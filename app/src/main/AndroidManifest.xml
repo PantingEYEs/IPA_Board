@@ -30,10 +30,10 @@
             -->
         </service>
 
-        <!--
-        <activity android:name=".SettingsActivity"
+        <activity
+            android:name=".SettingsActivity"
+            android:label="IPA_Board Settings"
             android:exported="true"/>
-        -->
 
     </application>
 
