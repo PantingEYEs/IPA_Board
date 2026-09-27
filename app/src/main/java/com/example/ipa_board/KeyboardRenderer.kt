@@ -11,6 +11,8 @@ import android.widget.TextView
 object KeyboardRenderer {
 
     fun render(context: Context, container: ViewGroup, layout: KeyboardLayout, heightPx: Int, symbolColor: Int,
+        shiftEnabled: Boolean = false,
+        ctrlEnabled: Boolean = false,
         onKeyClick: ((Int, Int, KeySlot) -> Unit)? = null
     ) {
         container.removeAllViews()
@@ -33,7 +35,10 @@ object KeyboardRenderer {
             }
 
             for ((columnIndex, slot) in row.slots.withIndex()) {
-                val slotView = FrameLayoutWithBorder(context, symbolColor).apply {
+                val active = (slot.action == KeyAction.SHIFT && shiftEnabled) ||
+                    (slot.action == KeyAction.CTRL && ctrlEnabled)
+                val slotView = FrameLayoutWithBorder(context, symbolColor, active).apply {
+                    isSelected = active
                     layoutParams = LinearLayout.LayoutParams(
                         0,
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -42,13 +47,15 @@ object KeyboardRenderer {
                 }
                 
                 val textView = TextView(context).apply {
-                    text = slot.text.ifEmpty { "∅" }
+                    text = slot.displayText(shiftEnabled) + if (active) " •" else ""
                     maxLines = 2
                     gravity = Gravity.CENTER
                     setTextColor(symbolColor)
                 }
                 
-                slotView.contentDescription = "Row ${rowIndex + 1}, key ${columnIndex + 1}: ${slot.text.ifEmpty { "unassigned" }}"
+                val description = if (slot.action == KeyAction.TEXT) slot.displayText(shiftEnabled) else slot.action.title
+                slotView.contentDescription = "Row ${rowIndex + 1}, key ${columnIndex + 1}: $description" +
+                    if (active) ", active" else ""
                 if (onKeyClick != null) {
                     slotView.isFocusable = true
                     slotView.setOnClickListener { onKeyClick(rowIndex, columnIndex, slot) }
@@ -61,10 +68,10 @@ object KeyboardRenderer {
         }
     }
 
-    private class FrameLayoutWithBorder(context: Context, symbolColor: Int) : android.widget.FrameLayout(context) {
+    private class FrameLayoutWithBorder(context: Context, symbolColor: Int, active: Boolean) : android.widget.FrameLayout(context) {
         init {
             val border = GradientDrawable().apply {
-                setColor(Color.TRANSPARENT)
+                setColor(if (active) Color.argb(65, Color.red(symbolColor), Color.green(symbolColor), Color.blue(symbolColor)) else Color.TRANSPARENT)
                 // Use a subtle version of the symbol color for the border
                 val alphaColor = Color.argb(
                     30, 

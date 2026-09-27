@@ -16,13 +16,17 @@ data class KeyboardLayout(
         }) { "Invalid key sizes or text (maximum 1000 characters per key)" }
     }
 
-    fun withKeyText(row: Int, column: Int, text: String): KeyboardLayout = copy(
-        rows = rows.mapIndexed { r, value ->
+    fun withKeyText(row: Int, column: Int, text: String): KeyboardLayout =
+        withKeyMapping(row, column, text, KeyAction.TEXT)
+
+    fun withKeyMapping(row: Int, column: Int, text: String, action: KeyAction): KeyboardLayout {
+        require(row in rows.indices && column in rows[row].slots.indices) { "Unknown key position" }
+        return copy(rows = rows.mapIndexed { r, value ->
             if (r != row) value else value.copy(slots = value.slots.mapIndexed { c, slot ->
-                if (c == column) slot.copy(text = text) else slot
+                if (c == column) slot.copy(text = text, action = action) else slot
             })
-        }
-    )
+        })
+    }
 
     fun toJson(): String {
         val obj = JSONObject()
@@ -79,18 +83,49 @@ data class RowLayout(
 
 data class KeySlot(
     val widthWeight: Float,
-    val text: String = ""
+    val text: String = "",
+    val action: KeyAction = KeyAction.TEXT
 ) {
+    fun displayText(shiftEnabled: Boolean = false): String = when (action) {
+        KeyAction.TEXT -> (if (shiftEnabled) text.uppercase(java.util.Locale.ROOT) else text).ifEmpty { "∅" }
+        else -> action.keyLabel
+    }
+
     fun toJsonObject(): JSONObject {
         val obj = JSONObject()
         obj.put("widthWeight", widthWeight.toDouble())
         obj.put("text", text)
+        obj.put("action", action.wireValue)
         return obj
     }
 
     companion object {
         fun fromJsonObject(obj: JSONObject): KeySlot {
-            return KeySlot(obj.getDouble("widthWeight").toFloat(), obj.optString("text", ""))
+            return KeySlot(
+                obj.getDouble("widthWeight").toFloat(),
+                obj.optString("text", ""),
+                if (obj.has("action")) KeyAction.fromWireValue(obj.getString("action")) else KeyAction.TEXT
+            )
         }
+    }
+}
+
+enum class KeyAction(val wireValue: String, val title: String, val keyLabel: String, val help: String) {
+    TEXT("text", "Text", "", "Enter symbols or text. Leave empty to unassign this key."),
+    BACKSPACE("backspace", "Backspace", "⌫", "Delete the selection or the character before the cursor."),
+    LEFT("left", "Arrow Left", "←", "Move the cursor left. Shift extends the selection."),
+    RIGHT("right", "Arrow Right", "→", "Move the cursor right. Shift extends the selection."),
+    UP("up", "Arrow Up", "↑", "Move the cursor up. Shift extends the selection."),
+    DOWN("down", "Arrow Down", "↓", "Move the cursor down. Shift extends the selection."),
+    SHIFT("shift", "Shift / Uppercase", "Shift", "Toggle uppercase text and Shift navigation. Tap again to turn off."),
+    CTRL("ctrl", "Ctrl", "Ctrl", "Apply Ctrl to the next key. Use single letters for shortcuts, such as Ctrl+A. Support depends on the receiving app."),
+    ENTER("enter", "Enter", "↵", "Run the text field action, or insert a new line in a multiline field."),
+    TAB("tab", "Tab", "Tab", "Send Tab. Focus movement depends on the receiving app."),
+    HOME("home", "Home", "Home", "Move to the beginning of the line. Shift extends the selection."),
+    END("end", "End", "End", "Move to the end of the line. Shift extends the selection.");
+
+    companion object {
+        fun fromWireValue(value: String): KeyAction = entries.firstOrNull { it.wireValue == value }
+            ?: throw IllegalArgumentException("Unsupported key action: $value")
     }
 }

@@ -51,6 +51,28 @@ class KeyboardWindowTest {
         }
     }
 
+    @Test fun rendererShowsFunctionLabelsAndActiveModifiers() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val context = instrumentation.targetContext
+            val keyboard = LayoutInflater.from(context).inflate(R.layout.keyboard_view, null) as ViewGroup
+            val layout = KeyboardLayout("Functions", listOf(RowLayout(1f, listOf(
+                KeySlot(1f, "a"), KeySlot(1f, action = KeyAction.SHIFT),
+                KeySlot(1f, action = KeyAction.CTRL), KeySlot(1f, action = KeyAction.BACKSPACE)
+            ))))
+            KeyboardRenderer.render(context, keyboard, layout, 210, Color.WHITE, true, true)
+            val row = keyboard.getChildAt(0) as ViewGroup
+            fun label(index: Int) = ((row.getChildAt(index) as ViewGroup).getChildAt(0) as TextView).text.toString()
+            assertEquals("A", label(0))
+            assertEquals("Shift •", label(1))
+            assertEquals("Ctrl •", label(2))
+            assertEquals("⌫", label(3))
+            assertTrue(row.getChildAt(1).isSelected)
+            assertTrue(row.getChildAt(2).isSelected)
+            assertFalse(row.getChildAt(3).isSelected)
+        }
+    }
+
     @Test fun unattachedKeyboardCanBeAddedToImeHost() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.runOnMainSync {

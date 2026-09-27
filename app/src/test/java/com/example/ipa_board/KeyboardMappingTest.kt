@@ -18,6 +18,19 @@ class KeyboardMappingTest {
         assertEquals("", edited.withKeyText(0, 1, "").rows[0].slots[1].text)
     }
 
+    @Test fun functionKeyLabelsAndShiftedTextAreIndependentOfDeviceLocale() {
+        val previousLocale = java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("tr"))
+            assertEquals("IPA", KeySlot(1f, "ipa").displayText(true))
+            assertEquals("ipa", KeySlot(1f, "ipa").displayText(false))
+            assertEquals("⌫", KeySlot(1f, "old text", KeyAction.BACKSPACE).displayText(true))
+            assertEquals("∅", KeySlot(1f).displayText())
+        } finally {
+            java.util.Locale.setDefault(previousLocale)
+        }
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun rejectsNonFiniteWeights() {
         KeyboardLayout("invalid", listOf(RowLayout(Float.NaN, listOf(KeySlot(1f)))))

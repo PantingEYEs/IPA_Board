@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.FrameLayout
+import android.widget.Toast
 import com.example.ipa_board.SettingsConstants.DEFAULT_BG_COLOR_HEX
 import com.example.ipa_board.SettingsConstants.DEFAULT_KEYBOARD_HEIGHT
 import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT_FILENAME
@@ -22,9 +23,11 @@ class IpaBoardService : InputMethodService() {
 
     private var keyboardView: ViewGroup? = null
     private lateinit var prefs: SharedPreferences
+    private val inputController = KeyboardInputController()
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == SettingsConstants.KEY_LAYOUT_REVISION || key == KEY_BG_COLOR_HEX || key == KEY_ACTIVE_LAYOUT_FILE || key == KEY_KEYBOARD_HEIGHT || key == KEY_SYMBOL_COLOR_HEX) {
+            if (key == KEY_ACTIVE_LAYOUT_FILE || key == SettingsConstants.KEY_LAYOUT_REVISION) inputController.reset()
             applySettings()
         }
     }
@@ -73,8 +76,16 @@ class IpaBoardService : InputMethodService() {
         // 4. Layout File
         val layoutFile = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
         val layout = LayoutFileManager.loadLayout(this, layoutFile) ?: SettingsConstants.DEFAULT_LAYOUT
-        KeyboardRenderer.render(this, container, layout, heightPx, symbolColor) { _, _, slot ->
-            if (slot.text.isNotEmpty()) currentInputConnection?.commitText(slot.text, 1)
+        KeyboardRenderer.render(
+            this, container, layout, heightPx, symbolColor,
+            inputController.shiftEnabled, inputController.ctrlEnabled
+        ) { _, _, slot ->
+            val shiftBefore = inputController.shiftEnabled
+            val ctrlBefore = inputController.ctrlEnabled
+            if (!inputController.handle(slot, currentInputConnection, currentInputEditorInfo)) {
+                Toast.makeText(this, R.string.unsupported_shortcut, Toast.LENGTH_SHORT).show()
+            }
+            if (shiftBefore != inputController.shiftEnabled || ctrlBefore != inputController.ctrlEnabled) applySettings()
         }
         
         container.requestLayout()
@@ -82,6 +93,17 @@ class IpaBoardService : InputMethodService() {
 
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
+        inputController.reset()
+    }
+
+    override fun onFinishInputView(finishingInput: Boolean) {
+        inputController.reset()
+        super.onFinishInputView(finishingInput)
+    }
+
+    override fun onFinishInput() {
+        inputController.reset()
+        super.onFinishInput()
     }
 
     override fun onStartInputView(editorInfo: EditorInfo?, restarting: Boolean) {

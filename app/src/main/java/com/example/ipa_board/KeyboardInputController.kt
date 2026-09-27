@@ -1,0 +1,150 @@
+package com.example.ipa_board
+
+import android.os.SystemClock
+import android.text.InputType
+import android.view.InputDevice
+import android.view.KeyCharacterMap
+import android.view.KeyEvent
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputConnection
+import java.util.Locale
+
+/** Executes mappings without keeping modifier state in the receiving application. */
+class KeyboardInputController {
+    var shiftEnabled: Boolean = false
+        private set
+    var ctrlEnabled: Boolean = false
+        private set
+
+    fun reset() {
+        shiftEnabled = false
+        ctrlEnabled = false
+    }
+
+    fun handle(slot: KeySlot, connection: InputConnection?, editorInfo: EditorInfo?): Boolean {
+        when (slot.action) {
+            KeyAction.SHIFT -> {
+                shiftEnabled = !shiftEnabled
+                return true
+            }
+            KeyAction.CTRL -> {
+                ctrlEnabled = !ctrlEnabled
+                return true
+            }
+            else -> Unit
+        }
+
+        val useCtrl = ctrlEnabled
+        // Consume the latch even when this mapping or the current editor is unsupported.
+        ctrlEnabled = false
+        connection ?: return false
+        val metaState = (if (shiftEnabled) KeyEvent.META_SHIFT_ON else 0) or
+            (if (useCtrl) KeyEvent.META_CTRL_ON else 0)
+        return when (slot.action) {
+            KeyAction.TEXT -> if (useCtrl) {
+                sendShortcut(connection, slot.text, metaState)
+            } else {
+                slot.text.isEmpty() || connection.commitText(
+                    if (shiftEnabled) slot.text.uppercase(Locale.ROOT) else slot.text, 1
+                )
+            }
+            KeyAction.BACKSPACE -> if (useCtrl) {
+                sendKey(connection, KeyEvent.KEYCODE_DEL, metaState)
+            } else {
+                backspace(connection)
+            }
+            KeyAction.LEFT -> sendKey(connection, KeyEvent.KEYCODE_DPAD_LEFT, metaState)
+            KeyAction.RIGHT -> sendKey(connection, KeyEvent.KEYCODE_DPAD_RIGHT, metaState)
+            KeyAction.UP -> sendKey(connection, KeyEvent.KEYCODE_DPAD_UP, metaState)
+            KeyAction.DOWN -> sendKey(connection, KeyEvent.KEYCODE_DPAD_DOWN, metaState)
+            KeyAction.HOME -> sendKey(connection, KeyEvent.KEYCODE_MOVE_HOME, metaState)
+            KeyAction.END -> sendKey(connection, KeyEvent.KEYCODE_MOVE_END, metaState)
+            KeyAction.TAB -> sendKey(connection, KeyEvent.KEYCODE_TAB, metaState)
+            KeyAction.ENTER -> enter(connection, editorInfo, metaState)
+            KeyAction.SHIFT, KeyAction.CTRL -> true
+        }
+    }
+
+    private fun sendShortcut(connection: InputConnection, text: String, metaState: Int): Boolean {
+        // A mapping may contain several Unicode characters, but a hardware shortcut has one key.
+        if (text.length != 1) return false
+        val original = text[0]
+        val character = if (original in 'A'..'Z') original.lowercaseChar() else original
+        val keyCode = when (character) {
+            in 'a'..'z' -> KeyEvent.KEYCODE_A + (character - 'a')
+            in '0'..'9' -> KeyEvent.KEYCODE_0 + (character - '0')
+            ' ' -> KeyEvent.KEYCODE_SPACE
+            else -> return false
+        }
+        if (metaState and KeyEvent.META_SHIFT_ON == 0) {
+            val contextAction = when (character) {
+                'a' -> android.R.id.selectAll
+                'c' -> android.R.id.copy
+                'x' -> android.R.id.cut
+                'v' -> android.R.id.paste
+                else -> null
+            }
+            if (contextAction != null && connection.performContextMenuAction(contextAction)) {
+                return true
+            }
+        }
+        return sendKey(connection, keyCode, metaState)
+    }
+
+    private fun backspace(connection: InputConnection): Boolean {
+        // commitText replaces a composing span before a selection; finish it first.
+        connection.finishComposingText()
+        if (!connection.getSelectedText(0).isNullOrEmpty()) {
+            return connection.commitText("", 1)
+        }
+        if (connection.deleteSurroundingTextInCodePoints(1, 0)) return true
+
+        // Older/custom editors can reject code-point deletion. Never split a surrogate pair.
+        val before = connection.getTextBeforeCursor(2, 0)
+            ?: return sendKey(connection, KeyEvent.KEYCODE_DEL, 0)
+        if (before.isEmpty()) return true
+        val last = before[before.length - 1]
+        if (Character.isHighSurrogate(last)) {
+            val after = connection.getTextAfterCursor(1, 0)
+            if (!after.isNullOrEmpty() && Character.isLowSurrogate(after[0])) {
+                return connection.deleteSurroundingText(1, 1)
+            }
+        }
+        val length = if (before.length >= 2 && Character.isSurrogatePair(
+                before[before.length - 2], last
+            )) 2 else 1
+        return connection.deleteSurroundingText(length, 0)
+    }
+
+    private fun enter(connection: InputConnection, editorInfo: EditorInfo?, metaState: Int): Boolean {
+        if (metaState != 0) return sendKey(connection, KeyEvent.KEYCODE_ENTER, metaState)
+        if (editorInfo != null) {
+            if (editorInfo.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION == 0) {
+                val action = editorInfo.imeOptions and EditorInfo.IME_MASK_ACTION
+                if (editorInfo.actionLabel != null) {
+                    return connection.performEditorAction(editorInfo.actionId)
+                }
+                if (action != EditorInfo.IME_ACTION_NONE && action != EditorInfo.IME_ACTION_UNSPECIFIED) {
+                    return connection.performEditorAction(action)
+                }
+            }
+            if (editorInfo.inputType and InputType.TYPE_MASK_CLASS == InputType.TYPE_CLASS_TEXT &&
+                editorInfo.inputType and InputType.TYPE_TEXT_FLAG_MULTI_LINE != 0) {
+                return connection.commitText("\n", 1)
+            }
+        }
+        return sendKey(connection, KeyEvent.KEYCODE_ENTER, 0)
+    }
+
+    private fun sendKey(connection: InputConnection, keyCode: Int, metaState: Int): Boolean {
+        val time = SystemClock.uptimeMillis()
+        fun event(action: Int) = KeyEvent(
+            time, time, action, keyCode, 0, metaState, KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
+            KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE, InputDevice.SOURCE_KEYBOARD
+        )
+        val downAccepted = connection.sendKeyEvent(event(KeyEvent.ACTION_DOWN))
+        // Always release the key, including when the target declines the down event.
+        val upAccepted = connection.sendKeyEvent(event(KeyEvent.ACTION_UP))
+        return downAccepted || upAccepted
+    }
+}

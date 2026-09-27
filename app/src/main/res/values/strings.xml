@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">IPA_Board</string>
+    <string name="key_type">Key type</string>
+    <string name="key_text_hint">Enter symbols or text; leave empty to unassign</string>
+    <string name="key_edit_message">Choose text or a function. Changes apply when saved.</string>
+    <string name="key_preview_hint">Tap a key below to assign text or a function.</string>
+    <string name="unsupported_shortcut">This action is not supported here. Ctrl text shortcuts require a single letter, digit, or space; support depends on the receiving app.</string>
 </resources>

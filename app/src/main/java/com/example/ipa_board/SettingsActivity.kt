@@ -2,8 +2,6 @@ package com.example.ipa_board
 
 import android.app.AlertDialog
 import android.widget.EditText
-import android.text.InputFilter
-import android.text.InputType
 import org.json.JSONObject
 import android.app.Activity
 import android.content.Context
@@ -214,28 +212,48 @@ class SettingsActivity : Activity() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val filename = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
         val layout = LayoutFileManager.loadLayout(this, filename) ?: return
-        val input = EditText(this).apply {
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-            filters = arrayOf(InputFilter.LengthFilter(1000))
-            setText(layout.rows[row].slots[column].text)
-            setSelection(text.length)
-            hint = "Enter symbols or text; leave empty to unassign"
+        val slot = layout.rows[row].slots[column]
+        val editorView = layoutInflater.inflate(R.layout.dialog_key_editor, null)
+        val input = editorView.findViewById<EditText>(R.id.et_key_text)
+        val types = editorView.findViewById<Spinner>(R.id.sp_key_type)
+        val help = editorView.findViewById<TextView>(R.id.tv_key_help)
+        val error = editorView.findViewById<TextView>(R.id.tv_key_error)
+        val actions = KeyAction.entries
+        input.setText(slot.text)
+        input.setSelection(input.text.length)
+        types.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, actions.map { it.title }).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
+        fun updateEditor() {
+            val action = actions[types.selectedItemPosition]
+            input.visibility = if (action == KeyAction.TEXT) View.VISIBLE else View.GONE
+            help.text = action.help
+            error.visibility = View.GONE
+        }
+        types.setSelection(actions.indexOf(slot.action))
+        types.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = updateEditor()
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+        updateEditor()
         val dialog = AlertDialog.Builder(this)
             .setTitle("Row ${row + 1} · Key ${column + 1}")
-            .setMessage("Changes apply when saved. Multiple characters, spaces, and combining marks are supported.")
-            .setView(input)
+            .setMessage(R.string.key_edit_message)
+            .setView(editorView)
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Save", null)
             .create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 try {
-                    LayoutFileManager.saveLayout(this, filename, layout.withKeyText(row, column, input.text.toString()))
+                    val action = actions[types.selectedItemPosition]
+                    val text = if (action == KeyAction.TEXT) input.text.toString() else ""
+                    LayoutFileManager.saveLayout(this, filename, layout.withKeyMapping(row, column, text, action))
                     refreshPreview()
                     dialog.dismiss()
                 } catch (e: Exception) {
-                    input.error = "Failed to save: ${e.message}"
+                    error.text = "Failed to save: ${e.message}"
+                    error.visibility = View.VISIBLE
                 }
             }
         }
@@ -285,7 +303,7 @@ class SettingsActivity : Activity() {
                 val config = JSONObject(String(bytes, Charsets.UTF_8))
                 val layout = KeyboardLayout.fromJson((config.optJSONObject("layout") ?: config).toString())
                 val appearance = config.optJSONObject("appearance")
-                if (config.has("version")) require(config.getInt("version") == 1) { "Unsupported configuration version" }
+                if (config.has("version")) require(config.getInt("version") in 1..2) { "Unsupported configuration version" }
                 val bg = appearance?.getString("backgroundColor")
                 val symbol = appearance?.getString("symbolColor")
                 val height = appearance?.getInt("heightDp")
@@ -316,7 +334,7 @@ class SettingsActivity : Activity() {
         val layout = LayoutFileManager.loadLayout(this, filename)
         if (layout != null) {
             pendingExport = JSONObject().apply {
-                put("version", 1)
+                put("version", 2)
                 put("layout", JSONObject(layout.toJson()))
                 put("appearance", JSONObject().apply {
                     put("backgroundColor", prefs.getString(KEY_BG_COLOR_HEX, DEFAULT_BG_COLOR_HEX))
