@@ -13,6 +13,7 @@ object KeyboardRenderer {
     fun render(context: Context, container: ViewGroup, layout: KeyboardLayout, heightPx: Int, symbolColor: Int,
         shiftEnabled: Boolean = false,
         ctrlEnabled: Boolean = false,
+        showUnassignedPlaceholders: Boolean = false,
         onKeyClick: ((Int, Int, KeySlot) -> Unit)? = null
     ) {
         container.removeAllViews()
@@ -46,14 +47,20 @@ object KeyboardRenderer {
                     )
                 }
                 
+                val unassigned = slot.action == KeyAction.TEXT && slot.text.isEmpty()
+                val label = if (unassigned && !showUnassignedPlaceholders) "" else slot.displayText(shiftEnabled)
                 val textView = TextView(context).apply {
-                    text = slot.displayText(shiftEnabled) + if (active) " •" else ""
+                    text = label + if (active) " •" else ""
                     maxLines = 2
                     gravity = Gravity.CENTER
                     setTextColor(symbolColor)
                 }
                 
-                val description = if (slot.action == KeyAction.TEXT) slot.displayText(shiftEnabled) else slot.action.title
+                val description = when {
+                    unassigned -> "unassigned"
+                    slot.action == KeyAction.TEXT -> slot.displayText(shiftEnabled)
+                    else -> slot.action.title
+                }
                 slotView.contentDescription = "Row ${rowIndex + 1}, key ${columnIndex + 1}: $description" +
                     if (active) ", active" else ""
                 if (onKeyClick != null) {

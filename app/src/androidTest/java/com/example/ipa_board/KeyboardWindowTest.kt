@@ -15,6 +15,36 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class KeyboardWindowTest {
+    @Test fun unassignedPlaceholderAppearsOnlyInEditorPreview() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val context = instrumentation.targetContext
+            val keyboard = LayoutInflater.from(context).inflate(R.layout.keyboard_view, null) as ViewGroup
+            val layout = KeyboardLayout("Unassigned", listOf(RowLayout(1f, listOf(
+                KeySlot(1f), KeySlot(1f, "∅"), KeySlot(1f, action = KeyAction.BACKSPACE)
+            ))))
+
+            fun labels(): List<String> {
+                val row = keyboard.getChildAt(0) as ViewGroup
+                return (0 until row.childCount).map { index ->
+                    ((row.getChildAt(index) as ViewGroup).getChildAt(0) as TextView).text.toString()
+                }
+            }
+
+            KeyboardRenderer.render(context, keyboard, layout, 210, Color.WHITE)
+            assertEquals(listOf("", "∅", "⌫"), labels())
+            val row = keyboard.getChildAt(0) as ViewGroup
+            assertEquals("Row 1, key 1: unassigned", row.getChildAt(0).contentDescription)
+            assertEquals("Row 1, key 2: ∅", row.getChildAt(1).contentDescription)
+
+            KeyboardRenderer.render(context, keyboard, layout, 210, Color.WHITE,
+                showUnassignedPlaceholders = true)
+            assertEquals(listOf("∅", "∅", "⌫"), labels())
+            val previewRow = keyboard.getChildAt(0) as ViewGroup
+            assertEquals("Row 1, key 1: unassigned", previewRow.getChildAt(0).contentDescription)
+        }
+    }
+
     @Test fun attachedKeyboardCanRefreshAfterMappingAndHeightChanges() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.runOnMainSync {

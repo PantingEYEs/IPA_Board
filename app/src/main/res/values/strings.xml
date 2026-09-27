@@ -5,4 +5,13 @@
     <string name="key_edit_message">Choose text or a function. Changes apply when saved.</string>
     <string name="key_preview_hint">Tap a key below to assign text or a function.</string>
     <string name="unsupported_shortcut">This action is not supported here. Ctrl text shortcuts require a single letter, digit, or space; support depends on the receiving app.</string>
+    <string name="new_layout">New Layout</string>
+    <string name="new_layout_title">New Blank Layout</string>
+    <string name="new_layout_message">Create a named file using the default key grid, with all keys unassigned.</string>
+    <string name="layout_name_hint">Layout name</string>
+    <string name="clear_keys">Clear Keys</string>
+    <string name="undo_clear">Undo Clear</string>
+    <string name="layout_cleared">All keys cleared. Tap Undo Clear to restore them.</string>
+    <string name="layout_already_empty">All keys are already unassigned.</string>
+    <string name="layout_restored">Key mappings restored.</string>
 </resources>

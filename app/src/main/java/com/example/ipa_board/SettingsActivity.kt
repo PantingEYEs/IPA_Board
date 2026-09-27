@@ -9,6 +9,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
@@ -49,10 +50,13 @@ class SettingsActivity : Activity() {
     private val IMPORT_REQUEST_CODE = 123
     private val EXPORT_REQUEST_CODE = 124
     private var pendingExport: String? = null
+    private data class ClearedLayout(val filename: String, val original: KeyboardLayout)
+    private var clearedLayout: ClearedLayout? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         pendingExport = savedInstanceState?.getString("pending_export")
+        clearedLayout = lastNonConfigurationInstance as? ClearedLayout
         setContentView(R.layout.activity_settings)
 
         LayoutFileManager.initDefaultLayout(this)
@@ -110,6 +114,9 @@ class SettingsActivity : Activity() {
         // 4. Action Buttons
         btnImport.setOnClickListener { startImport() }
         btnExport.setOnClickListener { startExport() }
+        findViewById<Button>(R.id.btn_new_layout).setOnClickListener { showNewLayoutDialog() }
+        findViewById<Button>(R.id.btn_clear_layout).setOnClickListener { clearCurrentLayout() }
+        findViewById<Button>(R.id.btn_undo_clear).setOnClickListener { undoClear() }
         btnEdit.setOnClickListener { 
             showKeyEditor(0, 0)
         }
@@ -176,12 +183,15 @@ class SettingsActivity : Activity() {
         val files = LayoutFileManager.listLayoutFiles(this)
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, files)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        val listener = spLayouts.onItemSelectedListener
+        spLayouts.onItemSelectedListener = null
         spLayouts.adapter = adapter
 
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val activeFile = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME)
         val index = files.indexOf(activeFile)
         if (index >= 0) spLayouts.setSelection(index)
+        spLayouts.onItemSelectedListener = listener
     }
 
     private fun refreshPreview() {
@@ -203,7 +213,10 @@ class SettingsActivity : Activity() {
         previewContainer.setBackgroundColor(bgColor)
 
         val layout = LayoutFileManager.loadLayout(this, layoutFile) ?: SettingsConstants.DEFAULT_LAYOUT
-        KeyboardRenderer.render(this, previewContainer, layout, heightPx, symbolColor) { row, column, _ ->
+        if (clearedLayout?.filename != layoutFile) clearedLayout = null
+        findViewById<Button>(R.id.btn_undo_clear).visibility = if (clearedLayout != null) View.VISIBLE else View.GONE
+        KeyboardRenderer.render(this, previewContainer, layout, heightPx, symbolColor,
+            showUnassignedPlaceholders = true) { row, column, _ ->
             showKeyEditor(row, column)
         }
     }
@@ -249,6 +262,7 @@ class SettingsActivity : Activity() {
                     val action = actions[types.selectedItemPosition]
                     val text = if (action == KeyAction.TEXT) input.text.toString() else ""
                     LayoutFileManager.saveLayout(this, filename, layout.withKeyMapping(row, column, text, action))
+                    clearedLayout = null
                     refreshPreview()
                     dialog.dismiss()
                 } catch (e: Exception) {
@@ -259,6 +273,83 @@ class SettingsActivity : Activity() {
         }
         dialog.show()
     }
+
+    private fun showNewLayoutDialog() {
+        val content = layoutInflater.inflate(R.layout.dialog_new_layout, null)
+        val nameInput = content.findViewById<EditText>(R.id.et_layout_name)
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.new_layout_title)
+            .setMessage(R.string.new_layout_message)
+            .setView(content)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Create", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                try {
+                    val filename = LayoutFileManager.createBlankLayout(this, nameInput.text.toString())
+                    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                        .putString(KEY_ACTIVE_LAYOUT_FILE, filename).apply()
+                    clearedLayout = null
+                    updateLayoutSpinner()
+                    refreshPreview()
+                    dialog.dismiss()
+                    Toast.makeText(this, "Created $filename", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    nameInput.error = "Failed to create layout: ${e.message}"
+                }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun clearCurrentLayout() {
+        val filename = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
+        try {
+            val original = requireNotNull(LayoutFileManager.loadLayout(this, filename)) { "Unable to read layout" }
+            val blank = original.cleared()
+            if (original == blank) {
+                Toast.makeText(this, R.string.layout_already_empty, Toast.LENGTH_SHORT).show()
+                return
+            }
+            LayoutFileManager.saveLayout(this, filename, blank)
+            clearedLayout = ClearedLayout(filename, original)
+            refreshPreview()
+            Toast.makeText(this, R.string.layout_cleared, Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to clear layout: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun undoClear() {
+        val snapshot = clearedLayout ?: return
+        val activeFile = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME)
+        if (activeFile != snapshot.filename) {
+            clearedLayout = null
+            refreshPreview()
+            return
+        }
+        try {
+            // Do not replace edits made after clearing, including edits from another activity instance.
+            val current = LayoutFileManager.loadLayout(this, snapshot.filename)
+            if (current != snapshot.original.cleared()) {
+                clearedLayout = null
+                refreshPreview()
+                Toast.makeText(this, "Layout has changed. Undo is no longer available.", Toast.LENGTH_SHORT).show()
+                return
+            }
+            LayoutFileManager.saveLayout(this, snapshot.filename, snapshot.original)
+            clearedLayout = null
+            refreshPreview()
+            Toast.makeText(this, R.string.layout_restored, Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to restore layout: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    override fun onRetainNonConfigurationInstance(): Any? = clearedLayout
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString("pending_export", pendingExport)
@@ -311,8 +402,7 @@ class SettingsActivity : Activity() {
                     require(bg != null && isValidHex(bg) && symbol != null && isValidHex(symbol)) { "Invalid colors" }
                     require(height != null && height in 150..450) { "Invalid keyboard height" }
                 }
-                val filename = "imported_${System.currentTimeMillis()}.json"
-                LayoutFileManager.saveLayout(this, filename, layout)
+                val filename = LayoutFileManager.createLayout(this, sourceFileName(uri) ?: layout.name, layout)
                 val editor = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
                     .putString(KEY_ACTIVE_LAYOUT_FILE, filename)
                 if (appearance != null) {
@@ -320,12 +410,30 @@ class SettingsActivity : Activity() {
                         .putInt(KEY_KEYBOARD_HEIGHT, requireNotNull(height))
                 }
                 editor.apply()
-                recreate()
-                Toast.makeText(this, "Configuration imported and activated", Toast.LENGTH_SHORT).show()
+                clearedLayout = null
+                // Refresh persisted values in place; recreating can restore the old spinner selection.
+                setupColorControls()
+                val heightDp = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    .getInt(KEY_KEYBOARD_HEIGHT, DEFAULT_KEYBOARD_HEIGHT)
+                sbHeight.progress = heightDp - MIN_HEIGHT_DP
+                tvHeightValue.text = "${heightDp}dp"
+                updateLayoutSpinner()
+                refreshPreview()
+                Toast.makeText(this, "Imported and activated $filename", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
             Toast.makeText(this, "Failed to import: ${e.message}", Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun sourceFileName(uri: Uri): String? = try {
+        contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            val column = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (column >= 0 && cursor.moveToFirst()) cursor.getString(column)?.takeIf { it.isNotBlank() } else null
+        }
+    } catch (_: Exception) {
+        // Some document providers expose no display name; use the name stored in the layout instead.
+        null
     }
 
     private fun startExport() {
@@ -345,7 +453,7 @@ class SettingsActivity : Activity() {
             startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                 type = "application/json"
                 addCategory(Intent.CATEGORY_OPENABLE)
-                putExtra(Intent.EXTRA_TITLE, "ipa-board-config.json")
+                putExtra(Intent.EXTRA_TITLE, filename)
             }, EXPORT_REQUEST_CODE)
         }
     }

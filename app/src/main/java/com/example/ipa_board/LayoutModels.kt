@@ -28,6 +28,10 @@ data class KeyboardLayout(
         })
     }
 
+    fun cleared(): KeyboardLayout = copy(rows = rows.map { row ->
+        row.copy(slots = row.slots.map { slot -> slot.copy(text = "", action = KeyAction.TEXT) })
+    })
+
     fun toJson(): String {
         val obj = JSONObject()
         obj.put("name", name)

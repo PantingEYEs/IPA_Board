@@ -31,6 +31,21 @@ class KeyboardMappingTest {
         }
     }
 
+    @Test fun clearingRemovesEveryMappingWithoutChangingLayoutGeometryOrSource() {
+        val original = KeyboardLayout("Custom", listOf(
+            RowLayout(2f, listOf(KeySlot(3f, "t͡ʃ"), KeySlot(1f, action = KeyAction.CTRL))),
+            RowLayout(1f, listOf(KeySlot(2f, action = KeyAction.BACKSPACE)))
+        ))
+        val cleared = original.cleared()
+        assertEquals("Custom", cleared.name)
+        assertEquals(listOf(2f, 1f), cleared.rows.map { it.heightWeight })
+        assertEquals(listOf(listOf(3f, 1f), listOf(2f)), cleared.rows.map { row -> row.slots.map { it.widthWeight } })
+        assertTrue(cleared.rows.flatMap { it.slots }.all { it.text.isEmpty() && it.action == KeyAction.TEXT })
+        assertEquals("t͡ʃ", original.rows[0].slots[0].text)
+        assertEquals(KeyAction.CTRL, original.rows[0].slots[1].action)
+        assertEquals(cleared, cleared.cleared())
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun rejectsNonFiniteWeights() {
         KeyboardLayout("invalid", listOf(RowLayout(Float.NaN, listOf(KeySlot(1f)))))
