@@ -1,0 +1,70 @@
+package com.example.ipa_board
+
+import android.graphics.Color
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.TextView
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.*
+import org.junit.Test
+import org.junit.runner.RunWith
+
+@RunWith(AndroidJUnit4::class)
+class KeyboardWindowTest {
+    @Test fun attachedKeyboardCanRefreshAfterMappingAndHeightChanges() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val context = instrumentation.targetContext
+            val host = FrameLayout(context)
+            val keyboard = LayoutInflater.from(context)
+                .inflate(R.layout.keyboard_view, host, false) as ViewGroup
+            val originalParams = keyboard.layoutParams as FrameLayout.LayoutParams
+            originalParams.gravity = Gravity.BOTTOM
+            originalParams.leftMargin = 7
+            host.addView(keyboard)
+            var layout = SettingsConstants.DEFAULT_LAYOUT
+            var committed = ""
+            for ((index, height) in listOf(210, 300, 150).withIndex()) {
+                layout = KeyboardLayout.fromJson(layout.withKeyText(0, 0, "t͡ʃ$index").toJson())
+                keyboard.updateKeyboardHeight(height)
+                KeyboardRenderer.render(context, keyboard, layout, height, Color.WHITE) { _, _, key ->
+                    committed = key.text
+                }
+                host.measure(
+                    View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(1000, View.MeasureSpec.AT_MOST)
+                )
+                host.layout(0, 0, host.measuredWidth, host.measuredHeight)
+                assertSame(originalParams, keyboard.layoutParams)
+                assertEquals(Gravity.BOTTOM, originalParams.gravity)
+                assertEquals(7, originalParams.leftMargin)
+                assertEquals(height, keyboard.measuredHeight)
+                val key = (keyboard.getChildAt(0) as ViewGroup).getChildAt(0) as ViewGroup
+                assertEquals("t͡ʃ$index", (key.getChildAt(0) as TextView).text.toString())
+                key.performClick()
+                assertEquals("t͡ʃ$index", committed)
+            }
+        }
+    }
+
+    @Test fun unattachedKeyboardCanBeAddedToImeHost() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val context = instrumentation.targetContext
+            val keyboard = LayoutInflater.from(context).inflate(R.layout.keyboard_view, null)
+            keyboard.updateKeyboardHeight(210)
+            val host = FrameLayout(context)
+            host.addView(keyboard)
+            keyboard.updateKeyboardHeight(300)
+            host.measure(
+                View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(1000, View.MeasureSpec.AT_MOST)
+            )
+            assertEquals(300, keyboard.measuredHeight)
+        }
+    }
+}

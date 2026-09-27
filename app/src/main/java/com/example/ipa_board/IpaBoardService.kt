@@ -7,6 +7,7 @@ import android.inputmethodservice.InputMethodService
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.widget.FrameLayout
 import com.example.ipa_board.SettingsConstants.DEFAULT_BG_COLOR_HEX
 import com.example.ipa_board.SettingsConstants.DEFAULT_KEYBOARD_HEIGHT
 import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT_FILENAME
@@ -55,11 +56,7 @@ class IpaBoardService : InputMethodService() {
         val density = resources.displayMetrics.density
         val heightPx = (heightDp * density).toInt()
 
-        container.minimumHeight = heightPx
-        container.layoutParams = ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, 
-            heightPx
-        )
+        container.updateKeyboardHeight(heightPx)
         
         // 2. Background Color
         val colorHex = prefs.getString(KEY_BG_COLOR_HEX, DEFAULT_BG_COLOR_HEX) ?: DEFAULT_BG_COLOR_HEX
@@ -91,4 +88,15 @@ class IpaBoardService : InputMethodService() {
         super.onStartInputView(editorInfo, restarting)
         applySettings()
     }
+}
+
+/** Keep the IME host's layout parameter type when refreshing an attached input view. */
+internal fun View.updateKeyboardHeight(heightPx: Int) {
+    minimumHeight = heightPx
+    val params = layoutParams ?: FrameLayout.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT,
+        heightPx
+    )
+    params.height = heightPx
+    layoutParams = params
 }
