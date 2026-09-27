@@ -1,5 +1,10 @@
 package com.example.ipa_board
 
+import android.app.AlertDialog
+import android.widget.EditText
+import android.text.InputFilter
+import android.text.InputType
+import org.json.JSONObject
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -44,9 +49,12 @@ class SettingsActivity : Activity() {
 
     private val MIN_HEIGHT_DP = 150
     private val IMPORT_REQUEST_CODE = 123
+    private val EXPORT_REQUEST_CODE = 124
+    private var pendingExport: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingExport = savedInstanceState?.getString("pending_export")
         setContentView(R.layout.activity_settings)
 
         LayoutFileManager.initDefaultLayout(this)
@@ -105,7 +113,7 @@ class SettingsActivity : Activity() {
         btnImport.setOnClickListener { startImport() }
         btnExport.setOnClickListener { startExport() }
         btnEdit.setOnClickListener { 
-            Toast.makeText(this, "Edit feature coming soon...", Toast.LENGTH_SHORT).show()
+            showKeyEditor(0, 0)
         }
 
         refreshPreview()
@@ -197,7 +205,46 @@ class SettingsActivity : Activity() {
         previewContainer.setBackgroundColor(bgColor)
 
         val layout = LayoutFileManager.loadLayout(this, layoutFile) ?: SettingsConstants.DEFAULT_LAYOUT
-        KeyboardRenderer.render(this, previewContainer, layout, heightPx, symbolColor)
+        KeyboardRenderer.render(this, previewContainer, layout, heightPx, symbolColor) { row, column, _ ->
+            showKeyEditor(row, column)
+        }
+    }
+
+    private fun showKeyEditor(row: Int, column: Int) {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val filename = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
+        val layout = LayoutFileManager.loadLayout(this, filename) ?: return
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            filters = arrayOf(InputFilter.LengthFilter(1000))
+            setText(layout.rows[row].slots[column].text)
+            setSelection(text.length)
+            hint = "输入音标或文本；留空表示未分配"
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("第 ${row + 1} 行 · 第 ${column + 1} 键")
+            .setMessage("保存后立即生效。支持多个字符、空格和组合音标。")
+            .setView(input)
+            .setNegativeButton("取消", null)
+            .setPositiveButton("保存", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                try {
+                    LayoutFileManager.saveLayout(this, filename, layout.withKeyText(row, column, input.text.toString()))
+                    refreshPreview()
+                    dialog.dismiss()
+                } catch (e: Exception) {
+                    input.error = "保存失败：${e.message}"
+                }
+            }
+        }
+        dialog.show()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString("pending_export", pendingExport)
+        super.onSaveInstanceState(outState)
     }
 
     private fun startImport() {
@@ -210,6 +257,20 @@ class SettingsActivity : Activity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == EXPORT_REQUEST_CODE) {
+            if (resultCode == RESULT_OK) {
+                try {
+                    val uri = requireNotNull(data?.data) { "未选择文件" }
+                    val json = requireNotNull(pendingExport) { "请重新导出" }
+                    val stream = requireNotNull(contentResolver.openOutputStream(uri, "wt")) { "无法打开文件" }
+                    stream.bufferedWriter(Charsets.UTF_8).use { it.write(json) }
+                    Toast.makeText(this, "配置已导出", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(this, "导出失败：${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+            pendingExport = null
+        }
         if (requestCode == IMPORT_REQUEST_CODE && resultCode == RESULT_OK) {
             data?.data?.let { uri ->
                 importFile(uri)
@@ -219,13 +280,30 @@ class SettingsActivity : Activity() {
 
     private fun importFile(uri: Uri) {
         try {
-            contentResolver.openInputStream(uri)?.use { inputStream ->
-                val json = inputStream.bufferedReader().use { it.readText() }
-                val layout = KeyboardLayout.fromJson(json)
+            requireNotNull(contentResolver.openInputStream(uri)) { "无法读取文件" }.use { inputStream ->
+                val bytes = inputStream.readBytesWithLimit()
+                val config = JSONObject(String(bytes, Charsets.UTF_8))
+                val layout = KeyboardLayout.fromJson((config.optJSONObject("layout") ?: config).toString())
+                val appearance = config.optJSONObject("appearance")
+                if (config.has("version")) require(config.getInt("version") == 1) { "Unsupported configuration version" }
+                val bg = appearance?.getString("backgroundColor")
+                val symbol = appearance?.getString("symbolColor")
+                val height = appearance?.getInt("heightDp")
+                if (appearance != null) {
+                    require(bg != null && isValidHex(bg) && symbol != null && isValidHex(symbol)) { "Invalid colors" }
+                    require(height != null && height in 150..450) { "Invalid keyboard height" }
+                }
                 val filename = "imported_${System.currentTimeMillis()}.json"
                 LayoutFileManager.saveLayout(this, filename, layout)
-                updateLayoutSpinner()
-                Toast.makeText(this, "Layout imported!", Toast.LENGTH_SHORT).show()
+                val editor = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                    .putString(KEY_ACTIVE_LAYOUT_FILE, filename)
+                if (appearance != null) {
+                    editor.putString(KEY_BG_COLOR_HEX, bg).putString(KEY_SYMBOL_COLOR_HEX, symbol)
+                        .putInt(KEY_KEYBOARD_HEIGHT, requireNotNull(height))
+                }
+                editor.apply()
+                recreate()
+                Toast.makeText(this, "配置已导入并启用", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
             Toast.makeText(this, "Failed to import: ${e.message}", Toast.LENGTH_LONG).show()
@@ -237,13 +315,33 @@ class SettingsActivity : Activity() {
         val filename = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
         val layout = LayoutFileManager.loadLayout(this, filename)
         if (layout != null) {
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, layout.toJson())
-                putExtra(Intent.EXTRA_SUBJECT, "IPA Board Layout: $filename")
-            }
-            startActivity(Intent.createChooser(shareIntent, "Export Layout"))
+            pendingExport = JSONObject().apply {
+                put("version", 1)
+                put("layout", JSONObject(layout.toJson()))
+                put("appearance", JSONObject().apply {
+                    put("backgroundColor", prefs.getString(KEY_BG_COLOR_HEX, DEFAULT_BG_COLOR_HEX))
+                    put("symbolColor", prefs.getString(KEY_SYMBOL_COLOR_HEX, DEFAULT_SYMBOL_COLOR_HEX))
+                    put("heightDp", prefs.getInt(KEY_KEYBOARD_HEIGHT, DEFAULT_KEYBOARD_HEIGHT))
+                })
+            }.toString(2)
+            startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                type = "application/json"
+                addCategory(Intent.CATEGORY_OPENABLE)
+                putExtra(Intent.EXTRA_TITLE, "ipa-board-config.json")
+            }, EXPORT_REQUEST_CODE)
         }
+    }
+
+    private fun java.io.InputStream.readBytesWithLimit(): ByteArray {
+        val output = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(8192)
+        while (true) {
+            val count = read(buffer)
+            if (count == -1) break
+            require(output.size() + count <= 1024 * 1024) { "配置文件不能超过 1 MB" }
+            output.write(buffer, 0, count)
+        }
+        return output.toByteArray()
     }
 
     private fun isValidHex(color: String): Boolean {

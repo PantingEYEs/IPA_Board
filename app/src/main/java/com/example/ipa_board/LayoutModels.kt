@@ -7,6 +7,23 @@ data class KeyboardLayout(
     val name: String,
     val rows: List<RowLayout>
 ) {
+    init {
+        require(rows.isNotEmpty() && rows.size <= 20) { "Layout must contain 1–20 rows" }
+        require(rows.all { row ->
+            row.heightWeight.isFinite() && row.heightWeight > 0 &&
+                row.slots.isNotEmpty() && row.slots.size <= 40 &&
+                row.slots.all { it.widthWeight.isFinite() && it.widthWeight > 0 && it.text.length <= 1000 }
+        }) { "Invalid key sizes or text (maximum 1000 characters per key)" }
+    }
+
+    fun withKeyText(row: Int, column: Int, text: String): KeyboardLayout = copy(
+        rows = rows.mapIndexed { r, value ->
+            if (r != row) value else value.copy(slots = value.slots.mapIndexed { c, slot ->
+                if (c == column) slot.copy(text = text) else slot
+            })
+        }
+    )
+
     fun toJson(): String {
         val obj = JSONObject()
         obj.put("name", name)
@@ -61,17 +78,19 @@ data class RowLayout(
 }
 
 data class KeySlot(
-    val widthWeight: Float
+    val widthWeight: Float,
+    val text: String = ""
 ) {
     fun toJsonObject(): JSONObject {
         val obj = JSONObject()
         obj.put("widthWeight", widthWeight.toDouble())
+        obj.put("text", text)
         return obj
     }
 
     companion object {
         fun fromJsonObject(obj: JSONObject): KeySlot {
-            return KeySlot(obj.getDouble("widthWeight").toFloat())
+            return KeySlot(obj.getDouble("widthWeight").toFloat(), obj.optString("text", ""))
         }
     }
 }

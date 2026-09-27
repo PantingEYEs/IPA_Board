@@ -34,7 +34,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Keyboard Appearance"
+                android:text="点击上方按键编辑字符映射"
                 android:textSize="22sp"
                 android:textColor="#FFFFFF"
                 android:textStyle="bold"
@@ -195,7 +195,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Edit"
+                    android:text="编辑首键"
                     android:textSize="12sp"
                     android:layout_marginStart="4dp"/>
 

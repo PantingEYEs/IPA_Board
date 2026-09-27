@@ -23,7 +23,7 @@ class IpaBoardService : InputMethodService() {
     private lateinit var prefs: SharedPreferences
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == KEY_BG_COLOR_HEX || key == KEY_ACTIVE_LAYOUT_FILE || key == KEY_KEYBOARD_HEIGHT || key == KEY_SYMBOL_COLOR_HEX) {
+        if (key == SettingsConstants.KEY_LAYOUT_REVISION || key == KEY_BG_COLOR_HEX || key == KEY_ACTIVE_LAYOUT_FILE || key == KEY_KEYBOARD_HEIGHT || key == KEY_SYMBOL_COLOR_HEX) {
             applySettings()
         }
     }
@@ -76,7 +76,9 @@ class IpaBoardService : InputMethodService() {
         // 4. Layout File
         val layoutFile = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
         val layout = LayoutFileManager.loadLayout(this, layoutFile) ?: SettingsConstants.DEFAULT_LAYOUT
-        KeyboardRenderer.render(this, container, layout, heightPx, symbolColor)
+        KeyboardRenderer.render(this, container, layout, heightPx, symbolColor) { _, _, slot ->
+            if (slot.text.isNotEmpty()) currentInputConnection?.commitText(slot.text, 1)
+        }
         
         container.requestLayout()
     }
@@ -87,5 +89,6 @@ class IpaBoardService : InputMethodService() {
 
     override fun onStartInputView(editorInfo: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(editorInfo, restarting)
+        applySettings()
     }
 }

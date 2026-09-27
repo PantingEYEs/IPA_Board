@@ -10,12 +10,14 @@ import android.widget.TextView
 
 object KeyboardRenderer {
 
-    fun render(context: Context, container: ViewGroup, layout: KeyboardLayout, heightPx: Int, symbolColor: Int) {
+    fun render(context: Context, container: ViewGroup, layout: KeyboardLayout, heightPx: Int, symbolColor: Int,
+        onKeyClick: ((Int, Int, KeySlot) -> Unit)? = null
+    ) {
         container.removeAllViews()
         
         val totalWeight = layout.rows.sumOf { it.heightWeight.toDouble() }.toFloat()
 
-        for (row in layout.rows) {
+        for ((rowIndex, row) in layout.rows.withIndex()) {
             val rowHeightPx = if (totalWeight > 0) {
                 ((row.heightWeight / totalWeight) * heightPx).toInt()
             } else {
@@ -30,7 +32,7 @@ object KeyboardRenderer {
                 )
             }
 
-            for (slot in row.slots) {
+            for ((columnIndex, slot) in row.slots.withIndex()) {
                 val slotView = FrameLayoutWithBorder(context, symbolColor).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         0,
@@ -40,11 +42,17 @@ object KeyboardRenderer {
                 }
                 
                 val textView = TextView(context).apply {
-                    text = "∅"
+                    text = slot.text.ifEmpty { "∅" }
+                    maxLines = 2
                     gravity = Gravity.CENTER
                     setTextColor(symbolColor)
                 }
                 
+                slotView.contentDescription = "Row ${rowIndex + 1}, key ${columnIndex + 1}: ${slot.text.ifEmpty { "unassigned" }}"
+                if (onKeyClick != null) {
+                    slotView.isFocusable = true
+                    slotView.setOnClickListener { onKeyClick(rowIndex, columnIndex, slot) }
+                }
                 slotView.addView(textView)
                 rowView.addView(slotView)
             }

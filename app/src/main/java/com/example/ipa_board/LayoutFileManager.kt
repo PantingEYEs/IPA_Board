@@ -22,7 +22,18 @@ object LayoutFileManager {
 
     fun saveLayout(context: Context, filename: String, layout: KeyboardLayout) {
         val file = File(getLayoutsDir(context), filename)
-        file.writeText(layout.toJson())
+        val atomicFile = android.util.AtomicFile(file)
+        val output = atomicFile.startWrite()
+        try {
+            output.write(layout.toJson().toByteArray(Charsets.UTF_8))
+            atomicFile.finishWrite(output)
+        } catch (e: Exception) {
+            atomicFile.failWrite(output)
+            throw e
+        }
+        val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putLong(SettingsConstants.KEY_LAYOUT_REVISION,
+            prefs.getLong(SettingsConstants.KEY_LAYOUT_REVISION, 0) + 1).apply()
     }
 
     fun loadLayout(context: Context, filename: String): KeyboardLayout? {

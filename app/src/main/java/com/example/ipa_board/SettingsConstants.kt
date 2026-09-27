@@ -9,6 +9,8 @@ object SettingsConstants {
     const val KEY_SYMBOL_COLOR_HEX = "symbol_color_hex"
     const val DEFAULT_SYMBOL_COLOR_HEX = "#FFFFFF"
     
+    const val KEY_LAYOUT_REVISION = "layout_revision"
+
     const val KEY_ACTIVE_LAYOUT_FILE = "active_layout_file"
     const val DEFAULT_LAYOUT_FILENAME = "default.json"
     
