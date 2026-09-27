@@ -12,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.ipa_board"
-        minSdk = 36
+        minSdk = 35
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"

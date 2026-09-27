@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/keyboard_container"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/keyboard_height"
+    android:minHeight="@dimen/keyboard_height"
+    android:orientation="vertical"
+    android:gravity="center">
+
+    <!-- Future keyboard keys will be added here -->
+
+</LinearLayout>
