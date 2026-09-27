@@ -219,14 +219,14 @@ class SettingsActivity : Activity() {
             filters = arrayOf(InputFilter.LengthFilter(1000))
             setText(layout.rows[row].slots[column].text)
             setSelection(text.length)
-            hint = "输入音标或文本；留空表示未分配"
+            hint = "Enter symbols or text; leave empty to unassign"
         }
         val dialog = AlertDialog.Builder(this)
-            .setTitle("第 ${row + 1} 行 · 第 ${column + 1} 键")
-            .setMessage("保存后立即生效。支持多个字符、空格和组合音标。")
+            .setTitle("Row ${row + 1} · Key ${column + 1}")
+            .setMessage("Changes apply when saved. Multiple characters, spaces, and combining marks are supported.")
             .setView(input)
-            .setNegativeButton("取消", null)
-            .setPositiveButton("保存", null)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Save", null)
             .create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
@@ -235,7 +235,7 @@ class SettingsActivity : Activity() {
                     refreshPreview()
                     dialog.dismiss()
                 } catch (e: Exception) {
-                    input.error = "保存失败：${e.message}"
+                    input.error = "Failed to save: ${e.message}"
                 }
             }
         }
@@ -260,13 +260,13 @@ class SettingsActivity : Activity() {
         if (requestCode == EXPORT_REQUEST_CODE) {
             if (resultCode == RESULT_OK) {
                 try {
-                    val uri = requireNotNull(data?.data) { "未选择文件" }
-                    val json = requireNotNull(pendingExport) { "请重新导出" }
-                    val stream = requireNotNull(contentResolver.openOutputStream(uri, "wt")) { "无法打开文件" }
+                    val uri = requireNotNull(data?.data) { "No file selected" }
+                    val json = requireNotNull(pendingExport) { "Please export again" }
+                    val stream = requireNotNull(contentResolver.openOutputStream(uri, "wt")) { "Unable to open file" }
                     stream.bufferedWriter(Charsets.UTF_8).use { it.write(json) }
-                    Toast.makeText(this, "配置已导出", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Configuration exported", Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
-                    Toast.makeText(this, "导出失败：${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Failed to export: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
             pendingExport = null
@@ -280,7 +280,7 @@ class SettingsActivity : Activity() {
 
     private fun importFile(uri: Uri) {
         try {
-            requireNotNull(contentResolver.openInputStream(uri)) { "无法读取文件" }.use { inputStream ->
+            requireNotNull(contentResolver.openInputStream(uri)) { "Unable to read file" }.use { inputStream ->
                 val bytes = inputStream.readBytesWithLimit()
                 val config = JSONObject(String(bytes, Charsets.UTF_8))
                 val layout = KeyboardLayout.fromJson((config.optJSONObject("layout") ?: config).toString())
@@ -303,7 +303,7 @@ class SettingsActivity : Activity() {
                 }
                 editor.apply()
                 recreate()
-                Toast.makeText(this, "配置已导入并启用", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Configuration imported and activated", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
             Toast.makeText(this, "Failed to import: ${e.message}", Toast.LENGTH_LONG).show()
@@ -338,7 +338,7 @@ class SettingsActivity : Activity() {
         while (true) {
             val count = read(buffer)
             if (count == -1) break
-            require(output.size() + count <= 1024 * 1024) { "配置文件不能超过 1 MB" }
+            require(output.size() + count <= 1024 * 1024) { "Configuration must not exceed 1 MB" }
             output.write(buffer, 0, count)
         }
         return output.toByteArray()
