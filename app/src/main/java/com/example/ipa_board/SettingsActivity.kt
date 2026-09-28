@@ -229,6 +229,9 @@ class SettingsActivity : Activity() {
         val editorView = layoutInflater.inflate(R.layout.dialog_key_editor, null)
         val input = editorView.findViewById<EditText>(R.id.et_key_text)
         val types = editorView.findViewById<Spinner>(R.id.sp_key_type)
+        val behavior = editorView.findViewById<Spinner>(R.id.sp_text_behavior)
+        behavior.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, TextBehavior.entries.map { it.title })
+        behavior.setSelection(TextBehavior.entries.indexOf(slot.textBehavior))
         val help = editorView.findViewById<TextView>(R.id.tv_key_help)
         val error = editorView.findViewById<TextView>(R.id.tv_key_error)
         val actions = KeyAction.entries
@@ -240,6 +243,7 @@ class SettingsActivity : Activity() {
         fun updateEditor() {
             val action = actions[types.selectedItemPosition]
             input.visibility = if (action == KeyAction.TEXT) View.VISIBLE else View.GONE
+            behavior.visibility = if (action == KeyAction.TEXT) View.VISIBLE else View.GONE
             help.text = action.help
             error.visibility = View.GONE
         }
@@ -261,7 +265,7 @@ class SettingsActivity : Activity() {
                 try {
                     val action = actions[types.selectedItemPosition]
                     val text = if (action == KeyAction.TEXT) input.text.toString() else ""
-                    LayoutFileManager.saveLayout(this, filename, layout.withKeyMapping(row, column, text, action))
+                    LayoutFileManager.saveLayout(this, filename, layout.withKeyMapping(row, column, text, action, TextBehavior.entries[behavior.selectedItemPosition]))
                     clearedLayout = null
                     refreshPreview()
                     dialog.dismiss()
@@ -394,7 +398,7 @@ class SettingsActivity : Activity() {
                 val config = JSONObject(String(bytes, Charsets.UTF_8))
                 val layout = KeyboardLayout.fromJson((config.optJSONObject("layout") ?: config).toString())
                 val appearance = config.optJSONObject("appearance")
-                if (config.has("version")) require(config.getInt("version") in 1..2) { "Unsupported configuration version" }
+                if (config.has("version")) require(config.getInt("version") in 1..3) { "Unsupported configuration version" }
                 val bg = appearance?.getString("backgroundColor")
                 val symbol = appearance?.getString("symbolColor")
                 val height = appearance?.getInt("heightDp")
@@ -442,7 +446,7 @@ class SettingsActivity : Activity() {
         val layout = LayoutFileManager.loadLayout(this, filename)
         if (layout != null) {
             pendingExport = JSONObject().apply {
-                put("version", 2)
+                put("version", 3)
                 put("layout", JSONObject(layout.toJson()))
                 put("appearance", JSONObject().apply {
                     put("backgroundColor", prefs.getString(KEY_BG_COLOR_HEX, DEFAULT_BG_COLOR_HEX))

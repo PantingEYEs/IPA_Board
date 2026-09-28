@@ -16,9 +16,12 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+
+    packaging { jniLibs { useLegacyPackaging = true } }
 
     buildTypes {
         release {
@@ -34,6 +37,7 @@ android {
 }
 
 dependencies {
+    implementation(files("libs/jna-5.17.0.aar"))
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
     implementation(libs.material)

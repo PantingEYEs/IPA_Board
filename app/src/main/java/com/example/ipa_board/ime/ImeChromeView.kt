@@ -1,0 +1,168 @@
+package com.example.ipa_board.ime
+
+import android.R
+import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
+import android.widget.*
+
+/** IME-only chrome. Never passed to KeyboardRenderer or serialized with a layout. */
+class ImeChromeView(context: Context) : LinearLayout(context) {
+    enum class Panel { KEYBOARD, CANDIDATES, CLIPBOARD, PAGES }
+    val keyboardHost = LinearLayout(context).apply { orientation = VERTICAL }
+    private val body = FrameLayout(context)
+    private val overlay = LinearLayout(context).apply { orientation = VERTICAL }
+    private val candidateRow = LinearLayout(context)
+    private val expand = button("⋯", "Expand") { showPanel(if (panel == Panel.CANDIDATES) Panel.KEYBOARD else Panel.CANDIDATES) }
+    private val status = TextView(context)
+    private var candidates = emptyList<Candidate>()
+    var panel = Panel.KEYBOARD
+        private set
+    var onCandidate: (Candidate, Long) -> Unit = { _, _ -> }
+    private var revision = -1L
+    var onLiteral: () -> Unit = {}
+    var onPanel: (Panel) -> Unit = {}
+
+    init {
+        orientation = VERTICAL
+        setBackgroundColor(Color.rgb(0, 0, 0))
+        val toolbar = LinearLayout(context).apply {
+            addView(button("⧉", "Clipboard") { toggle(Panel.CLIPBOARD) })
+            addView(button("⊞", "Keyboard Overview") { toggle(Panel.PAGES) })
+            status.setTextColor(Color.LTGRAY)
+            status.textSize = 10f
+            status.gravity = Gravity.CENTER_VERTICAL
+            addView(status, LayoutParams(0, dp(28), 1f))
+        }
+        addView(toolbar, LayoutParams(-1, dp(28)))
+        val strip = LinearLayout(context)
+        val horizontal = HorizontalScrollView(context).apply { isHorizontalScrollBarEnabled = false; addView(candidateRow) }
+        strip.addView(horizontal, LayoutParams(0, dp(28), 1f))
+        strip.addView(expand, LayoutParams(dp(37), dp(26)))//candidate drop down
+        addView(strip)
+        body.addView(keyboardHost, FrameLayout.LayoutParams(-1, -1))
+        overlay.setBackgroundColor(Color.rgb(0, 0, 0))
+        overlay.isClickable = true
+        body.addView(overlay, FrameLayout.LayoutParams(-1, -1))
+        addView(body, LayoutParams(-1, dp(210)))
+        showPanel(Panel.KEYBOARD)
+    }
+
+    fun setKeyboardHeight(px: Int) {
+        body.layoutParams = LayoutParams(-1, px)
+    }
+
+    fun render(raw: String, items: List<Candidate>, message: String, generation: Long) {
+        status.text = message
+        if (candidates != items || revision != generation) {
+            revision = generation
+            candidates = items
+            candidateRow.removeAllViews()
+            items.take(24).forEach { candidateRow.addView(candidateButton(it)) }
+            if (panel == Panel.CANDIDATES) renderCandidates()
+        }
+        expand.isEnabled = items.isNotEmpty() || panel == Panel.CANDIDATES
+    }
+
+    fun showPanel(next: Panel) {
+        panel = next
+        overlay.visibility = if (next == Panel.KEYBOARD) GONE else VISIBLE
+        keyboardHost.importantForAccessibility = if (next == Panel.KEYBOARD) IMPORTANT_FOR_ACCESSIBILITY_AUTO else IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        // Invisible keeps the geometry but prevents any underlying hit target or focus.
+        keyboardHost.visibility = if (next == Panel.KEYBOARD) VISIBLE else INVISIBLE
+        expand.text = if (next == Panel.CANDIDATES) "⌃" else "⋯"
+        expand.contentDescription = if (next == Panel.CANDIDATES) "Collapse" else "Expand"
+        if (next == Panel.CANDIDATES) renderCandidates()
+        onPanel(next)
+    }
+
+    fun showContent(title: String, content: View) {
+        overlay.removeAllViews()
+        val header = LinearLayout(context)
+        header.addView(TextView(context).apply { text = title; textSize = 10f; setTextColor(Color.WHITE); gravity = Gravity.CENTER_VERTICAL; setPadding(dp(12),0,0,0) }, LayoutParams(0, dp(28), 1f))
+        header.addView(button("Return", "Return to Keyboard") { showPanel(Panel.KEYBOARD) })
+        overlay.addView(header)
+        overlay.addView(content, LayoutParams(-1, 0, 1f))
+    }
+
+    fun listContent(labels: List<String>, click: (Int) -> Unit): View = ListView(context).apply {
+        adapter = object : ArrayAdapter<String>(context, R.layout.simple_list_item_1, labels) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
+                (super.getView(position, convertView, parent) as TextView).apply {
+                    setTextColor(Color.WHITE); setBackgroundColor(Color.rgb(0,0,0)); minHeight = dp(20)
+                }
+        }
+        setOnItemClickListener { _, _, position, _ -> click(position) }
+    }
+
+    fun candidateGridContent(snapshot: List<Candidate>, click: (Candidate) -> Unit): View {
+        val container = LinearLayout(context).apply {
+            orientation = VERTICAL
+            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+        }
+        val alphaColor = Color.argb(30, 255, 255, 255)
+        val columnsCount = 6
+
+        snapshot.chunked(columnsCount).forEach { rowCandidates ->
+            val rowView = LinearLayout(context).apply {
+                orientation = HORIZONTAL
+                layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, dp(26))
+            }
+            for (i in 0 until columnsCount) {
+                val candidate = rowCandidates.getOrNull(i)
+                val border = GradientDrawable().apply {
+                    setColor(Color.TRANSPARENT)
+                    setStroke(1, alphaColor)
+                }
+                val slotView = FrameLayout(context).apply {
+                    background = border
+                    layoutParams = LayoutParams(0, LayoutParams.MATCH_PARENT, 1f)
+                }
+                if (candidate != null) {
+                    val textView = TextView(context).apply {
+                        text = candidate.text
+                        textSize = 10f
+                        setTextColor(Color.WHITE)
+                        gravity = Gravity.CENTER
+                        maxLines = 1
+                    }
+                    slotView.isFocusable = true
+                    slotView.isClickable = true
+                    slotView.contentDescription = candidate.text
+                    slotView.setOnClickListener { click(candidate) }
+                    slotView.addView(textView, FrameLayout.LayoutParams(-1, -1))
+                }
+                rowView.addView(slotView)
+            }
+            container.addView(rowView)
+        }
+        return ScrollView(context).apply {
+            isVerticalScrollBarEnabled = true
+            addView(container)
+        }
+    }
+
+    private fun renderCandidates() {
+        val snapshot = candidates.toList()
+        val generation = revision
+        val title = if (snapshot.isEmpty()) "" else "(${snapshot.size})"
+        showContent(title, candidateGridContent(snapshot) { candidate ->
+            onCandidate(candidate, generation)
+        })
+    }
+    private fun toggle(next: Panel) = showPanel(if (panel == next) Panel.KEYBOARD else next)
+    private fun candidateButton(candidate: Candidate): View {
+        val generation = revision
+        return button("${candidate.text} ", candidate.text) { onCandidate(candidate, generation) }
+    }
+    private fun button(label: String, description: String, click: () -> Unit) = Button(context).apply {
+        text = label; contentDescription = description; isAllCaps = false; textSize = 10f
+        setTextColor(Color.WHITE); setBackgroundColor(Color.TRANSPARENT)
+        minHeight = dp(20); minimumHeight = dp(20); minWidth = dp(48)
+        setOnClickListener { click() }
+    }
+    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+}

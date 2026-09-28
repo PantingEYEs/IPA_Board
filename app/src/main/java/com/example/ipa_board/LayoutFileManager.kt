@@ -84,6 +84,12 @@ object LayoutFileManager {
     }
 
     fun initDefaultLayout(context: Context) {
+        val mixedFile = layoutFile(context, com.example.ipa_board.ime.BuiltinLayouts.MIXED_ID)
+        val settings = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        if (!settings.getBoolean("mixed_layout_created", false)) {
+            if (!mixedFile.exists()) saveLayout(context, mixedFile.name, com.example.ipa_board.ime.BuiltinLayouts.mixed)
+            settings.edit().putBoolean("mixed_layout_created", true).apply()
+        }
         val defaultFile = layoutFile(context, DEFAULT_LAYOUT_FILENAME)
         if (!defaultFile.exists()) {
             saveLayout(context, DEFAULT_LAYOUT_FILENAME, DEFAULT_LAYOUT)

@@ -26,6 +26,12 @@
             android:layout_height="wrap_content"
             android:layout_marginVertical="12dp" />
 
+        <Spinner
+            android:id="@+id/sp_text_behavior"
+            android:contentDescription="@string/text_behavior"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+
         <EditText
             android:id="@+id/et_key_text"
             android:layout_width="match_parent"

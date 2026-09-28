@@ -1,0 +1,4 @@
+patch:
+  translator/enable_user_dict: false
+  translator/enable_completion: false
+  switches/@0/reset: 0

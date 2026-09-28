@@ -14,4 +14,5 @@
     <string name="layout_cleared">All keys cleared. Tap Undo Clear to restore them.</string>
     <string name="layout_already_empty">All keys are already unassigned.</string>
     <string name="layout_restored">Key mappings restored.</string>
+    <string name="text_behavior">Text input behavior</string>
 </resources>

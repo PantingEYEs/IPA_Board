@@ -1,124 +1,213 @@
 package com.example.ipa_board
 
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.inputmethodservice.InputMethodService
+import android.text.InputType
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
-import android.widget.FrameLayout
-import android.widget.Toast
-import com.example.ipa_board.SettingsConstants.DEFAULT_BG_COLOR_HEX
-import com.example.ipa_board.SettingsConstants.DEFAULT_KEYBOARD_HEIGHT
-import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT_FILENAME
-import com.example.ipa_board.SettingsConstants.DEFAULT_SYMBOL_COLOR_HEX
-import com.example.ipa_board.SettingsConstants.KEY_ACTIVE_LAYOUT_FILE
+import android.widget.*
+import com.example.ipa_board.ime.*
+import com.example.ipa_board.SettingsConstants.PREFS_NAME
+import com.example.ipa_board.SettingsConstants.KEY_LAYOUT_REVISION
 import com.example.ipa_board.SettingsConstants.KEY_BG_COLOR_HEX
+import com.example.ipa_board.SettingsConstants.KEY_ACTIVE_LAYOUT_FILE
 import com.example.ipa_board.SettingsConstants.KEY_KEYBOARD_HEIGHT
 import com.example.ipa_board.SettingsConstants.KEY_SYMBOL_COLOR_HEX
-import com.example.ipa_board.SettingsConstants.PREFS_NAME
+import com.example.ipa_board.SettingsConstants.DEFAULT_KEYBOARD_HEIGHT
+import com.example.ipa_board.SettingsConstants.DEFAULT_BG_COLOR_HEX
+import com.example.ipa_board.SettingsConstants.DEFAULT_SYMBOL_COLOR_HEX
+import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT_FILENAME
+import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT
+import java.util.Locale
 
 class IpaBoardService : InputMethodService() {
-
-    private var keyboardView: ViewGroup? = null
+    private var chrome: ImeChromeView? = null
     private lateinit var prefs: SharedPreferences
     private val inputController = KeyboardInputController()
-
+    private lateinit var engines: EngineCoordinator
+    private lateinit var composition: CompositionController
+    private var engineStatus = "加载词库"
+    private var directOnly = false
+    private var consumedPanelBack = false
+    private var panelBackRegistered = false
+    private val panelBackCallback = android.window.OnBackInvokedCallback { chrome?.showPanel(ImeChromeView.Panel.KEYBOARD) }
+    private val clipboard by lazy { getSystemService(ClipboardManager::class.java) }
+    private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
+        if (chrome?.panel == ImeChromeView.Panel.CLIPBOARD) showClipboard()
+    }
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == SettingsConstants.KEY_LAYOUT_REVISION || key == KEY_BG_COLOR_HEX || key == KEY_ACTIVE_LAYOUT_FILE || key == KEY_KEYBOARD_HEIGHT || key == KEY_SYMBOL_COLOR_HEX) {
-            if (key == KEY_ACTIVE_LAYOUT_FILE || key == SettingsConstants.KEY_LAYOUT_REVISION) inputController.reset()
+        if (key in setOf(KEY_LAYOUT_REVISION, KEY_BG_COLOR_HEX, KEY_ACTIVE_LAYOUT_FILE, KEY_KEYBOARD_HEIGHT, KEY_SYMBOL_COLOR_HEX)) {
+            if (key == KEY_ACTIVE_LAYOUT_FILE || key == KEY_LAYOUT_REVISION) inputController.reset()
             applySettings()
         }
     }
-
     override fun onCreate() {
         super.onCreate()
         LayoutFileManager.initDefaultLayout(this)
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
-    }
-
-    override fun onDestroy() {
-        prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
-        super.onDestroy()
-    }
-
-    override fun onCreateInputView(): View? {
-        val root = layoutInflater.inflate(R.layout.keyboard_view, null)
-        keyboardView = root as? ViewGroup
-        applySettings()
-        return root
-    }
-
-    private fun applySettings() {
-        val container = keyboardView ?: return
-        
-        // 1. Height
-        val heightDp = prefs.getInt(KEY_KEYBOARD_HEIGHT, DEFAULT_KEYBOARD_HEIGHT)
-        val density = resources.displayMetrics.density
-        val heightPx = (heightDp * density).toInt()
-
-        container.updateKeyboardHeight(heightPx)
-        
-        // 2. Background Color
-        val colorHex = prefs.getString(KEY_BG_COLOR_HEX, DEFAULT_BG_COLOR_HEX) ?: DEFAULT_BG_COLOR_HEX
-        try {
-            container.setBackgroundColor(Color.parseColor(colorHex))
-        } catch (e: Exception) {
-            container.setBackgroundColor(Color.parseColor(DEFAULT_BG_COLOR_HEX))
+        composition = CompositionController({ currentInputConnection }, { id, raw -> engines.query(id, raw) }, { refreshCandidates() })
+        engines = EngineCoordinator(this) { id, candidates, state ->
+            engineStatus = state
+            composition.acceptResults(id, candidates)
+            refreshCandidates()
         }
-
-        // 3. Symbol Color
-        val symbolColorHex = prefs.getString(KEY_SYMBOL_COLOR_HEX, DEFAULT_SYMBOL_COLOR_HEX) ?: DEFAULT_SYMBOL_COLOR_HEX
-        val symbolColor = try { Color.parseColor(symbolColorHex) } catch (e: Exception) { Color.WHITE }
-
-        // 4. Layout File
-        val layoutFile = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
-        val layout = LayoutFileManager.loadLayout(this, layoutFile) ?: SettingsConstants.DEFAULT_LAYOUT
-        KeyboardRenderer.render(
-            this, container, layout, heightPx, symbolColor,
-            inputController.shiftEnabled, inputController.ctrlEnabled
-        ) { _, _, slot ->
-            val shiftBefore = inputController.shiftEnabled
-            val ctrlBefore = inputController.ctrlEnabled
-            if (!inputController.handle(slot, currentInputConnection, currentInputEditorInfo)) {
-                Toast.makeText(this, R.string.unsupported_shortcut, Toast.LENGTH_SHORT).show()
+    }
+    override fun onCreateInputView(): View {
+        return ImeChromeView(this).also { view ->
+            chrome = view
+            view.onCandidate = { candidate, generation -> if (composition.select(candidate, generation)) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
+            view.onLiteral = { if (composition.literal()) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
+            view.onPanel = { panel ->
+                updatePanelBack(panel != ImeChromeView.Panel.KEYBOARD)
+                when (panel) {
+                    ImeChromeView.Panel.CLIPBOARD -> showClipboard()
+                    ImeChromeView.Panel.PAGES -> showPages()
+                    else -> Unit
+                }
             }
-            if (shiftBefore != inputController.shiftEnabled || ctrlBefore != inputController.ctrlEnabled) applySettings()
+            applySettings(); refreshCandidates()
+            engines.start()
         }
-        
-        container.requestLayout()
     }
-
+    private fun refreshCandidates() {
+        chrome?.render(composition.raw, composition.candidates, if (directOnly) "直接输入" else engineStatus, composition.revision)
+    }
+    private fun applySettings() {
+        val view = chrome ?: return
+        val density = resources.displayMetrics.density
+        val availableDp = (resources.displayMetrics.heightPixels / density - 180).toInt().coerceAtLeast(100)
+        val height = (prefs.getInt(KEY_KEYBOARD_HEIGHT, DEFAULT_KEYBOARD_HEIGHT).coerceIn(100, availableDp) * density).toInt()
+        view.setKeyboardHeight(height)
+        fun color(key: String, fallback: String) = try { Color.parseColor(prefs.getString(key, fallback)) } catch (_: IllegalArgumentException) { Color.parseColor(fallback) }
+        view.keyboardHost.setBackgroundColor(color(KEY_BG_COLOR_HEX, DEFAULT_BG_COLOR_HEX))
+        val filename = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
+        val layout = LayoutFileManager.loadLayout(this, filename) ?: DEFAULT_LAYOUT
+        KeyboardRenderer.render(this, view.keyboardHost, layout, height, color(KEY_SYMBOL_COLOR_HEX, DEFAULT_SYMBOL_COLOR_HEX),
+            inputController.shiftEnabled, inputController.ctrlEnabled) { _, _, slot -> handleKey(slot) }
+    }
+    private fun handleKey(slot: KeySlot) {
+        val ic = currentInputConnection ?: return
+        val beforeShift = inputController.shiftEnabled
+        val beforeCtrl = inputController.ctrlEnabled
+        val isModifier = slot.action == KeyAction.SHIFT || slot.action == KeyAction.CTRL
+        val text = if (beforeShift) slot.text.uppercase(Locale.ROOT) else slot.text
+        if (!beforeCtrl && slot.action == KeyAction.TEXT && text.isEmpty()) return
+        if (!directOnly && !beforeCtrl && !isModifier) {
+            when {
+                slot.action == KeyAction.BACKSPACE && composition.backspace() -> return
+                slot.action == KeyAction.ENTER && composition.raw.isNotEmpty() -> { composition.literal(); return }
+                slot.action == KeyAction.TEXT && text == " " && composition.space() -> return
+                slot.action == KeyAction.TEXT && slot.textBehavior == TextBehavior.AUTO && text.isNotEmpty() &&
+                    text.all { it in 'a'..'z' || it in 'A'..'Z' || it == '\'' } -> { composition.input(text); return }
+            }
+        }
+        if (!isModifier && !composition.literal()) return
+        if (!inputController.handle(slot, ic, currentInputEditorInfo)) Toast.makeText(this, R.string.unsupported_shortcut, Toast.LENGTH_SHORT).show()
+        if (beforeShift != inputController.shiftEnabled || beforeCtrl != inputController.ctrlEnabled) applySettings()
+    }
+    private fun showClipboard() {
+        val view = chrome ?: return
+        val clip = try { clipboard.primaryClip } catch (_: SecurityException) { null }
+        val text = if (clip != null && clip.itemCount > 0) clip.getItemAt(0).text?.toString() else null
+        val sensitive = clip?.description?.extras?.getBoolean("android.content.extra.IS_SENSITIVE", false) == true
+        val label = when {
+            text.isNullOrEmpty() -> "剪贴板中没有可粘贴的文本"
+            sensitive || directOnly -> "敏感内容 · 点击粘贴"
+            else -> text.take(240) + if (text.length > 240) "…" else ""
+        }
+        view.showContent("剪贴板", view.listContent(listOf(label)) {
+            if (!text.isNullOrEmpty() && composition.literal() && currentInputConnection?.commitText(text, 1) == true) view.showPanel(ImeChromeView.Panel.KEYBOARD)
+        })
+    }
+    private fun showPages() {
+        val view = chrome ?: return
+        val active = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME)
+        val layouts = LayoutFileManager.listLayoutFiles(this).mapNotNull { file -> LayoutFileManager.loadLayout(this, file)?.let { file to it } }
+        val grid = GridLayout(this).apply { columnCount = 2 }
+        layouts.forEach { (file, layout) ->
+            val cell = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(8, 8, 8, 8)
+                isFocusable = true
+                contentDescription = layout.name + if (file == active) "，当前键盘页" else "，切换键盘页"
+                setBackgroundColor(if (file == active) Color.rgb(55,65,88) else Color.rgb(35,38,46))
+                addView(TextView(this@IpaBoardService).apply { text = (if (file == active) "✓ " else "") + layout.name; setTextColor(Color.WHITE); textSize = 15f })
+                val preview = LinearLayout(this@IpaBoardService).apply { orientation = LinearLayout.VERTICAL; importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS }
+                KeyboardRenderer.render(this@IpaBoardService, preview, layout, (80 * resources.displayMetrics.density).toInt(), Color.LTGRAY)
+                addView(preview)
+                setOnClickListener {
+                    prefs.edit().putString(KEY_ACTIVE_LAYOUT_FILE, file).apply()
+                    view.showPanel(ImeChromeView.Panel.KEYBOARD)
+                }
+            }
+            grid.addView(cell, GridLayout.LayoutParams().apply { width = 0; columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f); setMargins(4,4,4,4) })
+        }
+        view.showContent("键盘页", ScrollView(this).apply { addView(grid) })
+    }
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
         inputController.reset()
+        composition.start()
+        val type = attribute?.inputType ?: 0
+        val variation = type and InputType.TYPE_MASK_VARIATION
+        directOnly = (type and InputType.TYPE_MASK_CLASS) != InputType.TYPE_CLASS_TEXT ||
+            variation in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)
+        chrome?.showPanel(ImeChromeView.Panel.KEYBOARD)
+        refreshCandidates()
     }
-
-    override fun onFinishInputView(finishingInput: Boolean) {
-        inputController.reset()
-        super.onFinishInputView(finishingInput)
-    }
-
-    override fun onFinishInput() {
-        inputController.reset()
-        super.onFinishInput()
-    }
-
     override fun onStartInputView(editorInfo: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(editorInfo, restarting)
+        clipboard.addPrimaryClipChangedListener(clipboardListener)
         applySettings()
+    }
+    override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
+        super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
+        composition.externalSelection(newSelStart, newSelEnd, candidatesEnd)
+    }
+    override fun onEvaluateFullscreenMode() = false
+    private fun updatePanelBack(open: Boolean) {
+        if (open == panelBackRegistered) return
+        if (open) window.onBackInvokedDispatcher.registerOnBackInvokedCallback(
+            android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, panelBackCallback
+        ) else window.onBackInvokedDispatcher.unregisterOnBackInvokedCallback(panelBackCallback)
+        panelBackRegistered = open
+    }
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && chrome?.panel != null && chrome?.panel != ImeChromeView.Panel.KEYBOARD) {
+            consumedPanelBack = true
+            chrome?.showPanel(ImeChromeView.Panel.KEYBOARD); event.startTracking(); return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && consumedPanelBack) { consumedPanelBack = false; return true }
+        return super.onKeyUp(keyCode, event)
+    }
+    override fun onFinishInputView(finishingInput: Boolean) {
+        clipboard.removePrimaryClipChangedListener(clipboardListener)
+        chrome?.showPanel(ImeChromeView.Panel.KEYBOARD)
+        composition.finish(); inputController.reset()
+        super.onFinishInputView(finishingInput)
+    }
+    override fun onFinishInput() { composition.finish(); inputController.reset(); super.onFinishInput() }
+    override fun onDestroy() {
+        clipboard.removePrimaryClipChangedListener(clipboardListener)
+        updatePanelBack(false)
+        engines.close(); prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
+        super.onDestroy()
     }
 }
 
-/** Keep the IME host's layout parameter type when refreshing an attached input view. */
+/** Preserve the IME host layout parameter type. Also used by the layout renderer tests. */
 internal fun View.updateKeyboardHeight(heightPx: Int) {
     minimumHeight = heightPx
-    val params = layoutParams ?: FrameLayout.LayoutParams(
-        ViewGroup.LayoutParams.MATCH_PARENT,
-        heightPx
-    )
+    val params = layoutParams ?: FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, heightPx)
     params.height = heightPx
     layoutParams = params
 }

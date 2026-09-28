@@ -19,17 +19,17 @@ data class KeyboardLayout(
     fun withKeyText(row: Int, column: Int, text: String): KeyboardLayout =
         withKeyMapping(row, column, text, KeyAction.TEXT)
 
-    fun withKeyMapping(row: Int, column: Int, text: String, action: KeyAction): KeyboardLayout {
+    fun withKeyMapping(row: Int, column: Int, text: String, action: KeyAction, behavior: TextBehavior? = null): KeyboardLayout {
         require(row in rows.indices && column in rows[row].slots.indices) { "Unknown key position" }
         return copy(rows = rows.mapIndexed { r, value ->
             if (r != row) value else value.copy(slots = value.slots.mapIndexed { c, slot ->
-                if (c == column) slot.copy(text = text, action = action) else slot
+                if (c == column) slot.copy(text = text, action = action, textBehavior = behavior ?: slot.textBehavior) else slot
             })
         })
     }
 
     fun cleared(): KeyboardLayout = copy(rows = rows.map { row ->
-        row.copy(slots = row.slots.map { slot -> slot.copy(text = "", action = KeyAction.TEXT) })
+        row.copy(slots = row.slots.map { slot -> slot.copy(text = "", action = KeyAction.TEXT, textBehavior = TextBehavior.LITERAL) })
     })
 
     fun toJson(): String {
@@ -88,7 +88,8 @@ data class RowLayout(
 data class KeySlot(
     val widthWeight: Float,
     val text: String = "",
-    val action: KeyAction = KeyAction.TEXT
+    val action: KeyAction = KeyAction.TEXT,
+    val textBehavior: TextBehavior = TextBehavior.LITERAL
 ) {
     fun displayText(shiftEnabled: Boolean = false): String = when (action) {
         KeyAction.TEXT -> (if (shiftEnabled) text.uppercase(java.util.Locale.ROOT) else text).ifEmpty { "∅" }
@@ -100,6 +101,7 @@ data class KeySlot(
         obj.put("widthWeight", widthWeight.toDouble())
         obj.put("text", text)
         obj.put("action", action.wireValue)
+        obj.put("textBehavior", textBehavior.wireValue)
         return obj
     }
 
@@ -108,7 +110,8 @@ data class KeySlot(
             return KeySlot(
                 obj.getDouble("widthWeight").toFloat(),
                 obj.optString("text", ""),
-                if (obj.has("action")) KeyAction.fromWireValue(obj.getString("action")) else KeyAction.TEXT
+                if (obj.has("action")) KeyAction.fromWireValue(obj.getString("action")) else KeyAction.TEXT,
+                TextBehavior.fromWireValue(obj.optString("textBehavior", "literal"))
             )
         }
     }
@@ -131,5 +134,16 @@ enum class KeyAction(val wireValue: String, val title: String, val keyLabel: Str
     companion object {
         fun fromWireValue(value: String): KeyAction = entries.firstOrNull { it.wireValue == value }
             ?: throw IllegalArgumentException("Unsupported key action: $value")
+    }
+}
+
+/** Missing fields in old layouts deliberately retain direct IPA entry. */
+enum class TextBehavior(val wireValue: String, val title: String) {
+    LITERAL("literal", "Direct text / IPA"),
+    AUTO("auto", "Mixed input (拼音 / English / ローマ字)");
+
+    companion object {
+        fun fromWireValue(value: String): TextBehavior = entries.firstOrNull { it.wireValue == value }
+            ?: throw IllegalArgumentException("Unsupported text behavior: $value")
     }
 }

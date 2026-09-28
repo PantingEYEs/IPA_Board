@@ -3,6 +3,7 @@
 
     <application
         android:allowBackup="true"
+        android:enableOnBackInvokedCallback="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -10,6 +11,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.IPA_Board">
+
+        <service android:name=".ime.RimeService" android:exported="false" android:process=":rime" />
+        <service android:name=".ime.MozcService" android:exported="false" android:process=":mozc" />
 
         <service
             android:name=".IpaBoardService"
