@@ -11,7 +11,7 @@ import android.widget.*
 
 /** IME-only chrome. Never passed to KeyboardRenderer or serialized with a layout. */
 class ImeChromeView(context: Context) : LinearLayout(context) {
-    enum class Panel { KEYBOARD, CANDIDATES, CLIPBOARD, PAGES }
+    enum class Panel { KEYBOARD, CANDIDATES, CLIPBOARD, PAGES, EMOJI }
     val keyboardHost = LinearLayout(context).apply { orientation = VERTICAL }
     private val body = FrameLayout(context)
     private val overlay = LinearLayout(context).apply { orientation = VERTICAL }

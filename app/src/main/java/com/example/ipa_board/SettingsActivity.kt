@@ -114,7 +114,9 @@ class SettingsActivity : Activity() {
         // 4. Action Buttons
         btnImport.setOnClickListener { startImport() }
         btnExport.setOnClickListener { startExport() }
+        findViewById<Button>(R.id.btn_rename_layout).setOnClickListener { showRenameLayoutDialog() }
         findViewById<Button>(R.id.btn_new_layout).setOnClickListener { showNewLayoutDialog() }
+        findViewById<Button>(R.id.btn_delete_layout).setOnClickListener { deleteCurrentLayout() }
         findViewById<Button>(R.id.btn_clear_layout).setOnClickListener { clearCurrentLayout() }
         findViewById<Button>(R.id.btn_undo_clear).setOnClickListener { undoClear() }
         btnEdit.setOnClickListener { 
@@ -201,6 +203,10 @@ class SettingsActivity : Activity() {
         val heightDp = prefs.getInt(KEY_KEYBOARD_HEIGHT, DEFAULT_KEYBOARD_HEIGHT)
         val layoutFile = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
 
+        findViewById<Button>(R.id.btn_delete_layout).apply {
+            isEnabled = !layoutFile.equals(DEFAULT_LAYOUT_FILENAME, ignoreCase = true)
+            setText(if (isEnabled) R.string.delete_layout else R.string.default_layout_protected)
+        }
         val density = resources.displayMetrics.density
         val heightPx = (heightDp * density).toInt()
 
@@ -213,6 +219,7 @@ class SettingsActivity : Activity() {
         previewContainer.setBackgroundColor(bgColor)
 
         val layout = LayoutFileManager.loadLayout(this, layoutFile) ?: SettingsConstants.DEFAULT_LAYOUT
+        findViewById<TextView>(R.id.tv_layout_name).text = getString(R.string.current_page_name, layout.name)
         if (clearedLayout?.filename != layoutFile) clearedLayout = null
         findViewById<Button>(R.id.btn_undo_clear).visibility = if (clearedLayout != null) View.VISIBLE else View.GONE
         KeyboardRenderer.render(this, previewContainer, layout, heightPx, symbolColor,
@@ -228,6 +235,10 @@ class SettingsActivity : Activity() {
         val slot = layout.rows[row].slots[column]
         val editorView = layoutInflater.inflate(R.layout.dialog_key_editor, null)
         val input = editorView.findViewById<EditText>(R.id.et_key_text)
+        val longPressTypes = editorView.findViewById<Spinner>(R.id.sp_long_press_type)
+        val longPressTextLabel = editorView.findViewById<TextView>(R.id.tv_long_press_text_label)
+        val longPressInput = editorView.findViewById<EditText>(R.id.et_long_press_text)
+        longPressInput.setText(slot.longPressText)
         val types = editorView.findViewById<Spinner>(R.id.sp_key_type)
         val behavior = editorView.findViewById<Spinner>(R.id.sp_text_behavior)
         behavior.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, TextBehavior.entries.map { it.title })
@@ -240,6 +251,10 @@ class SettingsActivity : Activity() {
         types.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, actions.map { it.title }).apply {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
+        longPressTypes.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, actions.map { it.title }).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        longPressTypes.setSelection(actions.indexOf(slot.longPressAction))
         fun updateEditor() {
             val action = actions[types.selectedItemPosition]
             input.visibility = if (action == KeyAction.TEXT) View.VISIBLE else View.GONE
@@ -247,12 +262,23 @@ class SettingsActivity : Activity() {
             help.text = action.help
             error.visibility = View.GONE
         }
+        fun updateLongPressEditor() {
+            val lpAction = actions[longPressTypes.selectedItemPosition]
+            val isText = lpAction == KeyAction.TEXT
+            longPressTextLabel.visibility = if (isText) View.VISIBLE else View.GONE
+            longPressInput.visibility = if (isText) View.VISIBLE else View.GONE
+        }
         types.setSelection(actions.indexOf(slot.action))
         types.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = updateEditor()
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
+        longPressTypes.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = updateLongPressEditor()
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
         updateEditor()
+        updateLongPressEditor()
         val dialog = AlertDialog.Builder(this)
             .setTitle("Row ${row + 1} · Key ${column + 1}")
             .setMessage(R.string.key_edit_message)
@@ -265,7 +291,12 @@ class SettingsActivity : Activity() {
                 try {
                     val action = actions[types.selectedItemPosition]
                     val text = if (action == KeyAction.TEXT) input.text.toString() else ""
-                    LayoutFileManager.saveLayout(this, filename, layout.withKeyMapping(row, column, text, action, TextBehavior.entries[behavior.selectedItemPosition]))
+                    val lpAction = actions[longPressTypes.selectedItemPosition]
+                    val lpText = if (lpAction == KeyAction.TEXT) longPressInput.text.toString() else ""
+                    LayoutFileManager.saveLayout(
+                        this, filename,
+                        layout.withKeyMapping(row, column, text, action, TextBehavior.entries[behavior.selectedItemPosition], longPressText = lpText, longPressAction = lpAction)
+                    )
                     clearedLayout = null
                     refreshPreview()
                     dialog.dismiss()
@@ -305,6 +336,56 @@ class SettingsActivity : Activity() {
             }
         }
         dialog.show()
+    }
+
+    private fun showRenameLayoutDialog() {
+        val filename = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
+        val layout = LayoutFileManager.loadLayout(this, filename) ?: return
+        val content = layoutInflater.inflate(R.layout.dialog_new_layout, null)
+        val nameInput = content.findViewById<EditText>(R.id.et_layout_name)
+        nameInput.setText(layout.name)
+        nameInput.selectAll()
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.rename_layout)
+            .setMessage(R.string.rename_layout_message)
+            .setView(content)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Save", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                try {
+                    LayoutFileManager.renameLayout(this, filename, nameInput.text.toString())
+                    clearedLayout = null
+                    refreshPreview()
+                    dialog.dismiss()
+                } catch (e: Exception) {
+                    nameInput.error = e.message
+                }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun deleteCurrentLayout() {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val filename = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
+        if (filename.equals(DEFAULT_LAYOUT_FILENAME, ignoreCase = true)) return
+        AlertDialog.Builder(this)
+            .setTitle(R.string.delete_layout_title)
+            .setMessage(getString(R.string.delete_layout_message, filename))
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton(R.string.delete_layout_confirm) { _, _ ->
+                if (LayoutFileManager.deleteLayout(this, filename)) {
+                    clearedLayout = null
+                    updateLayoutSpinner()
+                    refreshPreview()
+                    Toast.makeText(this, R.string.delete_layout_success, Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, R.string.delete_layout_failed, Toast.LENGTH_LONG).show()
+                }
+            }.show()
     }
 
     private fun clearCurrentLayout() {
@@ -398,7 +479,7 @@ class SettingsActivity : Activity() {
                 val config = JSONObject(String(bytes, Charsets.UTF_8))
                 val layout = KeyboardLayout.fromJson((config.optJSONObject("layout") ?: config).toString())
                 val appearance = config.optJSONObject("appearance")
-                if (config.has("version")) require(config.getInt("version") in 1..3) { "Unsupported configuration version" }
+                if (config.has("version")) require(config.getInt("version") in 1..4) { "Unsupported configuration version" }
                 val bg = appearance?.getString("backgroundColor")
                 val symbol = appearance?.getString("symbolColor")
                 val height = appearance?.getInt("heightDp")
@@ -446,7 +527,7 @@ class SettingsActivity : Activity() {
         val layout = LayoutFileManager.loadLayout(this, filename)
         if (layout != null) {
             pendingExport = JSONObject().apply {
-                put("version", 3)
+                put("version", 4)
                 put("layout", JSONObject(layout.toJson()))
                 put("appearance", JSONObject().apply {
                     put("backgroundColor", prefs.getString(KEY_BG_COLOR_HEX, DEFAULT_BG_COLOR_HEX))

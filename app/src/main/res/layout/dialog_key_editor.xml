@@ -42,6 +42,35 @@
             android:hint="@string/key_text_hint" />
 
         <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:labelFor="@id/sp_long_press_type"
+            android:text="@string/long_press_type" />
+
+        <Spinner
+            android:id="@+id/sp_long_press_type"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+
+        <TextView
+            android:id="@+id/tv_long_press_text_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:labelFor="@id/et_long_press_text"
+            android:text="@string/long_press_text_label" />
+
+        <EditText
+            android:id="@+id/et_long_press_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:inputType="textMultiLine|textNoSuggestions"
+            android:maxLength="1000"
+            android:hint="@string/long_press_text_hint" />
+
+        <TextView
             android:id="@+id/tv_key_error"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

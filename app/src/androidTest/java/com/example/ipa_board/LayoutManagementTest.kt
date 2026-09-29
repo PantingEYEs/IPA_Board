@@ -25,6 +25,59 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class LayoutManagementTest {
+    @Test fun renamePageValidatesAndPersistsWithoutChangingMappingsOrActiveFile() {
+        LayoutFixture().use { fixture ->
+            val original = KeyboardLayout("Before", listOf(RowLayout(1f, listOf(KeySlot(1f, "a", longPressText = "ɑ")))))
+            val filename = fixture.create(original)
+            fixture.select(filename)
+            ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+                onView(withId(R.id.btn_rename_layout)).perform(scrollTo(), click())
+                onView(withId(R.id.et_layout_name)).check(matches(withText("Before")))
+                onView(withId(R.id.et_layout_name)).perform(replaceText("Cancelled"), closeSoftKeyboard())
+                onView(withText("Cancel")).perform(click())
+                assertEquals(original, LayoutFileManager.loadLayout(fixture.context, filename))
+                onView(withId(R.id.btn_rename_layout)).perform(scrollTo(), click())
+                onView(withId(R.id.et_layout_name)).perform(replaceText("   "), closeSoftKeyboard())
+                onView(withText("Save")).perform(click())
+                onView(withId(R.id.et_layout_name)).check(matches(isDisplayed()))
+                assertEquals(original, LayoutFileManager.loadLayout(fixture.context, filename))
+                onView(withId(R.id.et_layout_name)).perform(replaceText("  IPA renamed  "), closeSoftKeyboard())
+                onView(withText("Save")).perform(click())
+                assertEquals(original.copy(name = "IPA renamed"), LayoutFileManager.loadLayout(fixture.context, filename))
+                assertEquals(filename, fixture.activeFilename())
+                onView(withId(R.id.tv_layout_name)).check(matches(withText("Page: IPA renamed")))
+                scenario.recreate()
+                onView(withId(R.id.tv_layout_name)).check(matches(withText("Page: IPA renamed")))
+                assertEquals(filename, fixture.activeFilename())
+            }
+        }
+    }
+
+    @Test fun deletingActiveLayoutCanBeCancelledAndFallsBackToProtectedDefault() {
+        LayoutFixture().use { fixture ->
+            val filename = fixture.create(SettingsConstants.DEFAULT_LAYOUT)
+            fixture.select(filename)
+            ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+                onView(withId(R.id.btn_delete_layout)).perform(scrollTo(), click())
+                onView(withText("Cancel")).perform(click())
+                assertEquals(filename, fixture.activeFilename())
+                assertNotNull(LayoutFileManager.loadLayout(fixture.context, filename))
+                onView(withId(R.id.btn_delete_layout)).perform(scrollTo(), click())
+                onView(withText("Delete")).perform(click())
+                assertNull(LayoutFileManager.loadLayout(fixture.context, filename))
+                assertFalse(LayoutFileManager.listLayoutFiles(fixture.context).contains(filename))
+                assertEquals(SettingsConstants.DEFAULT_LAYOUT_FILENAME, fixture.activeFilename())
+                onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(SettingsConstants.DEFAULT_LAYOUT_FILENAME)))
+                scenario.onActivity { activity ->
+                    assertFalse(activity.findViewById<android.widget.Button>(R.id.btn_delete_layout).isEnabled)
+                }
+                scenario.recreate()
+                assertEquals(SettingsConstants.DEFAULT_LAYOUT_FILENAME, fixture.activeFilename())
+                assertFalse(LayoutFileManager.deleteLayout(fixture.context, SettingsConstants.DEFAULT_LAYOUT_FILENAME))
+            }
+        }
+    }
+
     @Test fun importWithoutSourceMetadataUsesLayoutNameAndActivatesImportedConfiguration() {
         LayoutFixture().use { fixture ->
             val originalFilename = fixture.create(SettingsConstants.DEFAULT_LAYOUT)

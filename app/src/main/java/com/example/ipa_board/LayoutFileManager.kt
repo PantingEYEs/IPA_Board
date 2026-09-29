@@ -83,6 +83,13 @@ object LayoutFileManager {
         return createLayout(context, layoutName, DEFAULT_LAYOUT.copy(name = layoutName))
     }
 
+    fun renameLayout(context: Context, filename: String, name: String) {
+        val trimmed = name.trim()
+        require(trimmed.isNotEmpty() && trimmed.length <= 80) { "Enter a name of 1–80 characters" }
+        val layout = requireNotNull(loadLayout(context, filename)) { "Unable to read layout" }
+        saveLayout(context, filename, layout.copy(name = trimmed))
+    }
+
     fun initDefaultLayout(context: Context) {
         val mixedFile = layoutFile(context, com.example.ipa_board.ime.BuiltinLayouts.MIXED_ID)
         val settings = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
@@ -131,8 +138,19 @@ object LayoutFileManager {
     fun deleteLayout(context: Context, filename: String): Boolean {
         if (filename.equals(DEFAULT_LAYOUT_FILENAME, ignoreCase = true)) return false // Prevent deleting default
         return try {
-            layoutFile(context, filename).delete()
-        } catch (_: IllegalArgumentException) {
+            val file = layoutFile(context, filename)
+            val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+            val isActive = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) == filename
+            if (isActive) initDefaultLayout(context)
+            if (!file.delete()) return false
+            // Remove any AtomicFile recovery files so a deleted layout cannot reappear.
+            android.util.AtomicFile(file).delete()
+            prefs.edit().apply {
+                if (isActive) putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME)
+                putLong(SettingsConstants.KEY_LAYOUT_REVISION, prefs.getLong(SettingsConstants.KEY_LAYOUT_REVISION, 0) + 1)
+            }.apply()
+            true
+        } catch (_: Exception) {
             false
         }
     }

@@ -9,22 +9,42 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import java.util.Locale
 
+enum class ShiftState {
+    OFF,
+    SINGLE,
+    CAPS_LOCK
+}
+
 /** Executes mappings without keeping modifier state in the receiving application. */
 class KeyboardInputController {
-    var shiftEnabled: Boolean = false
+    var shiftState: ShiftState = ShiftState.OFF
         private set
+    val shiftEnabled: Boolean
+        get() = shiftState != ShiftState.OFF
     var ctrlEnabled: Boolean = false
         private set
 
     fun reset() {
-        shiftEnabled = false
+        shiftState = ShiftState.OFF
         ctrlEnabled = false
+    }
+
+    fun consumeSingleShift(): Boolean {
+        if (shiftState == ShiftState.SINGLE) {
+            shiftState = ShiftState.OFF
+            return true
+        }
+        return false
     }
 
     fun handle(slot: KeySlot, connection: InputConnection?, editorInfo: EditorInfo?): Boolean {
         when (slot.action) {
             KeyAction.SHIFT -> {
-                shiftEnabled = !shiftEnabled
+                shiftState = when (shiftState) {
+                    ShiftState.OFF -> ShiftState.SINGLE
+                    ShiftState.SINGLE -> ShiftState.CAPS_LOCK
+                    ShiftState.CAPS_LOCK -> ShiftState.OFF
+                }
                 return true
             }
             KeyAction.CTRL -> {
@@ -40,7 +60,7 @@ class KeyboardInputController {
         connection ?: return false
         val metaState = (if (shiftEnabled) KeyEvent.META_SHIFT_ON else 0) or
             (if (useCtrl) KeyEvent.META_CTRL_ON else 0)
-        return when (slot.action) {
+        val handled = when (slot.action) {
             KeyAction.TEXT -> if (useCtrl) {
                 sendShortcut(connection, slot.text, metaState)
             } else {
@@ -48,7 +68,7 @@ class KeyboardInputController {
                     if (shiftEnabled) slot.text.uppercase(Locale.ROOT) else slot.text, 1
                 )
             }
-            KeyAction.BACKSPACE -> if (useCtrl) {
+            KeyAction.BACKSPACE, KeyAction.REPEAT_BACKSPACE -> if (useCtrl) {
                 sendKey(connection, KeyEvent.KEYCODE_DEL, metaState)
             } else {
                 backspace(connection)
@@ -61,8 +81,13 @@ class KeyboardInputController {
             KeyAction.END -> sendKey(connection, KeyEvent.KEYCODE_MOVE_END, metaState)
             KeyAction.TAB -> sendKey(connection, KeyEvent.KEYCODE_TAB, metaState)
             KeyAction.ENTER -> enter(connection, editorInfo, metaState)
-            KeyAction.SHIFT, KeyAction.CTRL -> true
+            KeyAction.EMOJI -> false // Panel actions are handled by IpaBoardService.
+            else -> true
         }
+        if (handled && (slot.action == KeyAction.TEXT) && slot.text.isNotEmpty()) {
+            consumeSingleShift()
+        }
+        return handled
     }
 
     private fun sendShortcut(connection: InputConnection, text: String, metaState: Int): Boolean {

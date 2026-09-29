@@ -32,6 +32,7 @@ class KeyboardConfigurationTest {
         val actions = listOf(
             KeyAction.TEXT to "text",
             KeyAction.BACKSPACE to "backspace",
+            KeyAction.REPEAT_BACKSPACE to "repeat_backspace",
             KeyAction.LEFT to "left",
             KeyAction.RIGHT to "right",
             KeyAction.UP to "up",

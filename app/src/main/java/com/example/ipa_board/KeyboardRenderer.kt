@@ -14,6 +14,8 @@ object KeyboardRenderer {
         shiftEnabled: Boolean = false,
         ctrlEnabled: Boolean = false,
         showUnassignedPlaceholders: Boolean = false,
+        showKeyPreview: Boolean = false,
+        onKeyLongClick: ((Int, Int, KeySlot) -> Unit)? = null,
         onKeyClick: ((Int, Int, KeySlot) -> Unit)? = null
     ) {
         container.removeAllViews()
@@ -40,6 +42,21 @@ object KeyboardRenderer {
                     (slot.action == KeyAction.CTRL && ctrlEnabled)
                 val slotView = FrameLayoutWithBorder(context, symbolColor, active).apply {
                     isSelected = active
+                    previewEnabled = showKeyPreview
+                    tapPreview = when {
+                        slot.action != KeyAction.TEXT -> slot.action.keyLabel
+                        slot.text == " " -> "␣"
+                        slot.text == "\n" -> "↵"
+                        slot.text == "\t" -> "⇥"
+                        else -> slot.displayText(shiftEnabled)
+                    }.let { if (ctrlEnabled && slot.action == KeyAction.TEXT) "Ctrl+$it" else it }
+                    holdPreview = when {
+                        slot.longPressAction != KeyAction.TEXT -> slot.longPressAction.keyLabel
+                        slot.longPressText == " " -> "␣"
+                        slot.longPressText == "\n" -> "↵"
+                        slot.longPressText == "\t" -> "⇥"
+                        else -> slot.longPressText
+                    }.let { if (ctrlEnabled && slot.longPressAction == KeyAction.TEXT && slot.longPressText.isNotEmpty()) "Ctrl+$it" else it }
                     layoutParams = LinearLayout.LayoutParams(
                         0,
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -67,7 +84,33 @@ object KeyboardRenderer {
                     slotView.isFocusable = true
                     slotView.setOnClickListener { onKeyClick(rowIndex, columnIndex, slot) }
                 }
+                if (onKeyLongClick != null && slot.hasLongPress) {
+                    slotView.setOnLongClickListener {
+                        onKeyLongClick(rowIndex, columnIndex, slot)
+                        true
+                    }
+                }
+                if (slot.longPressAction == KeyAction.REPEAT_BACKSPACE || slot.action == KeyAction.REPEAT_BACKSPACE) {
+                    slotView.onLongPressRepeat = {
+                        onKeyLongClick?.invoke(rowIndex, columnIndex, slot)
+                    }
+                }
                 slotView.addView(textView)
+                if (slot.hasLongPress) {
+                    val longPressLabel = if (slot.longPressAction != KeyAction.TEXT) slot.longPressAction.keyLabel else slot.longPressText
+                    val longPressDesc = if (slot.longPressAction != KeyAction.TEXT) slot.longPressAction.title else slot.longPressText
+                    slotView.contentDescription = "${slotView.contentDescription}, long press: $longPressDesc"
+                    slotView.addView(TextView(context).apply {
+                        text = longPressLabel
+                        textSize = 10f
+                        setTextColor(symbolColor)
+                        maxLines = 1
+                        gravity = Gravity.END
+                        setPadding(2, 0, 4, 0)
+                    }, android.widget.FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END
+                    ))
+                }
                 rowView.addView(slotView)
             }
             
@@ -75,7 +118,7 @@ object KeyboardRenderer {
         }
     }
 
-    private class FrameLayoutWithBorder(context: Context, symbolColor: Int, active: Boolean) : android.widget.FrameLayout(context) {
+    private class FrameLayoutWithBorder(context: Context, symbolColor: Int, active: Boolean) : KeyPreviewFrameLayout(context) {
         init {
             val border = GradientDrawable().apply {
                 setColor(if (active) Color.argb(65, Color.red(symbolColor), Color.green(symbolColor), Color.blue(symbolColor)) else Color.TRANSPARENT)

@@ -28,21 +28,41 @@ class KeyboardInputControllerTest {
         }
     }
 
-    @Test fun shiftTogglesStickyUnicodeUppercaseIndependentOfSystemLocale() = withRecordingConnection { controller, connection ->
+    @Test fun singleShiftCapitalizesOneKeyAndTurnsOff() = withRecordingConnection { controller, connection ->
         val previousLocale = Locale.getDefault()
         try {
             Locale.setDefault(Locale.forLanguageTag("tr"))
+            assertEquals(ShiftState.OFF, controller.shiftState)
             assertTrue(controller.handle(key(KeyAction.SHIFT), connection, null))
-            controller.handle(text("iɐß"), connection, null)
-            controller.handle(text("a"), connection, null)
-            assertEquals(listOf("IⱯSS", "A"), connection.committed)
+            assertEquals(ShiftState.SINGLE, controller.shiftState)
             assertTrue(controller.shiftEnabled)
-            controller.handle(key(KeyAction.SHIFT), connection, null)
-            controller.handle(text("b"), connection, null)
-            assertEquals("b", connection.committed.last())
+            controller.handle(text("iɐß"), connection, null)
+            assertEquals("IⱯSS", connection.committed.last())
+            assertEquals(ShiftState.OFF, controller.shiftState)
+            assertFalse(controller.shiftEnabled)
+            controller.handle(text("a"), connection, null)
+            assertEquals("a", connection.committed.last())
         } finally {
             Locale.setDefault(previousLocale)
         }
+    }
+
+    @Test fun doubleShiftActivatesCapsLockUntilTappedThirdTime() = withRecordingConnection { controller, connection ->
+        assertTrue(controller.handle(key(KeyAction.SHIFT), connection, null))
+        assertEquals(ShiftState.SINGLE, controller.shiftState)
+        assertTrue(controller.handle(key(KeyAction.SHIFT), connection, null))
+        assertEquals(ShiftState.CAPS_LOCK, controller.shiftState)
+        assertTrue(controller.shiftEnabled)
+        controller.handle(text("iɐß"), connection, null)
+        controller.handle(text("a"), connection, null)
+        assertEquals(listOf("IⱯSS", "A"), connection.committed)
+        assertEquals(ShiftState.CAPS_LOCK, controller.shiftState)
+        assertTrue(controller.shiftEnabled)
+        controller.handle(key(KeyAction.SHIFT), connection, null)
+        assertEquals(ShiftState.OFF, controller.shiftState)
+        assertFalse(controller.shiftEnabled)
+        controller.handle(text("b"), connection, null)
+        assertEquals("b", connection.committed.last())
     }
 
     @Test fun ctrlUsesCommonEditorActionsAndOnlyAppliesToOneKey() = withRecordingConnection { controller, connection ->
@@ -109,6 +129,7 @@ class KeyboardInputControllerTest {
             KeyAction.RIGHT to KeyEvent.KEYCODE_DPAD_RIGHT, KeyAction.UP to KeyEvent.KEYCODE_DPAD_UP,
             KeyAction.DOWN to KeyEvent.KEYCODE_DPAD_DOWN, KeyAction.HOME to KeyEvent.KEYCODE_MOVE_HOME,
             KeyAction.END to KeyEvent.KEYCODE_MOVE_END, KeyAction.TAB to KeyEvent.KEYCODE_TAB)
+        controller.handle(key(KeyAction.SHIFT), connection, null)
         controller.handle(key(KeyAction.SHIFT), connection, null)
         for ((action, code) in mappings) {
             connection.events.clear()
@@ -181,6 +202,21 @@ class KeyboardInputControllerTest {
         assertKeyPair(connection.events, KeyEvent.KEYCODE_DEL, KeyEvent.META_CTRL_ON)
         assertTrue(connection.codePointDeletions.isEmpty())
         assertTrue(connection.surroundingDeletions.isEmpty())
+    }
+
+    @Test fun repeatBackspaceDeletesCharactersLikeBackspace() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val editor = EditText(instrumentation.targetContext)
+            editor.inputType = InputType.TYPE_CLASS_TEXT
+            val info = EditorInfo()
+            val connection = requireNotNull(editor.onCreateInputConnection(info))
+            val controller = KeyboardInputController()
+            editor.setText("hello")
+            editor.setSelection(5)
+            assertTrue(controller.handle(key(KeyAction.REPEAT_BACKSPACE), connection, info))
+            assertEquals("hell", editor.text.toString())
+        }
     }
 
     @Test fun enterHonorsEditorActionAndMultilineNewline() = withRecordingConnection { controller, connection ->

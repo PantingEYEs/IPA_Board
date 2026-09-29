@@ -12,6 +12,7 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.*
 import com.example.ipa_board.ime.*
+import com.example.ipa_board.emoji.*
 import com.example.ipa_board.SettingsConstants.PREFS_NAME
 import com.example.ipa_board.SettingsConstants.KEY_LAYOUT_REVISION
 import com.example.ipa_board.SettingsConstants.KEY_BG_COLOR_HEX
@@ -31,6 +32,11 @@ class IpaBoardService : InputMethodService() {
     private val inputController = KeyboardInputController()
     private lateinit var engines: EngineCoordinator
     private lateinit var composition: CompositionController
+    private val emojiRepository by lazy { EmojiCatalogRepository(BundledEmojiCatalogSource(this)) }
+    private val emojiExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
+    private val emojiHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var emojiRequest = 0L
+    private var emojiClosed = false
     private var engineStatus = "加载词库"
     private var directOnly = false
     private var consumedPanelBack = false
@@ -44,6 +50,7 @@ class IpaBoardService : InputMethodService() {
         if (key in setOf(KEY_LAYOUT_REVISION, KEY_BG_COLOR_HEX, KEY_ACTIVE_LAYOUT_FILE, KEY_KEYBOARD_HEIGHT, KEY_SYMBOL_COLOR_HEX)) {
             if (key == KEY_ACTIVE_LAYOUT_FILE || key == KEY_LAYOUT_REVISION) inputController.reset()
             applySettings()
+            if (key == KEY_LAYOUT_REVISION && chrome?.panel == ImeChromeView.Panel.PAGES) showPages()
         }
     }
     override fun onCreate() {
@@ -68,6 +75,7 @@ class IpaBoardService : InputMethodService() {
                 when (panel) {
                     ImeChromeView.Panel.CLIPBOARD -> showClipboard()
                     ImeChromeView.Panel.PAGES -> showPages()
+                    ImeChromeView.Panel.EMOJI -> showEmoji()
                     else -> Unit
                 }
             }
@@ -89,10 +97,37 @@ class IpaBoardService : InputMethodService() {
         val filename = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
         val layout = LayoutFileManager.loadLayout(this, filename) ?: DEFAULT_LAYOUT
         KeyboardRenderer.render(this, view.keyboardHost, layout, height, color(KEY_SYMBOL_COLOR_HEX, DEFAULT_SYMBOL_COLOR_HEX),
-            inputController.shiftEnabled, inputController.ctrlEnabled) { _, _, slot -> handleKey(slot) }
+            inputController.shiftEnabled, inputController.ctrlEnabled,
+            showKeyPreview = true,
+            onKeyLongClick = { _, _, slot -> handleLongPress(slot) }) { _, _, slot -> handleKey(slot) }
     }
+    private fun handleLongPress(slot: KeySlot) {
+        if (!slot.hasLongPress) return
+        if (slot.longPressAction == KeyAction.TEXT && slot.longPressText.isNotEmpty()) {
+            val ic = currentInputConnection ?: return
+            if (!composition.literal()) return
+            if (ic.commitText(slot.longPressText, 1)) {
+                if (inputController.consumeSingleShift()) applySettings()
+            }
+        } else {
+            val action = if (slot.longPressAction != KeyAction.TEXT) slot.longPressAction else slot.action
+            val longPressSlot = KeySlot(
+                widthWeight = slot.widthWeight,
+                text = "",
+                action = action,
+                textBehavior = slot.textBehavior
+            )
+            handleKey(longPressSlot)
+        }
+    }
+
     private fun handleKey(slot: KeySlot) {
+        if (slot.action == KeyAction.EMOJI) {
+            chrome?.showPanel(ImeChromeView.Panel.EMOJI)
+            return
+        }
         val ic = currentInputConnection ?: return
+        val beforeShiftState = inputController.shiftState
         val beforeShift = inputController.shiftEnabled
         val beforeCtrl = inputController.ctrlEnabled
         val isModifier = slot.action == KeyAction.SHIFT || slot.action == KeyAction.CTRL
@@ -100,17 +135,58 @@ class IpaBoardService : InputMethodService() {
         if (!beforeCtrl && slot.action == KeyAction.TEXT && text.isEmpty()) return
         if (!directOnly && !beforeCtrl && !isModifier) {
             when {
-                slot.action == KeyAction.BACKSPACE && composition.backspace() -> return
-                slot.action == KeyAction.ENTER && composition.raw.isNotEmpty() -> { composition.literal(); return }
-                slot.action == KeyAction.TEXT && text == " " && composition.space() -> return
+                (slot.action == KeyAction.BACKSPACE || slot.action == KeyAction.REPEAT_BACKSPACE) && composition.backspace() -> {
+                    if (inputController.consumeSingleShift()) applySettings()
+                    return
+                }
+                slot.action == KeyAction.ENTER && composition.raw.isNotEmpty() -> {
+                    composition.literal()
+                    if (inputController.consumeSingleShift()) applySettings()
+                    return
+                }
+                slot.action == KeyAction.TEXT && text == " " && composition.space() -> {
+                    if (inputController.consumeSingleShift()) applySettings()
+                    return
+                }
                 slot.action == KeyAction.TEXT && slot.textBehavior == TextBehavior.AUTO && text.isNotEmpty() &&
-                    text.all { it in 'a'..'z' || it in 'A'..'Z' || it == '\'' } -> { composition.input(text); return }
+                    text.all { it in 'a'..'z' || it in 'A'..'Z' || it == '\'' } -> {
+                    composition.input(text)
+                    if (inputController.consumeSingleShift()) applySettings()
+                    return
+                }
             }
         }
         if (!isModifier && !composition.literal()) return
         if (!inputController.handle(slot, ic, currentInputEditorInfo)) Toast.makeText(this, R.string.unsupported_shortcut, Toast.LENGTH_SHORT).show()
-        if (beforeShift != inputController.shiftEnabled || beforeCtrl != inputController.ctrlEnabled) applySettings()
+        if (beforeShiftState != inputController.shiftState || beforeCtrl != inputController.ctrlEnabled) applySettings()
     }
+    private fun showEmoji() {
+        val view = chrome ?: return
+        val request = ++emojiRequest
+        view.showContent("Emoji", TextView(this).apply {
+            setText(R.string.emoji_loading)
+            setTextColor(Color.WHITE)
+            gravity = android.view.Gravity.CENTER
+        })
+        emojiExecutor.execute {
+            val result = runCatching { emojiRepository.load() }
+            emojiHandler.post {
+                if (emojiClosed || request != emojiRequest || chrome !== view || view.panel != ImeChromeView.Panel.EMOJI) return@post
+                result.fold(onSuccess = { catalog ->
+                    view.showContent("Emoji ${catalog.version} · ${catalog.entries.size}", EmojiPickerView(this, catalog) { entry ->
+                        // Commit any pending composition first. Emoji bypass Shift/Ctrl and language conversion.
+                        if (composition.literal()) currentInputConnection?.commitText(entry.text, 1)
+                    })
+                }, onFailure = {
+                    view.showContent("Emoji", Button(this).apply {
+                        setText(R.string.emoji_retry)
+                        setOnClickListener { showEmoji() }
+                    })
+                })
+            }
+        }
+    }
+
     private fun showClipboard() {
         val view = chrome ?: return
         val clip = try { clipboard.primaryClip } catch (_: SecurityException) { null }
@@ -197,6 +273,10 @@ class IpaBoardService : InputMethodService() {
     }
     override fun onFinishInput() { composition.finish(); inputController.reset(); super.onFinishInput() }
     override fun onDestroy() {
+        emojiClosed = true
+        emojiRequest++
+        emojiExecutor.shutdownNow()
+        emojiHandler.removeCallbacksAndMessages(null)
         clipboard.removePrimaryClipChangedListener(clipboardListener)
         updatePanelBack(false)
         engines.close(); prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)

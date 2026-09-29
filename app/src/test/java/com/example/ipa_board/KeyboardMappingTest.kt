@@ -4,6 +4,43 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class KeyboardMappingTest {
+    @Test fun longPressEditingPreservesOtherMappingsAndClearRemovesBoth() {
+        val original = KeyboardLayout("Long press", listOf(RowLayout(1f, listOf(
+            KeySlot(1f, "a"), KeySlot(2f, action = KeyAction.BACKSPACE)
+        ))))
+        val edited = original.withKeyMapping(0, 1, "", KeyAction.BACKSPACE, longPressText = "t͡ʃ😀")
+        assertEquals(original.rows[0].slots[0], edited.rows[0].slots[0])
+        assertEquals(KeyAction.BACKSPACE, edited.rows[0].slots[1].action)
+        assertEquals("t͡ʃ😀", edited.rows[0].slots[1].longPressText)
+        assertEquals("t͡ʃ😀", edited.withKeyText(0, 1, "b").rows[0].slots[1].longPressText)
+        assertTrue(edited.cleared().rows[0].slots.all { it.longPressText.isEmpty() && it.text.isEmpty() && it.longPressAction == KeyAction.TEXT })
+        assertEquals("", original.rows[0].slots[1].longPressText)
+    }
+
+    @Test fun longPressFunctionKeyActionBinding() {
+        val slotWithFunctionLongPress = KeySlot(
+            widthWeight = 1f,
+            text = "a",
+            action = KeyAction.TEXT,
+            longPressAction = KeyAction.BACKSPACE
+        )
+        assertTrue(slotWithFunctionLongPress.hasLongPress)
+        assertEquals(KeyAction.BACKSPACE, slotWithFunctionLongPress.longPressAction)
+
+        val layout = KeyboardLayout("TestLP", listOf(RowLayout(1f, listOf(slotWithFunctionLongPress))))
+        val edited = layout.withKeyMapping(0, 0, "a", KeyAction.TEXT, longPressAction = KeyAction.ENTER)
+        assertEquals(KeyAction.ENTER, edited.rows[0].slots[0].longPressAction)
+
+        val clearedLayout = edited.cleared()
+        assertEquals(KeyAction.TEXT, clearedLayout.rows[0].slots[0].longPressAction)
+        assertFalse(clearedLayout.rows[0].slots[0].hasLongPress)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun rejectsOversizedLongPressMapping() {
+        KeyboardLayout("invalid", listOf(RowLayout(1f, listOf(KeySlot(1f, longPressText = "x".repeat(1001))))))
+    }
+
     @Test fun editsOnlySelectedKeyAndCanClearMapping() {
         val original = KeyboardLayout("IPA", listOf(
             RowLayout(2f, listOf(KeySlot(3f, "a"), KeySlot(1f, "b"))),

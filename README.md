@@ -7,7 +7,8 @@ Android 音标键盘原型，使用 Kotlin 和原生 View，最低 API 35。
 1. 安装应用，在 Android 系统设置中启用 IPA Board 并选择为输入法。
 2. 打开 IPA Board 应用，点击页面中部偏上的键盘预览中的任意按键。
 3. 在编辑对话框的 Key type 中选择 Text 或所需功能键。Text 支持多字符、组合音标、空格和换行；清空后保存即取消映射。功能键自动显示对应标签。保存后立即同步到输入法。
-4. 在其他应用的文本框中点击对应按键，即可输入文本或执行功能。
+   在 Long-press symbols / text 中填写长按时输入的内容（功能键也可设置）。留空禁用长按；长按直接输入完整文本，不触发短按功能，不应用 Shift/Ctrl 或混合输入转换。若有待确认编码，会先原样上屏。键帽右上角显示长按内容。
+4. 在其他应用的文本框中按下按键，上方显示白底黑字预览；达到长按时长后切换为长按内容，松手才输入。滑出按键或取消触摸会取消输入并隐藏预览。
 5. 点击 Export，在系统文件选择器中保存 JSON 配置，默认沿用当前布局的文件名。点击 Import 可恢复配置，导入成功后自动启用。
 
 默认键位尚未分配字符，仅在应用内预览中显示 ∅ 以便编辑，实际输入法中的未配置键不显示文字。如果手动将按键映射为字符 `∅`，实际键盘仍会显示并输入该字符。可粘贴字符来配置，也可从系统输入法切换入口切换到其他键盘输入。应用内编辑对话框点击保存后生效，取消不改变映射。
@@ -28,8 +29,16 @@ IME 顶部新增固定多功能栏和候选词栏，它们位于按键布局之�
 ## 布局管理
 
 - 点击 New Layout，在 New Blank Layout 对话框中输入名称后点击 Create，创建并自动启用一个空白布局文件。新布局使用默认的行列和按键尺寸，所有按键均未分配字符或功能；已有布局不受影响。
-- 点击 Clear Keys，一键清空当前布局的所有字符和功能键映射，并立即保存、同步到输入法。布局名称、行数、行高与按键宽度保持不变。保持当前布局且尚未进行其他编辑时，可点击 Undo Clear 恢复清空前的配置；切换布局后撤销入口消失。
+- 点击 Rename Keyboard Page 修改当前键盘页名称；键盘页总览与导出配置会使用新名称，文件名和按键映射保持不变。
+- 点击 Delete Active Layout File，确认后删除当前文件并自动启用默认布局；默认布局不可删除。
+- 点击 Clear Keys，一键清空当前布局的所有短按、长按字符和功能键映射，并立即保存、同步到输入法。布局名称、行数、行高与按键宽度保持不变。保持当前布局且尚未进行其他编辑时，可点击 Undo Clear 恢复清空前的配置；切换布局后撤销入口消失。
 - 导入优先保留系统文件提供的文件名（`DISPLAY_NAME`）；无法取得文件名时使用配置内的布局名称，并补上 `.json` 扩展名。与已有文件重名时依次添加 ` (2)`、` (3)` 等后缀，例如 `My IPA (2).json`，不会覆盖原文件。新建布局也使用相同的重名处理方式。
+
+## Emoji 面板
+
+在 app 中点击任意预览按键，将 Key type 设置为 **Emoji** 并保存。输入时点击该键，会打开覆盖键盘区域的 Emoji 面板；上下滑动浏览，可按类别筛选。点击 Emoji 直接输入，面板保持打开以便连续输入；点击 Return 或系统返回键回到键盘。
+
+内置 Unicode Emoji 18.0 全部 3,972 项标准 Emoji 和组件，离线可用，包含肤色、性别、组合表情和旗帜。Android 字体尚不支持的新 Emoji 会显示名称，点击仍输入完整字符序列。已预留版本元数据、数据源接口和缓存刷新接口，更新按钮与下载功能以后再做，详见 [Emoji 数据与更新接口](docs/emoji-catalog.md)。
 
 ## 功能键
 
@@ -37,6 +46,7 @@ IME 顶部新增固定多功能栏和候选词栏，它们位于按键布局之�
 
 | Key type | 功能 |
 | --- | --- |
+| Emoji | 打开可上下滚动的 Emoji 面板。 |
 | Backspace | 删除选中文本或光标前的字符。 |
 | Arrow Left / Right / Up / Down | 移动光标，启用 Shift 后扩展选区。 |
 | Shift / Uppercase | 开关大写和 Shift 导航。启用后文本键显示并输入大写；再次点击或结束当前输入时关闭。 |
@@ -49,11 +59,11 @@ IME 顶部新增固定多功能栏和候选词栏，它们位于按键布局之�
 
 ## 配置
 
-导出配置含 `version: 3`、`layout` 和 `appearance`。布局包含名称、各行的 `heightWeight`、各键的 `widthWeight`、`text`、`action` 与 `textBehavior`；外观包含 `backgroundColor`、`symbolColor` 与 `heightDp`。不包含设备或账户数据。
+导出配置含 `version: 4`、`layout` 和 `appearance`。布局包含名称、各行的 `heightWeight`、各键的 `widthWeight`、`text`、`action`、`textBehavior` 与 `longPressText`；外观包含 `backgroundColor`、`symbolColor` 与 `heightDp`。不包含设备或账户数据。
 
-`action` 可取 `text`、`backspace`、`left`、`right`、`up`、`down`、`shift`、`ctrl`、`enter`、`tab`、`home` 或 `end`。例如 `{"widthWeight": 1, "text": "", "action": "backspace"}` 表示退格键。导出和重新导入会保留功能键配置。
+`action` 可取 `text`、`backspace`、`left`、`right`、`up`、`down`、`shift`、`ctrl`、`enter`、`tab`、`home`、`end` 或 `emoji`。例如 `{"widthWeight": 1, "text": "", "action": "backspace"}` 表示退格键。导出和重新导入会保留功能键配置。
 
-旧版 `version: 1` / `version: 2` 配置以及只有 `name` 和 `rows` 的布局文件仍可导入：缺少 `action` 的键按文本键处理，缺少 `text` 的键视为未分配。未知的 `action` 会被拒绝。导入不会覆盖已有布局，会创建新文件。配置最大 1 MB，支持 1–20 行、每行 1–40 个键、每键最多 1000 个 UTF-16 代码单元；比例必须为有限正数。
+旧版 `version: 1` / `version: 2` / `version: 3` 配置以及只有 `name` 和 `rows` 的布局文件仍可导入：缺少 `action` 的键按文本键处理，缺少 `text` 的键视为未分配。缺少 `longPressText` 时不启用长按。未知的 `action` 会被拒绝。导入不会覆盖已有布局，会创建新文件。配置最大 1 MB，支持 1–20 行、每行 1–40 个键、每键最多 1000 个 UTF-16 代码单元；比例必须为有限正数。
 
 目前通过修改现有键位添加功能键，尚未实现增删行列的布局编辑器。
 

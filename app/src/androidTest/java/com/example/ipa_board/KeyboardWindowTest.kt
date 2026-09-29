@@ -15,6 +15,75 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class KeyboardWindowTest {
+    @Test fun longPressRoundTripsAndDispatchesSeparatelyFromTap() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val context = instrumentation.targetContext
+            val keyboard = LayoutInflater.from(context).inflate(R.layout.keyboard_view, null) as ViewGroup
+            val original = KeyboardLayout("Long press", listOf(RowLayout(1f, listOf(
+                KeySlot(1f, "a", longPressText = "ɑ😀"),
+                KeySlot(1f, action = KeyAction.BACKSPACE, longPressText = "ɪ"),
+                KeySlot(1f, "b")
+            ))))
+            val restored = KeyboardLayout.fromJson(original.toJson())
+            assertEquals(original, restored)
+            var taps = 0
+            var held = ""
+            KeyboardRenderer.render(context, keyboard, restored, 210, Color.WHITE,
+                onKeyLongClick = { _, _, slot -> held += slot.longPressText },
+                onKeyClick = { _, _, _ -> taps++ })
+            val row = keyboard.getChildAt(0) as ViewGroup
+            assertTrue(row.getChildAt(0).performLongClick())
+            assertTrue(row.getChildAt(1).performLongClick())
+            assertEquals("ɑ😀ɪ", held)
+            assertEquals(0, taps)
+            assertFalse(row.getChildAt(2).isLongClickable)
+            row.getChildAt(0).performClick()
+            assertEquals(1, taps)
+        }
+    }
+
+    @Test fun longPressFunctionKeyActionIsRenderedAndLongClickable() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val context = instrumentation.targetContext
+            val keyboard = LayoutInflater.from(context).inflate(R.layout.keyboard_view, null) as ViewGroup
+            val layout = KeyboardLayout("Func LP", listOf(RowLayout(1f, listOf(
+                KeySlot(1f, "a", longPressAction = KeyAction.BACKSPACE)
+            ))))
+            var longClickedAction: KeyAction? = null
+            KeyboardRenderer.render(context, keyboard, layout, 210, Color.WHITE,
+                onKeyLongClick = { _, _, slot -> longClickedAction = slot.longPressAction })
+            val row = keyboard.getChildAt(0) as ViewGroup
+            val keyView = row.getChildAt(0) as ViewGroup
+            assertTrue(keyView.isLongClickable)
+            assertTrue(keyView.performLongClick())
+            assertEquals(KeyAction.BACKSPACE, longClickedAction)
+            assertEquals("Row 1, key 1: a, long press: Backspace", keyView.contentDescription)
+        }
+    }
+
+    @Test fun repeatBackspaceSetsLongPressRepeatCallback() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val context = instrumentation.targetContext
+            val keyboard = LayoutInflater.from(context).inflate(R.layout.keyboard_view, null) as ViewGroup
+            val layout = KeyboardLayout("Repeat LP", listOf(RowLayout(1f, listOf(
+                KeySlot(1f, "a", longPressAction = KeyAction.REPEAT_BACKSPACE)
+            ))))
+            var repeatCount = 0
+            KeyboardRenderer.render(context, keyboard, layout, 210, Color.WHITE,
+                onKeyLongClick = { _, _, _ -> repeatCount++ })
+            val row = keyboard.getChildAt(0) as ViewGroup
+            val keyView = row.getChildAt(0) as KeyPreviewFrameLayout
+            assertNotNull(keyView.onLongPressRepeat)
+            keyView.onLongPressRepeat?.invoke()
+            keyView.onLongPressRepeat?.invoke()
+            assertEquals(2, repeatCount)
+            assertEquals("Row 1, key 1: a, long press: Continuous Delete", keyView.contentDescription)
+        }
+    }
+
     @Test fun unassignedPlaceholderAppearsOnlyInEditorPreview() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.runOnMainSync {
