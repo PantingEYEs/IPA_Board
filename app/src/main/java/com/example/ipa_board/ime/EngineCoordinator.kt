@@ -7,7 +7,7 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
     private var revision = 0L
     private var raw = ""
     private var closed = false
-    private val clients = listOf(Client(RimeService::class.java, "中英"), Client(MozcService::class.java, "日文"))
+    private val clients = listOf(Client(RimeService::class.java, "ZH/EN"), Client(MozcService::class.java, "JA"))
     fun start() { clients.filter { !it.bound }.forEach { it.bind() } }
     fun query(nextRevision: Long, value: String) {
         revision = nextRevision; raw = value
@@ -23,7 +23,7 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
         var bound = false
         var remote: Messenger? = null
         var items = emptyList<Candidate>()
-        var state = "加载中"
+        var state = "Loading"
         val response = Messenger(Handler(Looper.getMainLooper()) { message ->
             if (!closed && message.data.getLong("revision") == revision) {
                 val d = message.data
@@ -33,20 +33,20 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
                 items = texts.mapIndexedNotNull { i, text ->
                     if (i < languages.size && i < ranks.size) Candidate(text, languages[i], ranks[i]) else null
                 }
-                state = if (d.containsKey("error")) "暂不可用" else ""
+                state = if (d.containsKey("error")) "Unavailable" else ""
                 publish()
             }
             true
         })
-        fun bind() { bound = context.bindService(Intent(context, type), this, Context.BIND_AUTO_CREATE); if (!bound) { state = "暂不可用"; publish() } }
+        fun bind() { bound = context.bindService(Intent(context, type), this, Context.BIND_AUTO_CREATE); if (!bound) { state = "Unavailable"; publish() } }
         fun send() {
             try { remote?.send(Message.obtain(null, 1).apply {
                 replyTo = response
                 data = Bundle().apply { putLong("revision", revision); putString("raw", raw) }
-            }) } catch (_: RemoteException) { state = "暂不可用"; items = emptyList() }
+            }) } catch (_: RemoteException) { state = "Unavailable"; items = emptyList() }
         }
         override fun onServiceConnected(name: ComponentName, service: IBinder) { remote = Messenger(service); send() }
-        override fun onServiceDisconnected(name: ComponentName) { remote = null; items = emptyList(); state = "已断开"; publish() }
+        override fun onServiceDisconnected(name: ComponentName) { remote = null; items = emptyList(); state = "Disconnected"; publish() }
         override fun onBindingDied(name: ComponentName) { onServiceDisconnected(name) }
         override fun onNullBinding(name: ComponentName) { onServiceDisconnected(name) }
     }

@@ -11,7 +11,7 @@ import android.widget.*
 
 /** IME-only chrome. Never passed to KeyboardRenderer or serialized with a layout. */
 class ImeChromeView(context: Context) : LinearLayout(context) {
-    enum class Panel { KEYBOARD, CANDIDATES, CLIPBOARD, PAGES, EMOJI }
+    enum class Panel { KEYBOARD, CANDIDATES, CLIPBOARD, PAGES, EMOJI, KAOMOJI }
     val keyboardHost = LinearLayout(context).apply { orientation = VERTICAL }
     private val body = FrameLayout(context)
     private val overlay = LinearLayout(context).apply { orientation = VERTICAL }
@@ -40,6 +40,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         val toolbar = LinearLayout(context).apply {
             addView(button("⧉", "Clipboard") { toggle(Panel.CLIPBOARD) })
             addView(button("⊞", "Keyboard Overview") { toggle(Panel.PAGES) })
+            addView(button("顔", "顔文字") { toggle(Panel.KAOMOJI) })
             status.setTextColor(Color.LTGRAY)
             status.textSize = 10f
             status.gravity = Gravity.CENTER_VERTICAL
@@ -168,7 +169,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     private fun renderCandidates() {
         val snapshot = candidates.toList()
         val generation = revision
-        val title = if (snapshot.isEmpty()) "候选词" else "候选词 (${snapshot.size})"
+        val title = if (snapshot.isEmpty()) "Candidates" else "Candidates (${snapshot.size})"
         showContent(title, candidateGridContent(snapshot) { candidate ->
             onCandidate(candidate, generation)
         })

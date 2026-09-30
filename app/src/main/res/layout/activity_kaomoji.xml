@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:background="#121212">
+
+    <!-- Main Content Layout -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Top Header Bar with Back Button and Count Statistics -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="8dp"
+            android:gravity="center_vertical"
+            android:background="#1E1E1E">
+
+            <ImageButton
+                android:id="@+id/btn_back"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_arrow_back"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Back"
+                app:tint="#FFFFFF" />
+
+            <TextView
+                android:id="@+id/tv_count_stats"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:text="0 顔文字" />
+
+        </LinearLayout>
+
+        <!-- Search Bar with za Sort Toggle Button -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="8dp"
+            android:gravity="center_vertical"
+            android:background="#181818">
+
+            <EditText
+                android:id="@+id/et_search"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Search 顔文字, tags, or colors..."
+                android:textColorHint="#888888"
+                android:textColor="#FFFFFF"
+                android:background="#2A2A2A"
+                android:padding="10dp"
+                android:textSize="14sp"
+                android:singleLine="true"
+                android:imeOptions="actionSearch"
+                android:autofillHints=""
+                android:inputType="text" />
+
+            <Button
+                android:id="@+id/btn_sort_za"
+                android:layout_width="48dp"
+                android:layout_height="38dp"
+                android:text="za"
+                android:textSize="13sp"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#38383A"
+                android:layout_marginStart="8dp"
+                android:padding="0dp" />
+
+        </LinearLayout>
+
+        <!-- Batch Mode Control Bar (Hidden by default) -->
+        <LinearLayout
+            android:id="@+id/layout_batch_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="8dp"
+            android:gravity="center_vertical"
+            android:background="#242426"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tv_selected_count"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="0 selected"
+                android:textColor="#80D8FF"
+                android:textSize="14sp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp" />
+
+            <Button
+                android:id="@+id/btn_select_all"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Select All"
+                android:textSize="12sp"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#38383A"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btn_batch_add_tag"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Add Tags"
+                android:textSize="12sp"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#38383A"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btn_batch_delete"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Delete"
+                android:textSize="12sp"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#4A2C2C" />
+        </LinearLayout>
+
+        <!-- Empty view -->
+        <TextView
+            android:id="@+id/tv_empty"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="No 顔文字 found\nTap '+' at bottom right to add"
+            android:textColor="#777777"
+            android:textSize="16sp"
+            android:visibility="gone" />
+
+        <!-- 2D Compact Table Grid for Kaomojis -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_kaomojis"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="4dp"
+            android:clipToPadding="false" />
+
+    </LinearLayout>
+
+    <!-- Full-screen semi-transparent black overlay mask -->
+    <View
+        android:id="@+id/overlay_mask"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#AA000000"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone" />
+
+    <!-- Expanded Menu options (Add, Manage, Import, Export) above overlay -->
+    <LinearLayout
+        android:id="@+id/fab_menu_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="84dp"
+        android:layout_marginEnd="16dp"
+        android:orientation="vertical"
+        android:gravity="end"
+        android:visibility="gone">
+
+        <Button
+            android:id="@+id/btn_add_kaomoji"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:text="Add"
+            android:textSize="14sp"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#38383A"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btn_batch_manage"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:text="Manage"
+            android:textSize="14sp"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#38383A"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btn_import_config"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:text="Import"
+            android:textSize="14sp"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#38383A"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btn_export_config"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:text="Export"
+            android:textSize="14sp"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#38383A" />
+
+    </LinearLayout>
+
+    <!-- Grey circular floating window with white plus icon -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_main"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        app:fabSize="normal"
+        app:backgroundTint="#38383A"
+        app:srcCompat="@drawable/ic_add"
+        app:tint="#FFFFFF"
+        android:contentDescription="Action Menu" />
+
+</FrameLayout>

@@ -25,6 +25,9 @@ class KeyboardInputController {
     var ctrlEnabled: Boolean = false
         private set
 
+    var shiftShortcuts: Map<String, KeyAction> = emptyMap()
+    var ctrlShortcuts: Map<String, KeyAction> = emptyMap()
+
     fun reset() {
         shiftState = ShiftState.OFF
         ctrlEnabled = false
@@ -61,19 +64,36 @@ class KeyboardInputController {
         connection ?: return false
         val metaState = (if (shiftEnabled) KeyEvent.META_SHIFT_ON else 0) or
             (if (useCtrl) KeyEvent.META_CTRL_ON else 0)
+
+        val keyText = slot.text
+        if (useCtrl && keyText.isNotEmpty()) {
+            val shortcutAction = ctrlShortcuts[keyText] ?: ctrlShortcuts[keyText.lowercase(Locale.ROOT)]
+            if (shortcutAction != null) {
+                val handled = executeAction(shortcutAction, connection, editorInfo, metaState)
+                if (handled) {
+                    consumeSingleShift()
+                    return true
+                }
+            }
+            val handled = sendShortcut(connection, keyText, metaState)
+            if (handled) consumeSingleShift()
+            return handled
+        }
+
+        if (shiftEnabled && keyText.isNotEmpty()) {
+            val shortcutAction = shiftShortcuts[keyText] ?: shiftShortcuts[keyText.lowercase(Locale.ROOT)]
+            if (shortcutAction != null) {
+                val handled = executeAction(shortcutAction, connection, editorInfo, metaState)
+                if (handled) consumeSingleShift()
+                return handled
+            }
+        }
+
         val handled = when (slot.action) {
-            KeyAction.TEXT -> if (useCtrl) {
-                sendShortcut(connection, slot.text, metaState)
-            } else {
-                slot.text.isEmpty() || connection.commitText(
-                    if (shiftEnabled) slot.text.uppercase(Locale.ROOT) else slot.text, 1
-                )
-            }
-            KeyAction.BACKSPACE, KeyAction.REPEAT_BACKSPACE -> if (useCtrl) {
-                sendKey(connection, KeyEvent.KEYCODE_DEL, metaState)
-            } else {
-                backspace(connection)
-            }
+            KeyAction.TEXT -> slot.text.isEmpty() || connection.commitText(
+                if (shiftEnabled) slot.text.uppercase(Locale.ROOT) else slot.text, 1
+            )
+            KeyAction.BACKSPACE, KeyAction.REPEAT_BACKSPACE -> backspace(connection)
             KeyAction.LEFT -> sendKey(connection, KeyEvent.KEYCODE_DPAD_LEFT, metaState)
             KeyAction.RIGHT -> sendKey(connection, KeyEvent.KEYCODE_DPAD_RIGHT, metaState)
             KeyAction.UP -> sendKey(connection, KeyEvent.KEYCODE_DPAD_UP, metaState)
@@ -82,7 +102,11 @@ class KeyboardInputController {
             KeyAction.END -> sendKey(connection, KeyEvent.KEYCODE_MOVE_END, metaState)
             KeyAction.TAB -> sendKey(connection, KeyEvent.KEYCODE_TAB, metaState)
             KeyAction.ENTER -> enter(connection, editorInfo, metaState)
-            KeyAction.EMOJI, KeyAction.CANDIDATES, KeyAction.CLIPBOARD, KeyAction.PAGES -> false // Panel actions are handled by IpaBoardService.
+            KeyAction.SELECT_ALL -> connection.performContextMenuAction(R.id.selectAll)
+            KeyAction.COPY -> connection.performContextMenuAction(R.id.copy)
+            KeyAction.CUT -> connection.performContextMenuAction(R.id.cut)
+            KeyAction.PASTE -> connection.performContextMenuAction(R.id.paste)
+            KeyAction.EMOJI, KeyAction.KAOMOJI, KeyAction.CANDIDATES, KeyAction.CLIPBOARD, KeyAction.PAGES, KeyAction.PREV_PAGE, KeyAction.NEXT_PAGE -> false // Panel actions are handled by IpaBoardService.
             else -> true
         }
         if (handled && (slot.action == KeyAction.TEXT) && slot.text.isNotEmpty()) {
@@ -91,8 +115,40 @@ class KeyboardInputController {
         return handled
     }
 
+    fun executeAction(action: KeyAction, connection: InputConnection, editorInfo: EditorInfo?, metaState: Int): Boolean {
+        return when (action) {
+            KeyAction.SELECT_ALL -> {
+                if (connection.performContextMenuAction(R.id.selectAll)) true
+                else sendKey(connection, KeyEvent.KEYCODE_A, metaState)
+            }
+            KeyAction.COPY -> {
+                val hasSelection = try { !connection.getSelectedText(0).isNullOrEmpty() } catch (_: Exception) { false }
+                if (hasSelection && connection.performContextMenuAction(R.id.copy)) true
+                else sendKey(connection, KeyEvent.KEYCODE_C, metaState)
+            }
+            KeyAction.CUT -> {
+                val hasSelection = try { !connection.getSelectedText(0).isNullOrEmpty() } catch (_: Exception) { false }
+                if (hasSelection && connection.performContextMenuAction(R.id.cut)) true
+                else sendKey(connection, KeyEvent.KEYCODE_X, metaState)
+            }
+            KeyAction.PASTE -> {
+                if (connection.performContextMenuAction(R.id.paste)) true
+                else sendKey(connection, KeyEvent.KEYCODE_V, metaState)
+            }
+            KeyAction.BACKSPACE, KeyAction.REPEAT_BACKSPACE -> backspace(connection)
+            KeyAction.LEFT -> sendKey(connection, KeyEvent.KEYCODE_DPAD_LEFT, metaState)
+            KeyAction.RIGHT -> sendKey(connection, KeyEvent.KEYCODE_DPAD_RIGHT, metaState)
+            KeyAction.UP -> sendKey(connection, KeyEvent.KEYCODE_DPAD_UP, metaState)
+            KeyAction.DOWN -> sendKey(connection, KeyEvent.KEYCODE_DPAD_DOWN, metaState)
+            KeyAction.HOME -> sendKey(connection, KeyEvent.KEYCODE_MOVE_HOME, metaState)
+            KeyAction.END -> sendKey(connection, KeyEvent.KEYCODE_MOVE_END, metaState)
+            KeyAction.TAB -> sendKey(connection, KeyEvent.KEYCODE_TAB, metaState)
+            KeyAction.ENTER -> enter(connection, editorInfo, metaState)
+            else -> false
+        }
+    }
+
     private fun sendShortcut(connection: InputConnection, text: String, metaState: Int): Boolean {
-        // A mapping may contain several Unicode characters, but a hardware shortcut has one key.
         if (text.length != 1) return false
         val original = text[0]
         val character = if (original in 'A'..'Z') original.lowercaseChar() else original
@@ -138,11 +194,12 @@ class KeyboardInputController {
             }
         }
         if (metaState and KeyEvent.META_SHIFT_ON == 0) {
+            val hasSelection = try { !connection.getSelectedText(0).isNullOrEmpty() } catch (_: Exception) { false }
             val contextAction = when (character) {
                 'a' -> R.id.selectAll
-                'c' -> if (!connection.getSelectedText(0).isNullOrEmpty()) R.id.copy else null
-                'x' -> if (!connection.getSelectedText(0).isNullOrEmpty()) R.id.cut else null
-                'v' -> android.R.id.paste
+                'c' -> if (hasSelection) R.id.copy else null
+                'x' -> if (hasSelection) R.id.cut else null
+                'v' -> R.id.paste
                 else -> null
             }
             if (contextAction != null && connection.performContextMenuAction(contextAction)) {
@@ -151,6 +208,8 @@ class KeyboardInputController {
         }
         return sendKey(connection, keyCode, metaState)
     }
+
+
 
     private fun backspace(connection: InputConnection): Boolean {
         // commitText replaces a composing span before a selection; finish it first.

@@ -13,12 +13,16 @@ import android.view.inputmethod.EditorInfo
 import android.widget.*
 import com.example.ipa_board.ime.*
 import com.example.ipa_board.emoji.*
+import com.example.ipa_board.kaomoji.*
+import com.example.ipa_board.clipboard.*
 import com.example.ipa_board.SettingsConstants.PREFS_NAME
 import com.example.ipa_board.SettingsConstants.KEY_LAYOUT_REVISION
 import com.example.ipa_board.SettingsConstants.KEY_BG_COLOR_HEX
 import com.example.ipa_board.SettingsConstants.KEY_ACTIVE_LAYOUT_FILE
 import com.example.ipa_board.SettingsConstants.KEY_KEYBOARD_HEIGHT
 import com.example.ipa_board.SettingsConstants.KEY_SYMBOL_COLOR_HEX
+import com.example.ipa_board.SettingsConstants.KEY_SHIFT_SHORTCUTS
+import com.example.ipa_board.SettingsConstants.KEY_CTRL_SHORTCUTS
 import com.example.ipa_board.SettingsConstants.DEFAULT_KEYBOARD_HEIGHT
 import com.example.ipa_board.SettingsConstants.DEFAULT_BG_COLOR_HEX
 import com.example.ipa_board.SettingsConstants.DEFAULT_SYMBOL_COLOR_HEX
@@ -33,21 +37,34 @@ class IpaBoardService : InputMethodService() {
     private lateinit var engines: EngineCoordinator
     private lateinit var composition: CompositionController
     private val emojiRepository by lazy { EmojiCatalogRepository(BundledEmojiCatalogSource(this)) }
+    private val kaomojiRepository by lazy { KaomojiRepository(this) }
     private val emojiExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
     private val emojiHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private var emojiRequest = 0L
     private var emojiClosed = false
-    private var engineStatus = "加载词库"
+    private var engineStatus = "Loading Dictionary"
     private var directOnly = false
     private var consumedPanelBack = false
     private var panelBackRegistered = false
     private val panelBackCallback = android.window.OnBackInvokedCallback { chrome?.showPanel(ImeChromeView.Panel.KEYBOARD) }
     private val clipboard by lazy { getSystemService(ClipboardManager::class.java) }
+    private val clipboardRepository by lazy { ClipboardRepository(this) }
+    private var lastSyncedText: String? = null
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
+        syncClipboardHistory()
         if (chrome?.panel == ImeChromeView.Panel.CLIPBOARD) showClipboard()
     }
+    private fun syncClipboardHistory() {
+        val clip = try { clipboard.primaryClip } catch (_: SecurityException) { null }
+        val text = if (clip != null && clip.itemCount > 0) clip.getItemAt(0).text?.toString() else null
+        val sensitive = clip?.description?.extras?.getBoolean("android.content.extra.IS_SENSITIVE", false) == true
+        if (!text.isNullOrEmpty()) {
+            lastSyncedText = text
+            clipboardRepository.addClip(text, sensitive)
+        }
+    }
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key in setOf(KEY_LAYOUT_REVISION, KEY_BG_COLOR_HEX, KEY_ACTIVE_LAYOUT_FILE, KEY_KEYBOARD_HEIGHT, KEY_SYMBOL_COLOR_HEX)) {
+        if (key in setOf(KEY_LAYOUT_REVISION, KEY_BG_COLOR_HEX, KEY_ACTIVE_LAYOUT_FILE, KEY_KEYBOARD_HEIGHT, KEY_SYMBOL_COLOR_HEX, KEY_SHIFT_SHORTCUTS, KEY_CTRL_SHORTCUTS)) {
             if (key == KEY_ACTIVE_LAYOUT_FILE || key == KEY_LAYOUT_REVISION) inputController.reset()
             applySettings()
             if (key == KEY_LAYOUT_REVISION && chrome?.panel == ImeChromeView.Panel.PAGES) showPages()
@@ -76,6 +93,7 @@ class IpaBoardService : InputMethodService() {
                     ImeChromeView.Panel.CLIPBOARD -> showClipboard()
                     ImeChromeView.Panel.PAGES -> showPages()
                     ImeChromeView.Panel.EMOJI -> showEmoji()
+                    ImeChromeView.Panel.KAOMOJI -> showKaomojiPanel()
                     else -> Unit
                 }
             }
@@ -84,10 +102,12 @@ class IpaBoardService : InputMethodService() {
         }
     }
     private fun refreshCandidates() {
-        chrome?.render(composition.raw, composition.candidates, if (directOnly) "直接输入" else engineStatus, composition.revision)
+        chrome?.render(composition.raw, composition.candidates, if (directOnly) "Direct Input" else engineStatus, composition.revision)
     }
     private fun applySettings() {
         val view = chrome ?: return
+        inputController.shiftShortcuts = SettingsConstants.parseShortcutsJson(prefs.getString(KEY_SHIFT_SHORTCUTS, null))
+        inputController.ctrlShortcuts = SettingsConstants.parseShortcutsJson(prefs.getString(KEY_CTRL_SHORTCUTS, null))
         val density = resources.displayMetrics.density
         val availableDp = (resources.displayMetrics.heightPixels / density - 180).toInt().coerceAtLeast(100)
         val height = (prefs.getInt(KEY_KEYBOARD_HEIGHT, DEFAULT_KEYBOARD_HEIGHT).coerceIn(100, availableDp) * density).toInt()
@@ -134,6 +154,10 @@ class IpaBoardService : InputMethodService() {
                 chrome?.showPanel(ImeChromeView.Panel.EMOJI)
                 return
             }
+            KeyAction.KAOMOJI -> {
+                chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.KAOMOJI) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.KAOMOJI)
+                return
+            }
             KeyAction.CANDIDATES -> {
                 chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.CANDIDATES) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.CANDIDATES)
                 return
@@ -164,6 +188,43 @@ class IpaBoardService : InputMethodService() {
         val beforeShiftState = inputController.shiftState
         val beforeShift = inputController.shiftEnabled
         val beforeCtrl = inputController.ctrlEnabled
+
+        val slotText = slot.text
+        val activeShortcut = when {
+            beforeCtrl && slotText.isNotEmpty() -> inputController.ctrlShortcuts[slotText] ?: inputController.ctrlShortcuts[slotText.lowercase(Locale.ROOT)]
+            beforeShift && slotText.isNotEmpty() -> inputController.shiftShortcuts[slotText] ?: inputController.shiftShortcuts[slotText.lowercase(Locale.ROOT)]
+            else -> null
+        }
+        if (activeShortcut != null) {
+            fun consumeModifiers() {
+                inputController.consumeSingleShift()
+                if (beforeCtrl) inputController.handle(KeySlot(1f, action = KeyAction.CTRL), null, null)
+                applySettings()
+            }
+            when (activeShortcut) {
+                KeyAction.EMOJI -> { consumeModifiers(); chrome?.showPanel(ImeChromeView.Panel.EMOJI); return }
+                KeyAction.KAOMOJI -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.KAOMOJI) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.KAOMOJI); return }
+                KeyAction.CANDIDATES -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.CANDIDATES) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.CANDIDATES); return }
+                KeyAction.CLIPBOARD -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.CLIPBOARD) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.CLIPBOARD); return }
+                KeyAction.PAGES -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.PAGES) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.PAGES); return }
+                KeyAction.PREV_PAGE -> {
+                    consumeModifiers()
+                    val newPage = LayoutFileManager.switchPage(this, forward = false)
+                    val name = LayoutFileManager.loadLayout(this, newPage)?.name ?: newPage
+                    Toast.makeText(this, name, Toast.LENGTH_SHORT).show()
+                    return
+                }
+                KeyAction.NEXT_PAGE -> {
+                    consumeModifiers()
+                    val newPage = LayoutFileManager.switchPage(this, forward = true)
+                    val name = LayoutFileManager.loadLayout(this, newPage)?.name ?: newPage
+                    Toast.makeText(this, name, Toast.LENGTH_SHORT).show()
+                    return
+                }
+                else -> {}
+            }
+        }
+
         val isModifier = slot.action == KeyAction.SHIFT || slot.action == KeyAction.CTRL
         val text = if (beforeShift) slot.text.uppercase(Locale.ROOT) else slot.text
         if (!beforeCtrl && slot.action == KeyAction.TEXT && text.isEmpty()) return
@@ -242,19 +303,25 @@ class IpaBoardService : InputMethodService() {
         popup.show()
     }
 
+    private fun showKaomojiPanel() {
+        val view = chrome ?: return
+        val panelView = KaomojiPanelView(this, kaomojiRepository) { item ->
+            if (composition.literal() && currentInputConnection?.commitText(item.text, 1) == true) {
+                // Keep panel open so user can input multiple kaomojis
+            }
+        }
+        view.showContent("顔文字", panelView)
+    }
+
     private fun showClipboard() {
         val view = chrome ?: return
-        val clip = try { clipboard.primaryClip } catch (_: SecurityException) { null }
-        val text = if (clip != null && clip.itemCount > 0) clip.getItemAt(0).text?.toString() else null
-        val sensitive = clip?.description?.extras?.getBoolean("android.content.extra.IS_SENSITIVE", false) == true
-        val label = when {
-            text.isNullOrEmpty() -> "剪贴板中没有可粘贴的文本"
-            sensitive || directOnly -> "敏感内容 · 点击粘贴"
-            else -> text.take(240) + if (text.length > 240) "…" else ""
+        syncClipboardHistory()
+        val panelView = ClipboardPanelView(this, clipboardRepository) { item ->
+            if (composition.literal() && currentInputConnection?.commitText(item.text, 1) == true) {
+                view.showPanel(ImeChromeView.Panel.KEYBOARD)
+            }
         }
-        view.showContent("剪贴板", view.listContent(listOf(label)) {
-            if (!text.isNullOrEmpty() && composition.literal() && currentInputConnection?.commitText(text, 1) == true) view.showPanel(ImeChromeView.Panel.KEYBOARD)
-        })
+        view.showContent("Clipboard", panelView)
     }
     private fun showPages() {
         val view = chrome ?: return
@@ -266,7 +333,7 @@ class IpaBoardService : InputMethodService() {
                 orientation = LinearLayout.VERTICAL
                 setPadding(8, 8, 8, 8)
                 isFocusable = true
-                contentDescription = layout.name + if (file == active) "，当前键盘页" else "，切换键盘页"
+                contentDescription = layout.name + if (file == active) ", Current Page" else ", Switch Page"
                 setBackgroundColor(if (file == active) Color.rgb(55,65,88) else Color.rgb(35,38,46))
                 addView(TextView(this@IpaBoardService).apply { text = (if (file == active) "✓ " else "") + layout.name; setTextColor(Color.WHITE); textSize = 15f })
                 val preview = LinearLayout(this@IpaBoardService).apply { orientation = LinearLayout.VERTICAL; importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS }
@@ -279,7 +346,7 @@ class IpaBoardService : InputMethodService() {
             }
             grid.addView(cell, GridLayout.LayoutParams().apply { width = 0; columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f); setMargins(4,4,4,4) })
         }
-        view.showContent("键盘页", ScrollView(this).apply { addView(grid) })
+        view.showContent("Keyboard Pages", ScrollView(this).apply { addView(grid) })
     }
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)

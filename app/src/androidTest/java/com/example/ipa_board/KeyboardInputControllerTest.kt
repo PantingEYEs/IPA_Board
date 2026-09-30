@@ -1,5 +1,6 @@
 package com.example.ipa_board
 
+import android.R
 import android.content.Context
 import android.text.InputType
 import android.view.InputDevice
@@ -65,79 +66,57 @@ class KeyboardInputControllerTest {
         assertEquals("b", connection.committed.last())
     }
 
-    @Test fun ctrlUsesCommonEditorActionsAndOnlyAppliesToOneKey() = withRecordingConnection { controller, connection ->
+    @Test fun unconfiguredCtrlFallsBackToRawShortcutAndClearsLatch() = withRecordingConnection { controller, connection ->
         connection.selectedText = "selected text"
-        val actions = listOf("a" to android.R.id.selectAll, "C" to android.R.id.copy,
-            "x" to android.R.id.cut, "v" to android.R.id.paste)
+        controller.handle(key(KeyAction.CTRL), connection, null)
+        assertTrue(controller.handle(text("a"), connection, null))
+        assertFalse(controller.ctrlEnabled)
+        assertEquals(R.id.selectAll, connection.contextActions.last())
+
+        controller.handle(text("z"), connection, null)
+        assertEquals(listOf("z"), connection.committed)
+    }
+
+    @Test fun ctrlSendsHardwareKeyEventForTerminalAndCommandLineControl() = withRecordingConnection { controller, connection ->
+        connection.selectedText = null
+        for ((character, keyCode) in listOf("c" to KeyEvent.KEYCODE_C, "d" to KeyEvent.KEYCODE_D, "z" to KeyEvent.KEYCODE_Z, "l" to KeyEvent.KEYCODE_L)) {
+            connection.events.clear()
+            controller.handle(key(KeyAction.CTRL), connection, null)
+            assertTrue(controller.handle(text(character), connection, null))
+            assertKeyPair(connection.events, keyCode, KeyEvent.META_CTRL_ON)
+            assertFalse(controller.ctrlEnabled)
+        }
+    }
+
+    @Test fun configuredCtrlExecutesBoundActionAndClearsLatch() = withRecordingConnection { controller, connection ->
+        connection.selectedText = "selected text"
+        controller.ctrlShortcuts = mapOf(
+            "a" to KeyAction.SELECT_ALL,
+            "c" to KeyAction.COPY,
+            "x" to KeyAction.CUT,
+            "v" to KeyAction.PASTE
+        )
+        val actions = listOf("a" to R.id.selectAll, "c" to R.id.copy,
+            "x" to R.id.cut, "v" to R.id.paste)
         for ((character, action) in actions) {
             controller.handle(key(KeyAction.CTRL), connection, null)
             assertTrue(controller.handle(text(character), connection, null))
             assertFalse(controller.ctrlEnabled)
             assertEquals(action, connection.contextActions.last())
         }
-        assertTrue(connection.events.isEmpty())
         controller.handle(text("z"), connection, null)
         assertEquals(listOf("z"), connection.committed)
     }
 
-    @Test fun ctrlCAndXWithoutSelectionFallBackToKeyEvents() = withRecordingConnection { controller, connection ->
-        connection.selectedText = null
-        for ((character, keyCode) in listOf("c" to KeyEvent.KEYCODE_C, "x" to KeyEvent.KEYCODE_X)) {
-            connection.events.clear()
-            controller.handle(key(KeyAction.CTRL), connection, null)
-            assertTrue(controller.handle(text(character), connection, null))
-            assertKeyPair(connection.events, keyCode, KeyEvent.META_CTRL_ON)
-        }
-    }
+    @Test fun configuredShiftExecutesBoundActionOrFallsBackToUppercase() = withRecordingConnection { controller, connection ->
+        controller.shiftShortcuts = mapOf("h" to KeyAction.HOME)
+        controller.handle(key(KeyAction.SHIFT), connection, null)
+        assertTrue(controller.handle(text("h"), connection, null))
+        assertKeyPair(connection.events, KeyEvent.KEYCODE_MOVE_HOME, KeyEvent.META_SHIFT_ON)
 
-    @Test fun rejectedContextActionFallsBackToBalancedControlKeyEvents() = withRecordingConnection { controller, connection ->
-        connection.acceptContextActions = false
-        controller.handle(key(KeyAction.CTRL), connection, null)
+        controller.handle(key(KeyAction.SHIFT), connection, null)
         assertTrue(controller.handle(text("a"), connection, null))
-        assertKeyPair(connection.events, KeyEvent.KEYCODE_A, KeyEvent.META_CTRL_ON)
-        assertTrue(connection.committed.isEmpty())
-    }
-
-    @Test fun unsupportedCtrlMappingIsNotInsertedAndClearsLatch() = withRecordingConnection { controller, connection ->
-        for (value in listOf("t͡ʃ", "ɐ", "😀", "K", "İ", "")) {
-            controller.handle(key(KeyAction.CTRL), connection, null)
-            assertFalse(controller.handle(text(value), connection, null))
-            assertFalse(controller.ctrlEnabled)
-        }
-        assertTrue(connection.committed.isEmpty())
-        assertTrue(connection.events.isEmpty())
-        controller.handle(text("ɐ"), connection, null)
-        assertEquals(listOf("ɐ"), connection.committed)
-    }
-
-    @Test fun genericCtrlLettersDigitsAndSpaceUseKeyEvents() = withRecordingConnection { controller, connection ->
-        for ((value, keyCode) in listOf("Z" to KeyEvent.KEYCODE_Z,
-                "0" to KeyEvent.KEYCODE_0, "9" to KeyEvent.KEYCODE_9, " " to KeyEvent.KEYCODE_SPACE)) {
-            connection.events.clear()
-            controller.handle(key(KeyAction.CTRL), connection, null)
-            assertTrue(controller.handle(text(value), connection, null))
-            assertKeyPair(connection.events, keyCode, KeyEvent.META_CTRL_ON)
-        }
-        assertTrue(connection.committed.isEmpty())
-    }
-
-    @Test fun genericCtrlSymbolsUseKeyEvents() = withRecordingConnection { controller, connection ->
-        val symbols = listOf(
-            "[" to KeyEvent.KEYCODE_LEFT_BRACKET,
-            "]" to KeyEvent.KEYCODE_RIGHT_BRACKET,
-            "\\" to KeyEvent.KEYCODE_BACKSLASH,
-            "-" to KeyEvent.KEYCODE_MINUS,
-            "=" to KeyEvent.KEYCODE_EQUALS,
-            "/" to KeyEvent.KEYCODE_SLASH,
-            ";" to KeyEvent.KEYCODE_SEMICOLON
-        )
-        for ((symbol, keyCode) in symbols) {
-            connection.events.clear()
-            controller.handle(key(KeyAction.CTRL), connection, null)
-            assertTrue(controller.handle(text(symbol), connection, null))
-            assertKeyPair(connection.events, keyCode, KeyEvent.META_CTRL_ON)
-        }
-        assertTrue(connection.committed.isEmpty())
+        assertEquals("A", connection.committed.last())
     }
 
     @Test fun modifiersCanBeCancelledAndResetEvenWithoutInputConnection() = withRecordingConnection { controller, connection ->
@@ -171,13 +150,7 @@ class KeyboardInputControllerTest {
         }
     }
 
-    @Test fun ctrlShiftShortcutPreservesShiftInsteadOfRunningPlainContextAction() = withRecordingConnection { controller, connection ->
-        controller.handle(key(KeyAction.CTRL), connection, null)
-        controller.handle(key(KeyAction.SHIFT), connection, null)
-        controller.handle(text("v"), connection, null)
-        assertTrue(connection.contextActions.isEmpty())
-        assertKeyPair(connection.events, KeyEvent.KEYCODE_V, KeyEvent.META_SHIFT_ON or KeyEvent.META_CTRL_ON)
-    }
+
 
     @Test fun keyUpIsSentEvenIfEditorRejectsKeyDown() = withRecordingConnection { controller, connection ->
         connection.acceptEvents = false

@@ -1,5 +1,7 @@
 package com.example.ipa_board
 
+import org.json.JSONObject
+
 object SettingsConstants {
     const val PREFS_NAME = "ipa_board_prefs"
     
@@ -17,6 +19,34 @@ object SettingsConstants {
     
     const val KEY_KEYBOARD_HEIGHT = "keyboard_height_dp"
     const val DEFAULT_KEYBOARD_HEIGHT = 210
+
+    const val KEY_SHIFT_SHORTCUTS = "shift_shortcuts_json"
+    const val KEY_CTRL_SHORTCUTS = "ctrl_shortcuts_json"
+
+    fun parseShortcutsJson(jsonStr: String?): Map<String, KeyAction> {
+        if (jsonStr.isNullOrEmpty()) return emptyMap()
+        return try {
+            val obj = JSONObject(jsonStr)
+            val result = mutableMapOf<String, KeyAction>()
+            for (key in obj.keys()) {
+                val wireValue = obj.getString(key)
+                runCatching { KeyAction.fromWireValue(wireValue) }.getOrNull()?.let {
+                    result[key] = it
+                }
+            }
+            result
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    fun serializeShortcutsJson(shortcuts: Map<String, KeyAction>): String {
+        val obj = JSONObject()
+        for ((key, action) in shortcuts) {
+            obj.put(key, action.wireValue)
+        }
+        return obj.toString()
+    }
 
     val DEFAULT_LAYOUT = KeyboardLayout(
         name = "Default",

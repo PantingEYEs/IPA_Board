@@ -132,6 +132,57 @@
             android:text="@string/undo_clear"
             android:visibility="gone" />
 
+        <!-- Shortcut Management Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Shortcut Management"
+            android:textColor="#BBBBBB"
+            android:textSize="14sp"
+            android:layout_marginBottom="8dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
+
+            <Button
+                android:id="@+id/btn_manage_shift_shortcuts"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="Shift Shortcuts"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btn_manage_ctrl_shortcuts"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="Ctrl Shortcuts"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Kaomoji Management Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="顔文字 Management"
+            android:textColor="#BBBBBB"
+            android:textSize="14sp"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_manage_kaomoji"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="顔文字 Management"
+            android:textSize="14sp"
+            android:layout_marginBottom="16dp" />
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

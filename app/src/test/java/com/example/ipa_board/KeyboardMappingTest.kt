@@ -41,22 +41,26 @@ class KeyboardMappingTest {
         val clipboardSlot = KeySlot(1f, action = KeyAction.CLIPBOARD)
         val pagesSlot = KeySlot(1f, action = KeyAction.PAGES)
         val emojiSlot = KeySlot(1f, action = KeyAction.EMOJI)
+        val kaomojiSlot = KeySlot(1f, action = KeyAction.KAOMOJI)
 
         assertEquals("⋯", candidatesSlot.displayText())
         assertEquals("⧉", clipboardSlot.displayText())
         assertEquals("⊞", pagesSlot.displayText())
         assertEquals("☺", emojiSlot.displayText())
+        assertEquals("顔", kaomojiSlot.displayText())
 
         assertEquals("Candidates", candidatesSlot.action.title)
         assertEquals("Clipboard", clipboardSlot.action.title)
         assertEquals("Keyboard Pages", pagesSlot.action.title)
         assertEquals("Emoji", emojiSlot.action.title)
+        assertEquals("顔文字", kaomojiSlot.action.title)
 
-        val layout = KeyboardLayout("PanelKeys", listOf(RowLayout(1f, listOf(candidatesSlot, clipboardSlot, pagesSlot, emojiSlot))))
+        val layout = KeyboardLayout("PanelKeys", listOf(RowLayout(1f, listOf(candidatesSlot, clipboardSlot, pagesSlot, emojiSlot, kaomojiSlot))))
         assertEquals(KeyAction.CANDIDATES, layout.rows[0].slots[0].action)
         assertEquals(KeyAction.CLIPBOARD, layout.rows[0].slots[1].action)
         assertEquals(KeyAction.PAGES, layout.rows[0].slots[2].action)
         assertEquals(KeyAction.EMOJI, layout.rows[0].slots[3].action)
+        assertEquals(KeyAction.KAOMOJI, layout.rows[0].slots[4].action)
     }
 
     @Test(expected = IllegalArgumentException::class)

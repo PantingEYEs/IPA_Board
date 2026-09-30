@@ -258,11 +258,16 @@ enum class KeyAction(val wireValue: String, val title: String, val keyLabel: Str
     HOME("home", "Home", "Home", "Move to the beginning of the line. Shift extends the selection."),
     END("end", "End", "End", "Move to the end of the line. Shift extends the selection."),
     EMOJI("emoji", "Emoji", "☺", "Open the scrollable emoji panel. Tap an emoji to insert it; Return closes the panel."),
+    KAOMOJI("kaomoji", "顔文字", "顔", "Open the scrollable 顔文字 panel. Tap a 顔文字 to insert it; Return closes the panel."),
     CANDIDATES("candidates", "Candidates", "⋯", "Open the candidate word list panel."),
     CLIPBOARD("clipboard", "Clipboard", "⧉", "Open the clipboard panel. Tap an item to insert it; Return closes the panel."),
     PAGES("pages", "Keyboard Pages", "⊞", "Open the keyboard page picker panel to switch active layouts."),
     PREV_PAGE("prev_page", "Previous Keyboard Page", "⊞‹", "Switch to the previous keyboard page."),
-    NEXT_PAGE("next_page", "Next Keyboard Page", "⊞›", "Switch to the next keyboard page.");
+    NEXT_PAGE("next_page", "Next Keyboard Page", "⊞›", "Switch to the next keyboard page."),
+    SELECT_ALL("select_all", "Select All", "全选", "Select all text in current input field."),
+    COPY("copy", "Copy", "复制", "Copy current selected text."),
+    CUT("cut", "Cut", "剪切", "Cut current selected text."),
+    PASTE("paste", "Paste", "粘贴", "Paste clipboard text.");
 
     companion object {
         fun fromWireValue(value: String): KeyAction = entries.firstOrNull { it.wireValue == value }
