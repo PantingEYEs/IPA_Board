@@ -46,6 +46,9 @@ IME 顶部新增固定多功能栏和候选词栏，它们位于按键布局之�
 
 | Key type | 功能 |
 | --- | --- |
+| Candidates | 打开候选词列表面板。 |
+| Clipboard | 打开剪贴板面板。 |
+| Keyboard Pages | 打开键盘页列表面板，用于切换激活的布局。 |
 | Emoji | 打开可上下滚动的 Emoji 面板。 |
 | Backspace | 删除选中文本或光标前的字符。 |
 | Arrow Left / Right / Up / Down | 移动光标，启用 Shift 后扩展选区。 |
@@ -61,7 +64,7 @@ IME 顶部新增固定多功能栏和候选词栏，它们位于按键布局之�
 
 导出配置含 `version: 4`、`layout` 和 `appearance`。布局包含名称、各行的 `heightWeight`、各键的 `widthWeight`、`text`、`action`、`textBehavior` 与 `longPressText`；外观包含 `backgroundColor`、`symbolColor` 与 `heightDp`。不包含设备或账户数据。
 
-`action` 可取 `text`、`backspace`、`left`、`right`、`up`、`down`、`shift`、`ctrl`、`enter`、`tab`、`home`、`end` 或 `emoji`。例如 `{"widthWeight": 1, "text": "", "action": "backspace"}` 表示退格键。导出和重新导入会保留功能键配置。
+`action` 可取 `text`、`backspace`、`left`、`right`、`up`、`down`、`shift`、`ctrl`、`enter`、`tab`、`home`、`end`、`emoji`、`candidates`、`clipboard` 或 `pages`。例如 `{"widthWeight": 1, "text": "", "action": "backspace"}` 表示退格键。导出和重新导入会保留功能键配置。
 
 旧版 `version: 1` / `version: 2` / `version: 3` 配置以及只有 `name` 和 `rows` 的布局文件仍可导入：缺少 `action` 的键按文本键处理，缺少 `text` 的键视为未分配。缺少 `longPressText` 时不启用长按。未知的 `action` 会被拒绝。导入不会覆盖已有布局，会创建新文件。配置最大 1 MB，支持 1–20 行、每行 1–40 个键、每键最多 1000 个 UTF-16 代码单元；比例必须为有限正数。
 

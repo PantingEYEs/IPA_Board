@@ -3,6 +3,7 @@ package com.example.ipa_board
 import android.content.Context
 import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT
 import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT_FILENAME
+import org.json.JSONArray
 import java.io.File
 import java.io.IOException
 import java.util.Locale
@@ -133,6 +134,58 @@ object LayoutFileManager {
     fun listLayoutFiles(context: Context): List<String> {
         return getLayoutsDir(context).listFiles { file -> file.isFile && file.name.endsWith(".json", ignoreCase = true) }
             ?.map { it.name }?.sorted() ?: emptyList()
+    }
+
+    fun getLayoutOrder(context: Context): List<String> {
+        val files = listLayoutFiles(context)
+        if (files.isEmpty()) return emptyList()
+        val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        val savedOrderJson = prefs.getString(SettingsConstants.KEY_LAYOUT_ORDER, null)
+        if (savedOrderJson.isNullOrEmpty()) return files
+
+        return try {
+            val jsonArr = JSONArray(savedOrderJson)
+            val savedList = mutableListOf<String>()
+            for (i in 0 until jsonArr.length()) {
+                savedList.add(jsonArr.getString(i))
+            }
+            val ordered = savedList.filter { it in files }.toMutableList()
+            files.forEach { file ->
+                if (file !in ordered) ordered.add(file)
+            }
+            ordered
+        } catch (_: Exception) {
+            files
+        }
+    }
+
+    fun saveLayoutOrder(context: Context, orderedFilenames: List<String>) {
+        val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        val jsonArr = JSONArray()
+        orderedFilenames.forEach { jsonArr.put(it) }
+        prefs.edit().apply {
+            putString(SettingsConstants.KEY_LAYOUT_ORDER, jsonArr.toString())
+            putLong(SettingsConstants.KEY_LAYOUT_REVISION, prefs.getLong(SettingsConstants.KEY_LAYOUT_REVISION, 0) + 1)
+        }.apply()
+    }
+
+    fun switchPage(context: Context, forward: Boolean): String {
+        val pages = getLayoutOrder(context)
+        if (pages.isEmpty()) return DEFAULT_LAYOUT_FILENAME
+        val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        val active = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
+        val currentIndex = pages.indexOf(active).let { if (it < 0) 0 else it }
+        val newIndex = if (forward) {
+            (currentIndex + 1) % pages.size
+        } else {
+            (currentIndex - 1 + pages.size) % pages.size
+        }
+        val newPage = pages[newIndex]
+        prefs.edit().apply {
+            putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, newPage)
+            putLong(SettingsConstants.KEY_LAYOUT_REVISION, prefs.getLong(SettingsConstants.KEY_LAYOUT_REVISION, 0) + 1)
+        }.apply()
+        return newPage
     }
     
     fun deleteLayout(context: Context, filename: String): Boolean {

@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -15,6 +16,8 @@ object KeyboardRenderer {
         ctrlEnabled: Boolean = false,
         showUnassignedPlaceholders: Boolean = false,
         showKeyPreview: Boolean = false,
+        onKeyQuickSwipeItemClick: ((Int, Int, KeySlot, LongPressItem) -> Unit)? = null,
+        onKeyLongItemClick: ((Int, Int, KeySlot, LongPressItem) -> Unit)? = null,
         onKeyLongClick: ((Int, Int, KeySlot) -> Unit)? = null,
         onKeyClick: ((Int, Int, KeySlot) -> Unit)? = null
     ) {
@@ -43,6 +46,8 @@ object KeyboardRenderer {
                 val slotView = FrameLayoutWithBorder(context, symbolColor, active).apply {
                     isSelected = active
                     previewEnabled = showKeyPreview
+                    this.shiftEnabled = shiftEnabled
+                    this.ctrlEnabled = ctrlEnabled
                     tapPreview = when {
                         slot.action != KeyAction.TEXT -> slot.action.keyLabel
                         slot.text == " " -> "␣"
@@ -50,7 +55,11 @@ object KeyboardRenderer {
                         slot.text == "\t" -> "⇥"
                         else -> slot.displayText(shiftEnabled)
                     }.let { if (ctrlEnabled && slot.action == KeyAction.TEXT) "Ctrl+$it" else it }
-                    holdPreview = when {
+                    longPressItems = slot.effectiveLongPressItems
+                    swipeLeftItem = slot.effectiveSwipeLeftItem
+                    swipeRightItem = slot.effectiveSwipeRightItem
+                    val firstItem = slot.effectiveLongPressItems.firstOrNull()
+                    holdPreview = firstItem?.previewText(shiftEnabled, ctrlEnabled) ?: when {
                         slot.longPressAction != KeyAction.TEXT -> slot.longPressAction.keyLabel
                         slot.longPressText == " " -> "␣"
                         slot.longPressText == "\n" -> "↵"
@@ -84,32 +93,71 @@ object KeyboardRenderer {
                     slotView.isFocusable = true
                     slotView.setOnClickListener { onKeyClick(rowIndex, columnIndex, slot) }
                 }
-                if (onKeyLongClick != null && slot.hasLongPress) {
+                if (onKeyQuickSwipeItemClick != null) {
+                    slotView.onSwipeLeftItemClick = { item ->
+                        onKeyQuickSwipeItemClick(rowIndex, columnIndex, slot, item)
+                    }
+                    slotView.onSwipeRightItemClick = { item ->
+                        onKeyQuickSwipeItemClick(rowIndex, columnIndex, slot, item)
+                    }
+                }
+                if ((onKeyLongItemClick != null || onKeyLongClick != null) && slot.hasLongPress) {
+                    slotView.onLongPressItemClick = { item ->
+                        if (onKeyLongItemClick != null) {
+                            onKeyLongItemClick(rowIndex, columnIndex, slot, item)
+                        } else {
+                            onKeyLongClick?.invoke(rowIndex, columnIndex, slot)
+                        }
+                    }
                     slotView.setOnLongClickListener {
-                        onKeyLongClick(rowIndex, columnIndex, slot)
+                        val firstItem = slot.effectiveLongPressItems.firstOrNull() ?: LongPressItem(text = slot.longPressText, action = slot.longPressAction)
+                        if (onKeyLongItemClick != null) {
+                            onKeyLongItemClick(rowIndex, columnIndex, slot, firstItem)
+                        } else {
+                            onKeyLongClick?.invoke(rowIndex, columnIndex, slot)
+                        }
                         true
                     }
                 }
                 if (slot.longPressAction == KeyAction.REPEAT_BACKSPACE || slot.action == KeyAction.REPEAT_BACKSPACE) {
                     slotView.onLongPressRepeat = {
-                        onKeyLongClick?.invoke(rowIndex, columnIndex, slot)
+                        val firstItem = slot.effectiveLongPressItems.firstOrNull() ?: LongPressItem(text = slot.longPressText, action = slot.longPressAction)
+                        if (onKeyLongItemClick != null) {
+                            onKeyLongItemClick(rowIndex, columnIndex, slot, firstItem)
+                        } else {
+                            onKeyLongClick?.invoke(rowIndex, columnIndex, slot)
+                        }
                     }
                 }
-                slotView.addView(textView)
+                slotView.addView(textView, FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    if (slot.hasLongPress) (Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL) else Gravity.CENTER
+                ).apply {
+                    if (slot.hasLongPress) {
+                        bottomMargin = (3 * context.resources.displayMetrics.density).toInt()
+                    }
+                })
                 if (slot.hasLongPress) {
-                    val longPressLabel = if (slot.longPressAction != KeyAction.TEXT) slot.longPressAction.keyLabel else slot.longPressText
-                    val longPressDesc = if (slot.longPressAction != KeyAction.TEXT) slot.longPressAction.title else slot.longPressText
+                    val firstItem = slot.effectiveLongPressItems.firstOrNull()
+                    val longPressLabel = firstItem?.previewText(shiftEnabled, ctrlEnabled)
+                        ?: if (slot.longPressAction != KeyAction.TEXT) slot.longPressAction.keyLabel else slot.longPressText
+                    val longPressDesc = slot.effectiveLongPressItems.joinToString(", ") { it.description() }.ifEmpty {
+                        if (slot.longPressAction != KeyAction.TEXT) slot.longPressAction.title else slot.longPressText
+                    }
                     slotView.contentDescription = "${slotView.contentDescription}, long press: $longPressDesc"
                     slotView.addView(TextView(context).apply {
                         text = longPressLabel
-                        textSize = 10f
+                        textSize = 9f
                         setTextColor(symbolColor)
+                        alpha = 0.65f
                         maxLines = 1
-                        gravity = Gravity.END
-                        setPadding(2, 0, 4, 0)
-                    }, android.widget.FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END
-                    ))
+                        gravity = Gravity.CENTER
+                    }, FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                    ).apply {
+                        topMargin = (2 * context.resources.displayMetrics.density).toInt()
+                    })
                 }
                 rowView.addView(slotView)
             }
@@ -122,7 +170,6 @@ object KeyboardRenderer {
         init {
             val border = GradientDrawable().apply {
                 setColor(if (active) Color.argb(65, Color.red(symbolColor), Color.green(symbolColor), Color.blue(symbolColor)) else Color.TRANSPARENT)
-                // Use a subtle version of the symbol color for the border
                 val alphaColor = Color.argb(
                     30, 
                     Color.red(symbolColor), 

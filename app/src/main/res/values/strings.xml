@@ -16,8 +16,12 @@
     <string name="layout_restored">Key mappings restored.</string>
     <string name="text_behavior">Text input behavior</string>
     <string name="long_press_type">Long-press action</string>
-    <string name="long_press_text_label">Long-press symbols / text</string>
-    <string name="long_press_text_hint">Direct input; leave empty to disable long press</string>
+    <string name="long_press_text_label">Long-press symbols / text (separate multiple with commas ,)</string>
+    <string name="long_press_text_hint">e.g. ɑ, æ, ɒ (separated by commas for swipe selection)</string>
+    <string name="swipe_left_type">Quick Swipe Left action</string>
+    <string name="swipe_left_text_hint">Leave empty to disable quick swipe left</string>
+    <string name="swipe_right_type">Quick Swipe Right action</string>
+    <string name="swipe_right_text_hint">Leave empty to disable quick swipe right</string>
     <string name="delete_layout">Delete Active Layout File</string>
     <string name="delete_layout_title">Delete layout?</string>
     <string name="delete_layout_message">Delete %1$s? This cannot be undone. The default layout will become active.</string>
@@ -27,6 +31,8 @@
     <string name="default_layout_protected">Default layout cannot be deleted</string>
     <string name="rename_layout">Rename Keyboard Page</string>
     <string name="rename_layout_message">Change the page name shown in the keyboard page picker. The layout filename stays the same.</string>
+    <string name="reorder_pages">Reorder Keyboard Pages</string>
+    <string name="reorder_pages_title">Reorder Keyboard Pages</string>
     <string name="current_page_name">Page: %1$s</string>
     <string name="emoji_loading">Loading emoji…</string>
     <string name="emoji_retry">Unable to load emoji. Tap to retry.</string>

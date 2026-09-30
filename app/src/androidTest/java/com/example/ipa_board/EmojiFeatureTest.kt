@@ -1,7 +1,5 @@
 package com.example.ipa_board
 
-import android.content.Context
-import android.widget.Spinner
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onData
 import androidx.test.espresso.Espresso.onView
@@ -61,7 +59,7 @@ class EmojiFeatureTest {
                 val position = picker.grid.lastVisiblePosition
                 picker.grid.performItemClick(picker.grid.getChildAt(position - picker.grid.firstVisiblePosition), position, position.toLong())
                 assertEquals(catalog.entries.last(), selected)
-                picker.findViewById<Spinner>(R.id.emoji_category).setSelection(catalog.groups.indexOf("Component") + 1)
+                picker.filterCategory(catalog.groups.indexOf("Component") + 1)
             }
             instrumentation.waitForIdleSync()
             scenario.onActivity {

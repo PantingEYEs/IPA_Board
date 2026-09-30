@@ -1,26 +1,29 @@
 package com.example.ipa_board
 
-import android.app.AlertDialog
-import android.widget.EditText
-import org.json.JSONObject
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.RadioGroup
+import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.graphics.ColorUtils
+import org.json.JSONObject
 import com.example.ipa_board.SettingsConstants.DEFAULT_BG_COLOR_HEX
 import com.example.ipa_board.SettingsConstants.DEFAULT_KEYBOARD_HEIGHT
 import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT_FILENAME
@@ -115,6 +118,7 @@ class SettingsActivity : Activity() {
         btnImport.setOnClickListener { startImport() }
         btnExport.setOnClickListener { startExport() }
         findViewById<Button>(R.id.btn_rename_layout).setOnClickListener { showRenameLayoutDialog() }
+        findViewById<Button>(R.id.btn_reorder_pages).setOnClickListener { showReorderPagesDialog() }
         findViewById<Button>(R.id.btn_new_layout).setOnClickListener { showNewLayoutDialog() }
         findViewById<Button>(R.id.btn_delete_layout).setOnClickListener { deleteCurrentLayout() }
         findViewById<Button>(R.id.btn_clear_layout).setOnClickListener { clearCurrentLayout() }
@@ -182,7 +186,7 @@ class SettingsActivity : Activity() {
     }
 
     private fun updateLayoutSpinner() {
-        val files = LayoutFileManager.listLayoutFiles(this)
+        val files = LayoutFileManager.getLayoutOrder(this)
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, files)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         val listener = spLayouts.onItemSelectedListener
@@ -194,6 +198,74 @@ class SettingsActivity : Activity() {
         val index = files.indexOf(activeFile)
         if (index >= 0) spLayouts.setSelection(index)
         spLayouts.onItemSelectedListener = listener
+    }
+
+    private fun showReorderPagesDialog() {
+        val currentOrder = LayoutFileManager.getLayoutOrder(this).toMutableList()
+        val scroll = ScrollView(this)
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(32, 24, 32, 24)
+        }
+        scroll.addView(container)
+
+        fun refreshContainer(dialogView: LinearLayout) {
+            dialogView.removeAllViews()
+            currentOrder.forEachIndexed { index, filename ->
+                val layout = LayoutFileManager.loadLayout(this, filename)
+                val displayName = layout?.name ?: filename
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(0, 8, 0, 8)
+                }
+                val title = TextView(this).apply {
+                    text = "${index + 1}. $displayName"
+                    setTextColor(Color.WHITE)
+                    textSize = 16f
+                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                }
+                val btnUp = Button(this).apply {
+                    text = "▲"
+                    textSize = 12f
+                    isEnabled = index > 0
+                    setOnClickListener {
+                        val temp = currentOrder[index]
+                        currentOrder[index] = currentOrder[index - 1]
+                        currentOrder[index - 1] = temp
+                        refreshContainer(dialogView)
+                    }
+                }
+                val btnDown = Button(this).apply {
+                    text = "▼"
+                    textSize = 12f
+                    isEnabled = index < currentOrder.size - 1
+                    setOnClickListener {
+                        val temp = currentOrder[index]
+                        currentOrder[index] = currentOrder[index + 1]
+                        currentOrder[index + 1] = temp
+                        refreshContainer(dialogView)
+                    }
+                }
+                row.addView(title)
+                row.addView(btnUp, LinearLayout.LayoutParams((48 * resources.displayMetrics.density).toInt(), (40 * resources.displayMetrics.density).toInt()))
+                row.addView(btnDown, LinearLayout.LayoutParams((48 * resources.displayMetrics.density).toInt(), (40 * resources.displayMetrics.density).toInt()))
+                dialogView.addView(row)
+            }
+        }
+
+        refreshContainer(container)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.reorder_pages_title)
+            .setView(scroll)
+            .setPositiveButton("Save") { _, _ ->
+                LayoutFileManager.saveLayoutOrder(this, currentOrder)
+                updateLayoutSpinner()
+                refreshPreview()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun refreshPreview() {
@@ -238,7 +310,20 @@ class SettingsActivity : Activity() {
         val longPressTypes = editorView.findViewById<Spinner>(R.id.sp_long_press_type)
         val longPressTextLabel = editorView.findViewById<TextView>(R.id.tv_long_press_text_label)
         val longPressInput = editorView.findViewById<EditText>(R.id.et_long_press_text)
-        longPressInput.setText(slot.longPressText)
+        val currentLpText = if (slot.longPressItems.isNotEmpty()) {
+            slot.longPressItems.joinToString(", ") { if (it.action != KeyAction.TEXT) it.action.keyLabel else it.text }
+        } else {
+            slot.longPressText
+        }
+        longPressInput.setText(currentLpText)
+        val swipeLeftTypes = editorView.findViewById<Spinner>(R.id.sp_swipe_left_type)
+        val swipeLeftInput = editorView.findViewById<EditText>(R.id.et_swipe_left_text)
+        val swipeRightTypes = editorView.findViewById<Spinner>(R.id.sp_swipe_right_type)
+        val swipeRightInput = editorView.findViewById<EditText>(R.id.et_swipe_right_text)
+
+        swipeLeftInput.setText(slot.swipeLeftText)
+        swipeRightInput.setText(slot.swipeRightText)
+
         val types = editorView.findViewById<Spinner>(R.id.sp_key_type)
         val behavior = editorView.findViewById<Spinner>(R.id.sp_text_behavior)
         behavior.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, TextBehavior.entries.map { it.title })
@@ -255,6 +340,17 @@ class SettingsActivity : Activity() {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
         longPressTypes.setSelection(actions.indexOf(slot.longPressAction))
+
+        swipeLeftTypes.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, actions.map { it.title }).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        swipeLeftTypes.setSelection(actions.indexOf(slot.swipeLeftAction))
+
+        swipeRightTypes.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, actions.map { it.title }).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        swipeRightTypes.setSelection(actions.indexOf(slot.swipeRightAction))
+
         fun updateEditor() {
             val action = actions[types.selectedItemPosition]
             input.visibility = if (action == KeyAction.TEXT) View.VISIBLE else View.GONE
@@ -268,6 +364,14 @@ class SettingsActivity : Activity() {
             longPressTextLabel.visibility = if (isText) View.VISIBLE else View.GONE
             longPressInput.visibility = if (isText) View.VISIBLE else View.GONE
         }
+        fun updateSwipeEditors() {
+            val slAction = actions[swipeLeftTypes.selectedItemPosition]
+            swipeLeftInput.visibility = if (slAction == KeyAction.TEXT) View.VISIBLE else View.GONE
+
+            val srAction = actions[swipeRightTypes.selectedItemPosition]
+            swipeRightInput.visibility = if (srAction == KeyAction.TEXT) View.VISIBLE else View.GONE
+        }
+
         types.setSelection(actions.indexOf(slot.action))
         types.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = updateEditor()
@@ -277,8 +381,18 @@ class SettingsActivity : Activity() {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = updateLongPressEditor()
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
+        swipeLeftTypes.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = updateSwipeEditors()
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+        swipeRightTypes.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = updateSwipeEditors()
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+
         updateEditor()
         updateLongPressEditor()
+        updateSwipeEditors()
         val dialog = AlertDialog.Builder(this)
             .setTitle("Row ${row + 1} · Key ${column + 1}")
             .setMessage(R.string.key_edit_message)
@@ -293,10 +407,38 @@ class SettingsActivity : Activity() {
                     val text = if (action == KeyAction.TEXT) input.text.toString() else ""
                     val lpAction = actions[longPressTypes.selectedItemPosition]
                     val lpText = if (lpAction == KeyAction.TEXT) longPressInput.text.toString() else ""
+                    val items = if (lpAction == KeyAction.TEXT && lpText.isNotEmpty()) {
+                        if (lpText.contains(",")) {
+                            lpText.split(",").map { it.trim() }.filter { it.isNotEmpty() }.map { LongPressItem(text = it) }
+                        } else {
+                            listOf(LongPressItem(text = lpText))
+                        }
+                    } else if (lpAction != KeyAction.TEXT) {
+                        listOf(LongPressItem(action = lpAction))
+                    } else {
+                        emptyList()
+                    }
+
+                    val slAction = actions[swipeLeftTypes.selectedItemPosition]
+                    val slText = if (slAction == KeyAction.TEXT) swipeLeftInput.text.toString() else ""
+
+                    val srAction = actions[swipeRightTypes.selectedItemPosition]
+                    val srText = if (srAction == KeyAction.TEXT) swipeRightInput.text.toString() else ""
+
                     LayoutFileManager.saveLayout(
                         this, filename,
-                        layout.withKeyMapping(row, column, text, action, TextBehavior.entries[behavior.selectedItemPosition], longPressText = lpText, longPressAction = lpAction)
+                        layout.withKeyMapping(
+                            row, column, text, action, TextBehavior.entries[behavior.selectedItemPosition],
+                            longPressText = lpText, longPressAction = lpAction, longPressItems = items,
+                            swipeLeftText = slText, swipeLeftAction = slAction,
+                            swipeRightText = srText, swipeRightAction = srAction
+                        )
                     )
+                    clearedLayout = null
+                    refreshPreview()
+                    dialog.dismiss()
+                } catch (e: Exception) {
+                    error.text = "Failed to save: ${e.message}"
                     clearedLayout = null
                     refreshPreview()
                     dialog.dismiss()

@@ -71,6 +71,48 @@
             android:hint="@string/long_press_text_hint" />
 
         <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:labelFor="@id/sp_swipe_left_type"
+            android:text="@string/swipe_left_type" />
+
+        <Spinner
+            android:id="@+id/sp_swipe_left_type"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+
+        <EditText
+            android:id="@+id/et_swipe_left_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:inputType="textMultiLine|textNoSuggestions"
+            android:maxLength="1000"
+            android:hint="@string/swipe_left_text_hint" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:labelFor="@id/sp_swipe_right_type"
+            android:text="@string/swipe_right_type" />
+
+        <Spinner
+            android:id="@+id/sp_swipe_right_type"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+
+        <EditText
+            android:id="@+id/et_swipe_right_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:inputType="textMultiLine|textNoSuggestions"
+            android:maxLength="1000"
+            android:hint="@string/swipe_right_text_hint" />
+
+        <TextView
             android:id="@+id/tv_key_error"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

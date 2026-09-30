@@ -16,9 +16,17 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     private val body = FrameLayout(context)
     private val overlay = LinearLayout(context).apply { orientation = VERTICAL }
     private val candidateRow = LinearLayout(context)
-    private val expand = button("⋯", "Expand") { showPanel(if (panel == Panel.CANDIDATES) Panel.KEYBOARD else Panel.CANDIDATES) }
-    private val status = TextView(context)
+    private val expand = button("⋯", "Expand") { showPanel(if (panel == Panel.KEYBOARD) Panel.CANDIDATES else Panel.KEYBOARD) }
+    val status = TextView(context)
+    var onStatusClick: (() -> Unit)? = null
+        set(value) {
+            field = value
+            status.isClickable = value != null
+            status.isFocusable = value != null
+        }
     private var candidates = emptyList<Candidate>()
+    private var engineMessage = ""
+    private var panelTitle = ""
     var panel = Panel.KEYBOARD
         private set
     var onCandidate: (Candidate, Long) -> Unit = { _, _ -> }
@@ -35,13 +43,14 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
             status.setTextColor(Color.LTGRAY)
             status.textSize = 10f
             status.gravity = Gravity.CENTER_VERTICAL
+            status.setOnClickListener { onStatusClick?.invoke() }
             addView(status, LayoutParams(0, dp(28), 1f))
         }
         addView(toolbar, LayoutParams(-1, dp(28)))
         val strip = LinearLayout(context)
         val horizontal = HorizontalScrollView(context).apply { isHorizontalScrollBarEnabled = false; addView(candidateRow) }
         strip.addView(horizontal, LayoutParams(0, dp(28), 1f))
-        strip.addView(expand, LayoutParams(dp(37), dp(26)))//candidate drop down
+        strip.addView(expand, LayoutParams(LayoutParams.WRAP_CONTENT, dp(26)))//candidate drop down / return
         addView(strip)
         body.addView(keyboardHost, FrameLayout.LayoutParams(-1, -1))
         overlay.setBackgroundColor(Color.rgb(0, 0, 0))
@@ -56,7 +65,8 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     }
 
     fun render(raw: String, items: List<Candidate>, message: String, generation: Long) {
-        status.text = message
+        engineMessage = message
+        if (panel == Panel.KEYBOARD) status.text = engineMessage
         if (candidates != items || revision != generation) {
             revision = generation
             candidates = items
@@ -64,7 +74,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
             items.take(24).forEach { candidateRow.addView(candidateButton(it)) }
             if (panel == Panel.CANDIDATES) renderCandidates()
         }
-        expand.isEnabled = items.isNotEmpty() || panel == Panel.CANDIDATES
+        expand.isEnabled = if (panel == Panel.KEYBOARD) items.isNotEmpty() else true
     }
 
     fun showPanel(next: Panel) {
@@ -73,19 +83,29 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         keyboardHost.importantForAccessibility = if (next == Panel.KEYBOARD) IMPORTANT_FOR_ACCESSIBILITY_AUTO else IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         // Invisible keeps the geometry but prevents any underlying hit target or focus.
         keyboardHost.visibility = if (next == Panel.KEYBOARD) VISIBLE else INVISIBLE
-        expand.text = if (next == Panel.CANDIDATES) "⌃" else "⋯"
-        expand.contentDescription = if (next == Panel.CANDIDATES) "Collapse" else "Expand"
+        if (next == Panel.KEYBOARD) {
+            onStatusClick = null
+            expand.text = "⋯"
+            expand.contentDescription = "Expand"
+            expand.isEnabled = candidates.isNotEmpty()
+            status.text = engineMessage
+        } else {
+            expand.text = "Return"
+            expand.contentDescription = "Return to Keyboard"
+            expand.isEnabled = true
+            if (panelTitle.isNotEmpty()) status.text = panelTitle
+        }
         if (next == Panel.CANDIDATES) renderCandidates()
         onPanel(next)
     }
 
     fun showContent(title: String, content: View) {
-        overlay.removeAllViews()
-        val header = LinearLayout(context)
-        header.addView(TextView(context).apply { text = title; textSize = 10f; setTextColor(Color.WHITE); gravity = Gravity.CENTER_VERTICAL; setPadding(dp(12),0,0,0) }, LayoutParams(0, dp(28), 1f))
-        header.addView(button("Return", "Return to Keyboard") { showPanel(Panel.KEYBOARD) })
-        overlay.addView(header)
-        overlay.addView(content, LayoutParams(-1, 0, 1f))
+        panelTitle = title
+        if (panel != Panel.KEYBOARD) status.text = title
+        if (overlay.childCount == 0 || overlay.getChildAt(0) !== content) {
+            overlay.removeAllViews()
+            overlay.addView(content, LayoutParams(-1, -1))
+        }
     }
 
     fun listContent(labels: List<String>, click: (Int) -> Unit): View = ListView(context).apply {
@@ -148,7 +168,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     private fun renderCandidates() {
         val snapshot = candidates.toList()
         val generation = revision
-        val title = if (snapshot.isEmpty()) "" else "(${snapshot.size})"
+        val title = if (snapshot.isEmpty()) "候选词" else "候选词 (${snapshot.size})"
         showContent(title, candidateGridContent(snapshot) { candidate ->
             onCandidate(candidate, generation)
         })

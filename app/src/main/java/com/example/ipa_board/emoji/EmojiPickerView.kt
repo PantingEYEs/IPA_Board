@@ -22,31 +22,29 @@ class EmojiPickerView(context: Context, catalog: EmojiCatalog, private val onEmo
         contentDescription = context.getString(R.string.emoji_grid_description)
         setBackgroundColor(Color.BLACK)
     }
-    private val emojiAdapter = EmojiAdapter(catalog.entries)
+    private val allEntries = catalog.entries
+    private val emojiAdapter = EmojiAdapter(allEntries)
+    val categories: List<String> = listOf(context.getString(R.string.emoji_all)) + catalog.groups
+    var currentCategoryIndex: Int = 0
+        private set
+    val currentCategoryName: String
+        get() = categories.getOrElse(currentCategoryIndex) { categories.first() }
+    var onCategorySelected: ((Int, String) -> Unit)? = null
 
     init {
         orientation = VERTICAL
-        val groups = listOf(context.getString(R.string.emoji_all)) + catalog.groups
-        val filter = Spinner(context).apply {
-            id = R.id.emoji_category
-            contentDescription = context.getString(R.string.emoji_category)
-            adapter = object : ArrayAdapter<String>(context, android.R.layout.simple_spinner_dropdown_item, groups) {
-                override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
-                    (super.getView(position, convertView, parent) as TextView).apply { setTextColor(Color.WHITE) }
-            }
-            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                    emojiAdapter.items = if (position == 0) catalog.entries else catalog.entries.filter { it.group == groups[position] }
-                    emojiAdapter.notifyDataSetChanged()
-                    grid.setSelection(0)
-                }
-                override fun onNothingSelected(parent: AdapterView<*>?) = Unit
-            }
-        }
-        addView(filter, LayoutParams(-1, dp(40)))
         grid.adapter = emojiAdapter
         grid.setOnItemClickListener { _, _, position, _ -> onEmoji(emojiAdapter.getItem(position)) }
-        addView(grid, LayoutParams(-1, 0, 1f))
+        addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+    }
+
+    fun filterCategory(position: Int) {
+        if (position !in categories.indices) return
+        currentCategoryIndex = position
+        emojiAdapter.items = if (position == 0) allEntries else allEntries.filter { it.group == categories[position] }
+        emojiAdapter.notifyDataSetChanged()
+        grid.setSelection(0)
+        onCategorySelected?.invoke(position, currentCategoryName)
     }
 
     override fun onAttachedToWindow() {

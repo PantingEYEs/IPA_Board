@@ -1,5 +1,6 @@
 package com.example.ipa_board
 
+import android.R
 import android.os.SystemClock
 import android.text.InputType
 import android.view.InputDevice
@@ -81,7 +82,7 @@ class KeyboardInputController {
             KeyAction.END -> sendKey(connection, KeyEvent.KEYCODE_MOVE_END, metaState)
             KeyAction.TAB -> sendKey(connection, KeyEvent.KEYCODE_TAB, metaState)
             KeyAction.ENTER -> enter(connection, editorInfo, metaState)
-            KeyAction.EMOJI -> false // Panel actions are handled by IpaBoardService.
+            KeyAction.EMOJI, KeyAction.CANDIDATES, KeyAction.CLIPBOARD, KeyAction.PAGES -> false // Panel actions are handled by IpaBoardService.
             else -> true
         }
         if (handled && (slot.action == KeyAction.TEXT) && slot.text.isNotEmpty()) {
@@ -99,13 +100,48 @@ class KeyboardInputController {
             in 'a'..'z' -> KeyEvent.KEYCODE_A + (character - 'a')
             in '0'..'9' -> KeyEvent.KEYCODE_0 + (character - '0')
             ' ' -> KeyEvent.KEYCODE_SPACE
-            else -> return false
+            '[' -> KeyEvent.KEYCODE_LEFT_BRACKET
+            ']' -> KeyEvent.KEYCODE_RIGHT_BRACKET
+            '\\' -> KeyEvent.KEYCODE_BACKSLASH
+            ';' -> KeyEvent.KEYCODE_SEMICOLON
+            '\'' -> KeyEvent.KEYCODE_APOSTROPHE
+            ',' -> KeyEvent.KEYCODE_COMMA
+            '.' -> KeyEvent.KEYCODE_PERIOD
+            '/' -> KeyEvent.KEYCODE_SLASH
+            '`' -> KeyEvent.KEYCODE_GRAVE
+            '-' -> KeyEvent.KEYCODE_MINUS
+            '=' -> KeyEvent.KEYCODE_EQUALS
+            '{' -> KeyEvent.KEYCODE_LEFT_BRACKET
+            '}' -> KeyEvent.KEYCODE_RIGHT_BRACKET
+            '|' -> KeyEvent.KEYCODE_BACKSLASH
+            ':' -> KeyEvent.KEYCODE_SEMICOLON
+            '"' -> KeyEvent.KEYCODE_APOSTROPHE
+            '<' -> KeyEvent.KEYCODE_COMMA
+            '>' -> KeyEvent.KEYCODE_PERIOD
+            '?' -> KeyEvent.KEYCODE_SLASH
+            '~' -> KeyEvent.KEYCODE_GRAVE
+            '_' -> KeyEvent.KEYCODE_MINUS
+            '+' -> KeyEvent.KEYCODE_EQUALS
+            '!' -> KeyEvent.KEYCODE_1
+            '@' -> KeyEvent.KEYCODE_2
+            '#' -> KeyEvent.KEYCODE_3
+            '$' -> KeyEvent.KEYCODE_4
+            '%' -> KeyEvent.KEYCODE_5
+            '^' -> KeyEvent.KEYCODE_6
+            '&' -> KeyEvent.KEYCODE_7
+            '*' -> KeyEvent.KEYCODE_8
+            '(' -> KeyEvent.KEYCODE_9
+            ')' -> KeyEvent.KEYCODE_0
+            else -> {
+                val events = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD).getEvents(charArrayOf(character))
+                events?.firstOrNull()?.keyCode ?: return false
+            }
         }
         if (metaState and KeyEvent.META_SHIFT_ON == 0) {
             val contextAction = when (character) {
-                'a' -> android.R.id.selectAll
-                'c' -> android.R.id.copy
-                'x' -> android.R.id.cut
+                'a' -> R.id.selectAll
+                'c' -> if (!connection.getSelectedText(0).isNullOrEmpty()) R.id.copy else null
+                'x' -> if (!connection.getSelectedText(0).isNullOrEmpty()) R.id.cut else null
                 'v' -> android.R.id.paste
                 else -> null
             }
@@ -119,26 +155,30 @@ class KeyboardInputController {
     private fun backspace(connection: InputConnection): Boolean {
         // commitText replaces a composing span before a selection; finish it first.
         connection.finishComposingText()
-        if (!connection.getSelectedText(0).isNullOrEmpty()) {
+        val selected = try { connection.getSelectedText(0) } catch (_: Exception) { null }
+        if (!selected.isNullOrEmpty()) {
             return connection.commitText("", 1)
         }
+
+        val before = try { connection.getTextBeforeCursor(2, 0) } catch (_: Exception) { null }
+        if (before.isNullOrEmpty()) {
+            return sendKey(connection, KeyEvent.KEYCODE_DEL, 0)
+        }
+
         if (connection.deleteSurroundingTextInCodePoints(1, 0)) return true
 
         // Older/custom editors can reject code-point deletion. Never split a surrogate pair.
-        val before = connection.getTextBeforeCursor(2, 0)
-            ?: return sendKey(connection, KeyEvent.KEYCODE_DEL, 0)
-        if (before.isEmpty()) return true
         val last = before[before.length - 1]
         if (Character.isHighSurrogate(last)) {
-            val after = connection.getTextAfterCursor(1, 0)
+            val after = try { connection.getTextAfterCursor(1, 0) } catch (_: Exception) { null }
             if (!after.isNullOrEmpty() && Character.isLowSurrogate(after[0])) {
-                return connection.deleteSurroundingText(1, 1)
+                if (connection.deleteSurroundingText(1, 1)) return true
             }
         }
         val length = if (before.length >= 2 && Character.isSurrogatePair(
                 before[before.length - 2], last
             )) 2 else 1
-        return connection.deleteSurroundingText(length, 0)
+        return connection.deleteSurroundingText(length, 0) || sendKey(connection, KeyEvent.KEYCODE_DEL, 0)
     }
 
     private fun enter(connection: InputConnection, editorInfo: EditorInfo?, metaState: Int): Boolean {

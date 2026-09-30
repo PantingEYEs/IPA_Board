@@ -13,6 +13,7 @@ object SettingsConstants {
 
     const val KEY_ACTIVE_LAYOUT_FILE = "active_layout_file"
     const val DEFAULT_LAYOUT_FILENAME = "default.json"
+    const val KEY_LAYOUT_ORDER = "layout_order"
     
     const val KEY_KEYBOARD_HEIGHT = "keyboard_height_dp"
     const val DEFAULT_KEYBOARD_HEIGHT = 210
@@ -26,7 +27,7 @@ object SettingsConstants {
             RowLayout(1f, List(11) { KeySlot(1f) }),
             RowLayout(1f, listOf(
                 KeySlot(1f), KeySlot(1f), KeySlot(1f), 
-                KeySlot(5f), 
+                KeySlot(5f, " ", textBehavior = TextBehavior.AUTO, swipeLeftAction = KeyAction.PREV_PAGE, swipeRightAction = KeyAction.NEXT_PAGE), 
                 KeySlot(1f), KeySlot(1f)
             )),
             RowLayout(1f, List(4) { KeySlot(1f) })

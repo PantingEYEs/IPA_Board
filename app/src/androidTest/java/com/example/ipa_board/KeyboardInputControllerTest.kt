@@ -66,6 +66,7 @@ class KeyboardInputControllerTest {
     }
 
     @Test fun ctrlUsesCommonEditorActionsAndOnlyAppliesToOneKey() = withRecordingConnection { controller, connection ->
+        connection.selectedText = "selected text"
         val actions = listOf("a" to android.R.id.selectAll, "C" to android.R.id.copy,
             "x" to android.R.id.cut, "v" to android.R.id.paste)
         for ((character, action) in actions) {
@@ -77,6 +78,16 @@ class KeyboardInputControllerTest {
         assertTrue(connection.events.isEmpty())
         controller.handle(text("z"), connection, null)
         assertEquals(listOf("z"), connection.committed)
+    }
+
+    @Test fun ctrlCAndXWithoutSelectionFallBackToKeyEvents() = withRecordingConnection { controller, connection ->
+        connection.selectedText = null
+        for ((character, keyCode) in listOf("c" to KeyEvent.KEYCODE_C, "x" to KeyEvent.KEYCODE_X)) {
+            connection.events.clear()
+            controller.handle(key(KeyAction.CTRL), connection, null)
+            assertTrue(controller.handle(text(character), connection, null))
+            assertKeyPair(connection.events, keyCode, KeyEvent.META_CTRL_ON)
+        }
     }
 
     @Test fun rejectedContextActionFallsBackToBalancedControlKeyEvents() = withRecordingConnection { controller, connection ->
@@ -105,6 +116,25 @@ class KeyboardInputControllerTest {
             connection.events.clear()
             controller.handle(key(KeyAction.CTRL), connection, null)
             assertTrue(controller.handle(text(value), connection, null))
+            assertKeyPair(connection.events, keyCode, KeyEvent.META_CTRL_ON)
+        }
+        assertTrue(connection.committed.isEmpty())
+    }
+
+    @Test fun genericCtrlSymbolsUseKeyEvents() = withRecordingConnection { controller, connection ->
+        val symbols = listOf(
+            "[" to KeyEvent.KEYCODE_LEFT_BRACKET,
+            "]" to KeyEvent.KEYCODE_RIGHT_BRACKET,
+            "\\" to KeyEvent.KEYCODE_BACKSLASH,
+            "-" to KeyEvent.KEYCODE_MINUS,
+            "=" to KeyEvent.KEYCODE_EQUALS,
+            "/" to KeyEvent.KEYCODE_SLASH,
+            ";" to KeyEvent.KEYCODE_SEMICOLON
+        )
+        for ((symbol, keyCode) in symbols) {
+            connection.events.clear()
+            controller.handle(key(KeyAction.CTRL), connection, null)
+            assertTrue(controller.handle(text(symbol), connection, null))
             assertKeyPair(connection.events, keyCode, KeyEvent.META_CTRL_ON)
         }
         assertTrue(connection.committed.isEmpty())
@@ -196,6 +226,27 @@ class KeyboardInputControllerTest {
         assertEquals(1 to 0, connection.surroundingDeletions.last())
     }
 
+    @Test fun backspaceSendsDelKeyEventWhenBeforeCursorIsEmptyOrNull() = withRecordingConnection { controller, connection ->
+        connection.beforeCursor = ""
+        connection.events.clear()
+        assertTrue(controller.handle(key(KeyAction.BACKSPACE), connection, null))
+        assertKeyPair(connection.events, KeyEvent.KEYCODE_DEL, 0)
+
+        connection.beforeCursor = null
+        connection.events.clear()
+        assertTrue(controller.handle(key(KeyAction.BACKSPACE), connection, null))
+        assertKeyPair(connection.events, KeyEvent.KEYCODE_DEL, 0)
+    }
+
+    @Test fun backspaceFallsBackToDelKeyEventWhenDeleteSurroundingTextFails() = withRecordingConnection { controller, connection ->
+        connection.acceptCodePointDeletion = false
+        connection.acceptSurroundingDeletion = false
+        connection.beforeCursor = "a"
+        connection.events.clear()
+        assertTrue(controller.handle(key(KeyAction.BACKSPACE), connection, null))
+        assertKeyPair(connection.events, KeyEvent.KEYCODE_DEL, 0)
+    }
+
     @Test fun ctrlBackspaceDelegatesWordDeletionToTheEditor() = withRecordingConnection { controller, connection ->
         controller.handle(key(KeyAction.CTRL), connection, null)
         controller.handle(key(KeyAction.BACKSPACE), connection, null)
@@ -264,8 +315,10 @@ class KeyboardInputControllerTest {
         var acceptContextActions = true
         var acceptEvents = true
         var acceptCodePointDeletion = true
+        var acceptSurroundingDeletion = true
         var beforeCursor: CharSequence? = ""
         var afterCursor: CharSequence? = ""
+        var selectedText: CharSequence? = null
 
         override fun commitText(text: CharSequence?, newCursorPosition: Int): Boolean {
             committed += text.toString()
@@ -283,7 +336,7 @@ class KeyboardInputControllerTest {
             editorActions += editorAction
             return true
         }
-        override fun getSelectedText(flags: Int): CharSequence? = null
+        override fun getSelectedText(flags: Int): CharSequence? = selectedText
         override fun getTextBeforeCursor(n: Int, flags: Int): CharSequence? = beforeCursor
         override fun getTextAfterCursor(n: Int, flags: Int): CharSequence? = afterCursor
         override fun deleteSurroundingTextInCodePoints(beforeLength: Int, afterLength: Int): Boolean {
@@ -292,7 +345,7 @@ class KeyboardInputControllerTest {
         }
         override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
             surroundingDeletions += beforeLength to afterLength
-            return true
+            return acceptSurroundingDeletion
         }
     }
 }

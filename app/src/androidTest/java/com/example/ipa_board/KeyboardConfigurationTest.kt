@@ -42,7 +42,11 @@ class KeyboardConfigurationTest {
             KeyAction.ENTER to "enter",
             KeyAction.TAB to "tab",
             KeyAction.HOME to "home",
-            KeyAction.END to "end"
+            KeyAction.END to "end",
+            KeyAction.EMOJI to "emoji",
+            KeyAction.CANDIDATES to "candidates",
+            KeyAction.CLIPBOARD to "clipboard",
+            KeyAction.PAGES to "pages"
         )
         val layout = KeyboardLayout("Functions", listOf(RowLayout(1f, actions.map { (action, _) ->
             KeySlot(1f, if (action == KeyAction.TEXT) "ɪ" else "", action)

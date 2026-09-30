@@ -49,6 +49,13 @@
             android:layout_height="wrap_content"
             android:text="@string/rename_layout" />
 
+        <Button
+            android:id="@+id/btn_reorder_pages"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/reorder_pages"
+            android:layout_marginBottom="8dp" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

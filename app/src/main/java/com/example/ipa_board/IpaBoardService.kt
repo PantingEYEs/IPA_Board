@@ -99,32 +99,66 @@ class IpaBoardService : InputMethodService() {
         KeyboardRenderer.render(this, view.keyboardHost, layout, height, color(KEY_SYMBOL_COLOR_HEX, DEFAULT_SYMBOL_COLOR_HEX),
             inputController.shiftEnabled, inputController.ctrlEnabled,
             showKeyPreview = true,
+            onKeyQuickSwipeItemClick = { _, _, slot, item -> handleLongPressItem(slot, item) },
+            onKeyLongItemClick = { _, _, slot, item -> handleLongPressItem(slot, item) },
             onKeyLongClick = { _, _, slot -> handleLongPress(slot) }) { _, _, slot -> handleKey(slot) }
     }
-    private fun handleLongPress(slot: KeySlot) {
-        if (!slot.hasLongPress) return
-        if (slot.longPressAction == KeyAction.TEXT && slot.longPressText.isNotEmpty()) {
+
+    private fun handleLongPressItem(slot: KeySlot, item: LongPressItem) {
+        if (item.action == KeyAction.TEXT && item.text.isNotEmpty()) {
             val ic = currentInputConnection ?: return
             if (!composition.literal()) return
-            if (ic.commitText(slot.longPressText, 1)) {
+            if (ic.commitText(item.text, 1)) {
                 if (inputController.consumeSingleShift()) applySettings()
             }
-        } else {
-            val action = if (slot.longPressAction != KeyAction.TEXT) slot.longPressAction else slot.action
+        } else if (item.action != KeyAction.TEXT) {
             val longPressSlot = KeySlot(
                 widthWeight = slot.widthWeight,
                 text = "",
-                action = action,
+                action = item.action,
                 textBehavior = slot.textBehavior
             )
             handleKey(longPressSlot)
         }
     }
 
+    private fun handleLongPress(slot: KeySlot) {
+        if (!slot.hasLongPress) return
+        val item = slot.effectiveLongPressItems.firstOrNull() ?: LongPressItem(text = slot.longPressText, action = slot.longPressAction)
+        handleLongPressItem(slot, item)
+    }
+
     private fun handleKey(slot: KeySlot) {
-        if (slot.action == KeyAction.EMOJI) {
-            chrome?.showPanel(ImeChromeView.Panel.EMOJI)
-            return
+        when (slot.action) {
+            KeyAction.EMOJI -> {
+                chrome?.showPanel(ImeChromeView.Panel.EMOJI)
+                return
+            }
+            KeyAction.CANDIDATES -> {
+                chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.CANDIDATES) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.CANDIDATES)
+                return
+            }
+            KeyAction.CLIPBOARD -> {
+                chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.CLIPBOARD) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.CLIPBOARD)
+                return
+            }
+            KeyAction.PAGES -> {
+                chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.PAGES) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.PAGES)
+                return
+            }
+            KeyAction.PREV_PAGE -> {
+                val newPage = LayoutFileManager.switchPage(this, forward = false)
+                val name = LayoutFileManager.loadLayout(this, newPage)?.name ?: newPage
+                Toast.makeText(this, name, Toast.LENGTH_SHORT).show()
+                return
+            }
+            KeyAction.NEXT_PAGE -> {
+                val newPage = LayoutFileManager.switchPage(this, forward = true)
+                val name = LayoutFileManager.loadLayout(this, newPage)?.name ?: newPage
+                Toast.makeText(this, name, Toast.LENGTH_SHORT).show()
+                return
+            }
+            else -> {}
         }
         val ic = currentInputConnection ?: return
         val beforeShiftState = inputController.shiftState
@@ -163,6 +197,7 @@ class IpaBoardService : InputMethodService() {
     private fun showEmoji() {
         val view = chrome ?: return
         val request = ++emojiRequest
+        view.onStatusClick = null
         view.showContent("Emoji", TextView(this).apply {
             setText(R.string.emoji_loading)
             setTextColor(Color.WHITE)
@@ -173,11 +208,18 @@ class IpaBoardService : InputMethodService() {
             emojiHandler.post {
                 if (emojiClosed || request != emojiRequest || chrome !== view || view.panel != ImeChromeView.Panel.EMOJI) return@post
                 result.fold(onSuccess = { catalog ->
-                    view.showContent("Emoji ${catalog.version} · ${catalog.entries.size}", EmojiPickerView(this, catalog) { entry ->
+                    val picker = EmojiPickerView(this, catalog) { entry ->
                         // Commit any pending composition first. Emoji bypass Shift/Ctrl and language conversion.
                         if (composition.literal()) currentInputConnection?.commitText(entry.text, 1)
-                    })
+                    }
+                    fun updateStatus() {
+                        view.showContent("Emoji · ${picker.currentCategoryName} ▾", picker)
+                    }
+                    picker.onCategorySelected = { _, _ -> updateStatus() }
+                    view.onStatusClick = { showEmojiCategoryMenu(picker) }
+                    updateStatus()
                 }, onFailure = {
+                    view.onStatusClick = null
                     view.showContent("Emoji", Button(this).apply {
                         setText(R.string.emoji_retry)
                         setOnClickListener { showEmoji() }
@@ -185,6 +227,19 @@ class IpaBoardService : InputMethodService() {
                 })
             }
         }
+    }
+
+    private fun showEmojiCategoryMenu(picker: EmojiPickerView) {
+        val view = chrome ?: return
+        val popup = PopupMenu(this, view.status)
+        picker.categories.forEachIndexed { index, category ->
+            popup.menu.add(0, index, index, category)
+        }
+        popup.setOnMenuItemClickListener { item ->
+            picker.filterCategory(item.itemId)
+            true
+        }
+        popup.show()
     }
 
     private fun showClipboard() {
@@ -204,7 +259,7 @@ class IpaBoardService : InputMethodService() {
     private fun showPages() {
         val view = chrome ?: return
         val active = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME)
-        val layouts = LayoutFileManager.listLayoutFiles(this).mapNotNull { file -> LayoutFileManager.loadLayout(this, file)?.let { file to it } }
+        val layouts = LayoutFileManager.getLayoutOrder(this).mapNotNull { file -> LayoutFileManager.loadLayout(this, file)?.let { file to it } }
         val grid = GridLayout(this).apply { columnCount = 2 }
         layouts.forEach { (file, layout) ->
             val cell = LinearLayout(this).apply {

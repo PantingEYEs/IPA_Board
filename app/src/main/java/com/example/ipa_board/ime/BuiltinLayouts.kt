@@ -7,7 +7,7 @@ object BuiltinLayouts {
     val mixed = KeyboardLayout("多语言 QWERTY", listOf(
         row("qwertyuiop"), row("asdfghjkl"),
         RowLayout(1f, listOf(KeySlot(1.4f, action = KeyAction.SHIFT)) + "zxcvbnm".map { letter(it) } + KeySlot(1.4f, action = KeyAction.BACKSPACE)),
-        RowLayout(1f, listOf(KeySlot(1f, "'", textBehavior = TextBehavior.AUTO), KeySlot(1f, ","), KeySlot(4f, " ", textBehavior = TextBehavior.AUTO), KeySlot(1f, "."), KeySlot(1.5f, action = KeyAction.ENTER)))
+        RowLayout(1f, listOf(KeySlot(1f, "'", textBehavior = TextBehavior.AUTO), KeySlot(1f, ","), KeySlot(4f, " ", textBehavior = TextBehavior.AUTO, swipeLeftAction = KeyAction.PREV_PAGE, swipeRightAction = KeyAction.NEXT_PAGE), KeySlot(1f, "."), KeySlot(1.5f, action = KeyAction.ENTER)))
     ))
     private fun letter(c: Char) = KeySlot(1f, c.toString(), textBehavior = TextBehavior.AUTO)
     private fun row(s: String) = RowLayout(1f, s.map { letter(it) })

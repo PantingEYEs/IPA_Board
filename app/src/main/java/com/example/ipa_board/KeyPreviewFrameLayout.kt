@@ -3,7 +3,9 @@ package com.example.ipa_board
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.text.TextUtils
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.ViewConfiguration
 import android.widget.FrameLayout
@@ -15,27 +17,60 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
     var previewEnabled = false
     var tapPreview = ""
     var holdPreview = ""
+    var longPressItems: List<LongPressItem> = emptyList()
+    var swipeLeftItem: LongPressItem? = null
+    var swipeRightItem: LongPressItem? = null
     var onLongPressRepeat: (() -> Unit)? = null
+    var onLongPressItemClick: ((LongPressItem) -> Unit)? = null
+    var onSwipeLeftItemClick: ((LongPressItem) -> Unit)? = null
+    var onSwipeRightItemClick: ((LongPressItem) -> Unit)? = null
+    var shiftEnabled = false
+    var ctrlEnabled = false
+
+    private enum class QuickSwipe { NONE, LEFT, RIGHT }
+    private var quickSwipe = QuickSwipe.NONE
+
     private var tracking = false
     private var held = false
     private var isRepeating = false
+    private var isCanceled = false
     private var pointerId = -1
+    private var startX = 0f
+    private var startY = 0f
+    private var currentTouchRawX = 0f
+    private var currentTouchRawY = 0f
+    private var currentSelectedIndex = 0
     private var popup: PopupWindow? = null
+
     internal val visiblePreview: String?
         get() = if (popup?.isShowing == true) (popup?.contentView as? TextView)?.text?.toString() else null
+
     private val repeatRunnable = object : Runnable {
         override fun run() {
-            if (tracking && held && isRepeating) {
+            if (tracking && held && isRepeating && !isCanceled) {
                 onLongPressRepeat?.invoke()
                 postDelayed(this, 50L)
             }
         }
     }
+
     private val selectHold = Runnable {
-        if (tracking) {
+        if (tracking && !isCanceled) {
             held = true
-            showPreview(holdPreview)
-            performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+            quickSwipe = QuickSwipe.NONE
+            currentSelectedIndex = 0
+            startX = currentTouchRawX
+            startY = currentTouchRawY
+
+            val items = getEffectiveItems()
+            val initialPreview = if (items.isNotEmpty()) {
+                items[0].previewText(shiftEnabled, ctrlEnabled)
+            } else holdPreview
+
+            if (initialPreview.isNotEmpty()) {
+                showPreview(initialPreview)
+            }
+            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
             if (onLongPressRepeat != null) {
                 isRepeating = true
                 repeatRunnable.run()
@@ -43,37 +78,140 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
         }
     }
 
+    private fun getEffectiveItems(): List<LongPressItem> {
+        if (longPressItems.isNotEmpty()) return longPressItems
+        if (holdPreview.isNotEmpty()) return listOf(LongPressItem(text = holdPreview))
+        return emptyList()
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (!previewEnabled) return super.onTouchEvent(event)
         if (!isEnabled || !isClickable) return false
+
+        val density = resources.displayMetrics.density
+        val stepPx = (28 * density).toInt().coerceAtLeast(1)
+        val cancelThresholdY = (32 * density).toInt()
+
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 cancelPress()
                 tracking = true
+                isCanceled = false
                 pointerId = event.getPointerId(0)
+                startX = event.rawX
+                startY = event.rawY
+                currentTouchRawX = event.rawX
+                currentTouchRawY = event.rawY
+                quickSwipe = QuickSwipe.NONE
                 isPressed = true
                 parent?.requestDisallowInterceptTouchEvent(true)
                 showPreview(tapPreview)
-                if (holdPreview.isNotEmpty() && isLongClickable) {
+
+                val items = getEffectiveItems()
+                val hasLong = (items.isNotEmpty() || holdPreview.isNotEmpty()) && isLongClickable
+                if (hasLong) {
                     postDelayed(selectHold, ViewConfiguration.getLongPressTimeout().toLong())
                 }
             }
             MotionEvent.ACTION_MOVE -> {
                 val index = event.findPointerIndex(pointerId)
-                if (index < 0 || event.getX(index) < 0 || event.getX(index) >= width ||
-                    event.getY(index) < 0 || event.getY(index) >= height) cancelPress()
+                if (index >= 0) {
+                    currentTouchRawX = event.rawX
+                    currentTouchRawY = event.rawY
+                    val currentX = event.rawX
+                    val currentY = event.rawY
+                    val viewX = event.getX(index)
+                    val viewY = event.getY(index)
+
+                    if (!held) {
+                        val deltaX = currentX - startX
+                        val deltaY = currentY - startY
+                        val swipeThreshold = 24 * density
+
+                        if (Math.abs(deltaY) > cancelThresholdY && Math.abs(deltaY) > Math.abs(deltaX)) {
+                            cancelPress()
+                            isCanceled = true
+                        } else if (Math.abs(deltaX) > swipeThreshold && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+                            if (deltaX < 0 && swipeLeftItem != null) {
+                                if (quickSwipe != QuickSwipe.LEFT) {
+                                    quickSwipe = QuickSwipe.LEFT
+                                    showPreview(swipeLeftItem!!.previewText(shiftEnabled, ctrlEnabled))
+                                    performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                }
+                            } else if (deltaX > 0 && swipeRightItem != null) {
+                                if (quickSwipe != QuickSwipe.RIGHT) {
+                                    quickSwipe = QuickSwipe.RIGHT
+                                    showPreview(swipeRightItem!!.previewText(shiftEnabled, ctrlEnabled))
+                                    performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                }
+                            } else if (viewX < 0 || viewX >= width || viewY < 0 || viewY >= height) {
+                                cancelPress()
+                            }
+                        } else if (Math.abs(deltaX) <= swipeThreshold / 2f) {
+                            if (quickSwipe != QuickSwipe.NONE) {
+                                quickSwipe = QuickSwipe.NONE
+                                showPreview(tapPreview)
+                            }
+                            if (viewX < 0 || viewX >= width || viewY < 0 || viewY >= height) {
+                                cancelPress()
+                            }
+                        }
+                    } else {
+                        if (currentY - startY > cancelThresholdY || viewY >= height + cancelThresholdY) {
+                            cancelPress()
+                            isCanceled = true
+                        } else {
+                            val items = getEffectiveItems()
+                            if (items.isNotEmpty()) {
+                                val deltaX = currentX - startX
+                                val steps = Math.round(deltaX / stepPx)
+                                val n = items.size
+                                val newIndex = Math.floorMod(steps, n)
+                                if (newIndex != currentSelectedIndex) {
+                                    currentSelectedIndex = newIndex
+                                    showPreview(items[newIndex].previewText(shiftEnabled, ctrlEnabled))
+                                    performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    cancelPress()
+                }
             }
             MotionEvent.ACTION_UP -> {
-                val commit = tracking && event.getPointerId(event.actionIndex) == pointerId &&
-                    event.x >= 0 && event.x < width && event.y >= 0 && event.y < height
+                val index = event.actionIndex
+                val pointerMatches = event.getPointerId(index) == pointerId
+                val commit = tracking && pointerMatches && !isCanceled
                 val longPress = held
                 val wasRepeating = isRepeating
+                val selectedIdx = currentSelectedIndex
+                val swipeState = quickSwipe
+
                 cancelPress()
+
                 if (commit) {
                     if (longPress) {
-                        if (!wasRepeating) performLongClick()
+                        if (!wasRepeating) {
+                            val items = getEffectiveItems()
+                            if (onLongPressItemClick != null && items.isNotEmpty() && selectedIdx in items.indices) {
+                                onLongPressItemClick?.invoke(items[selectedIdx])
+                            } else {
+                                performLongClick()
+                            }
+                        }
                     } else {
-                        performClick()
+                        when (swipeState) {
+                            QuickSwipe.LEFT -> {
+                                swipeLeftItem?.let { item -> onSwipeLeftItemClick?.invoke(item) } ?: performClick()
+                            }
+                            QuickSwipe.RIGHT -> {
+                                swipeRightItem?.let { item -> onSwipeRightItemClick?.invoke(item) } ?: performClick()
+                            }
+                            QuickSwipe.NONE -> {
+                                performClick()
+                            }
+                        }
                     }
                 }
             }
@@ -100,7 +238,7 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
             minWidth = (56 * density).toInt()
             minHeight = (56 * density).toInt()
             maxLines = 3
-            ellipsize = android.text.TextUtils.TruncateAt.END
+            ellipsize = TextUtils.TruncateAt.END
             importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
         }
         val maxWidth = minOf((180 * density).toInt(), resources.displayMetrics.widthPixels)
@@ -129,6 +267,7 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
         isRepeating = false
         tracking = false
         held = false
+        quickSwipe = QuickSwipe.NONE
         pointerId = -1
         isPressed = false
         popup?.dismiss()
