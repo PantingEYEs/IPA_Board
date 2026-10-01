@@ -11,7 +11,7 @@ import android.widget.*
 
 /** IME-only chrome. Never passed to KeyboardRenderer or serialized with a layout. */
 class ImeChromeView(context: Context) : LinearLayout(context) {
-    enum class Panel { KEYBOARD, CANDIDATES, CLIPBOARD, PAGES, EMOJI, KAOMOJI }
+    enum class Panel { KEYBOARD, CANDIDATES, CLIPBOARD, PAGES, EMOJI, KAOMOJI, CALCULATOR }
     val keyboardHost = LinearLayout(context).apply { orientation = VERTICAL }
     private val body = FrameLayout(context)
     private val overlay = LinearLayout(context).apply { orientation = VERTICAL }
@@ -35,6 +35,8 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     private var revision = -1L
     var onLiteral: () -> Unit = {}
     var onPanel: (Panel) -> Unit = {}
+    var onCalculatorToggle: () -> Unit = {}
+    private val calcBtn = toolbarButton("∑", "Calculator") { onCalculatorToggle() }
 
     init {
         orientation = VERTICAL
@@ -43,6 +45,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
             addView(toolbarButton("⧉", "Clipboard") { toggle(Panel.CLIPBOARD) })
             addView(toolbarButton("⊞", "Keyboard Overview") { toggle(Panel.PAGES) })
             addView(toolbarButton("顔", "顔文字") { toggle(Panel.KAOMOJI) })
+            addView(calcBtn)
             status.setTextColor(Color.LTGRAY)
             status.textSize = 10f
             status.gravity = Gravity.CENTER_VERTICAL
@@ -69,6 +72,12 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     fun setKeyboardHeight(px: Int) {
         body.layoutParams = LayoutParams(-1, px)
     }
+
+    fun setCalculatorEnabled(enabled: Boolean) {
+        calcBtn.alpha = if (enabled) 1.0f else 0.5f
+    }
+
+
 
     fun setStatusCustomView(view: View?) {
         customStatusView = view

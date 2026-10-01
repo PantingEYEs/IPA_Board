@@ -20,6 +20,7 @@ import com.example.ipa_board.ime.*
 import com.example.ipa_board.emoji.*
 import com.example.ipa_board.kaomoji.*
 import com.example.ipa_board.clipboard.*
+import com.example.ipa_board.calculator.*
 import com.example.ipa_board.SettingsConstants.PREFS_NAME
 import com.example.ipa_board.SettingsConstants.KEY_LAYOUT_REVISION
 import com.example.ipa_board.SettingsConstants.KEY_BG_COLOR_HEX
@@ -48,6 +49,7 @@ class IpaBoardService : InputMethodService() {
     private var emojiRequest = 0L
     private var emojiClosed = false
     private var engineStatus = "Loading Dictionary"
+    private var isCalcEngineEnabled = true
     private var directOnly = false
     private var consumedPanelBack = false
     private var panelBackRegistered = false
@@ -188,6 +190,11 @@ class IpaBoardService : InputMethodService() {
     override fun onCreateInputView(): View {
         return ImeChromeView(this).also { view ->
             chrome = view
+            view.onCalculatorToggle = {
+                isCalcEngineEnabled = !isCalcEngineEnabled
+                chrome?.setCalculatorEnabled(isCalcEngineEnabled)
+                refreshCandidates()
+            }
             view.onCandidate = { candidate, generation -> if (composition.select(candidate, generation)) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
             view.onLiteral = { if (composition.literal()) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
             view.onPanel = { panel ->
@@ -208,10 +215,52 @@ class IpaBoardService : InputMethodService() {
             engines.start()
         }
     }
+    private fun getMathCandidate(raw: String): Candidate? {
+        if (!isCalcEngineEnabled) return null
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) return null
+
+        val mathOps = setOf('+', '-', '*', '/', '×', '÷')
+        val opsCount = trimmed.count { it in mathOps }
+        if (opsCount == 0) return null
+
+        if (opsCount == 1 && trimmed.startsWith("-") && trimmed.substring(1).all { it.isDigit() || it == '.' }) {
+            return null
+        }
+
+        val hasDigit = trimmed.any { it.isDigit() }
+        if (!hasDigit) return null
+
+        val evalRes = CalculatorEvaluator.evaluate(trimmed)
+        if (evalRes.isEmpty() || evalRes == "Error" || evalRes == "除数不能为0") {
+            return null
+        }
+
+        val firstNum = trimmed.takeWhile { it.isDigit() || it == '.' || it == '-' }
+        if (evalRes == firstNum || evalRes == trimmed) {
+            return null
+        }
+
+        return Candidate(evalRes, "∑", rank = -1)
+    }
+
     private fun refreshCandidates() {
-        chrome?.render(composition.raw, composition.candidates, if (directOnly) "Direct Input" else engineStatus, composition.revision)
+        val raw = composition.raw
+        val baseStatus = if (directOnly) "Direct Input" else engineStatus
+
+        val mathCand = getMathCandidate(raw)
+        val displayCandidates = if (mathCand != null) {
+            listOf(mathCand) + composition.candidates.filter { it.text != mathCand.text }
+        } else {
+            composition.candidates
+        }
+
+        composition.updateCandidates(displayCandidates)
+        chrome?.render(raw, displayCandidates, baseStatus, composition.revision)
         updateQuickPasteStatus()
     }
+
+
     private fun applySettings() {
         val view = chrome ?: return
         inputController.shiftShortcuts = SettingsConstants.parseShortcutsJson(prefs.getString(KEY_SHIFT_SHORTCUTS, null))
@@ -234,10 +283,14 @@ class IpaBoardService : InputMethodService() {
 
     private fun handleLongPressItem(slot: KeySlot, item: LongPressItem) {
         if (item.action == KeyAction.TEXT && item.text.isNotEmpty()) {
-            val ic = currentInputConnection ?: return
-            if (!composition.literal()) return
-            if (ic.commitText(item.text, 1)) {
+            if (!directOnly) {
+                composition.input(item.text)
                 if (inputController.consumeSingleShift()) applySettings()
+            } else {
+                val ic = currentInputConnection ?: return
+                if (ic.commitText(item.text, 1)) {
+                    if (inputController.consumeSingleShift()) applySettings()
+                }
             }
         } else if (item.action != KeyAction.TEXT) {
             val longPressSlot = KeySlot(
@@ -264,6 +317,12 @@ class IpaBoardService : InputMethodService() {
             }
             KeyAction.KAOMOJI -> {
                 chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.KAOMOJI) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.KAOMOJI)
+                return
+            }
+            KeyAction.CALCULATOR -> {
+                isCalcEngineEnabled = !isCalcEngineEnabled
+                chrome?.setCalculatorEnabled(isCalcEngineEnabled)
+                refreshCandidates()
                 return
             }
             KeyAction.CANDIDATES -> {
@@ -312,6 +371,13 @@ class IpaBoardService : InputMethodService() {
             when (activeShortcut) {
                 KeyAction.EMOJI -> { consumeModifiers(); chrome?.showPanel(ImeChromeView.Panel.EMOJI); return }
                 KeyAction.KAOMOJI -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.KAOMOJI) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.KAOMOJI); return }
+                KeyAction.CALCULATOR -> {
+                    consumeModifiers()
+                    isCalcEngineEnabled = !isCalcEngineEnabled
+                    chrome?.setCalculatorEnabled(isCalcEngineEnabled)
+                    refreshCandidates()
+                    return
+                }
                 KeyAction.CANDIDATES -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.CANDIDATES) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.CANDIDATES); return }
                 KeyAction.CLIPBOARD -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.CLIPBOARD) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.CLIPBOARD); return }
                 KeyAction.PAGES -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.PAGES) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.PAGES); return }
@@ -336,6 +402,7 @@ class IpaBoardService : InputMethodService() {
         val isModifier = slot.action == KeyAction.SHIFT || slot.action == KeyAction.CTRL
         val text = if (beforeShift) slot.text.uppercase(Locale.ROOT) else slot.text
         if (!beforeCtrl && slot.action == KeyAction.TEXT && text.isEmpty()) return
+
         if (!directOnly && !beforeCtrl && !isModifier) {
             when {
                 (slot.action == KeyAction.BACKSPACE || slot.action == KeyAction.REPEAT_BACKSPACE) && composition.backspace() -> {
@@ -351,8 +418,7 @@ class IpaBoardService : InputMethodService() {
                     if (inputController.consumeSingleShift()) applySettings()
                     return
                 }
-                slot.action == KeyAction.TEXT && slot.textBehavior == TextBehavior.AUTO && text.isNotEmpty() &&
-                    text.all { it in 'a'..'z' || it in 'A'..'Z' || it == '\'' } -> {
+                slot.action == KeyAction.TEXT && text.isNotEmpty() -> {
                     composition.input(text)
                     if (inputController.consumeSingleShift()) applySettings()
                     return
@@ -663,6 +729,8 @@ class IpaBoardService : InputMethodService() {
 
         popup.showAsDropDown(anchorView)
     }
+
+
 
     private fun showClipboard() {
         val view = chrome ?: return

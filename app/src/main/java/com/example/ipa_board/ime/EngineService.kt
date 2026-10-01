@@ -25,8 +25,8 @@ abstract class EngineService : Service() {
                 if (engine == null && failure == null) engine = createEngine()
                 check(failure == null) { failure.orEmpty() }
                 val raw = data.getString("raw").orEmpty()
-                require(raw.length <= 64 && raw.all { it in 'a'..'z' || it in 'A'..'Z' || it == '\'' })
-                val candidates = if (raw.isEmpty()) emptyList() else engine!!.query(raw)
+                val isPinyinRomaji = raw.length <= 64 && raw.all { it in 'a'..'z' || it in 'A'..'Z' || it == '\'' }
+                val candidates = if (isPinyinRomaji && raw.isNotEmpty() && engine != null) engine!!.query(raw) else emptyList()
                 result.putStringArrayList("text", ArrayList(candidates.map { it.text }))
                 result.putStringArrayList("language", ArrayList(candidates.map { it.language }))
                 result.putIntArray("rank", candidates.map { it.rank }.toIntArray())

@@ -48,4 +48,10 @@ class MultilingualEngineTest {
         assertTrue(result.toString(), result.contains("日本語"))
         assertTrue(query(MozcService::class.java, "konnichiha").contains("こんにちは"))
     }
+    @Test fun nonPinyinOrMathQueriesDoNotCrashEngines() {
+        val rimeRes = query(RimeService::class.java, "100/4")
+        assertTrue(rimeRes.isEmpty())
+        val mozcRes = query(MozcService::class.java, "12.5+3.5")
+        assertTrue(mozcRes.isEmpty())
+    }
 }

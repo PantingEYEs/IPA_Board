@@ -106,7 +106,7 @@ class KeyboardInputController {
             KeyAction.COPY -> connection.performContextMenuAction(R.id.copy)
             KeyAction.CUT -> connection.performContextMenuAction(R.id.cut)
             KeyAction.PASTE -> connection.performContextMenuAction(R.id.paste)
-            KeyAction.EMOJI, KeyAction.KAOMOJI, KeyAction.CANDIDATES, KeyAction.CLIPBOARD, KeyAction.PAGES, KeyAction.PREV_PAGE, KeyAction.NEXT_PAGE -> false // Panel actions are handled by IpaBoardService.
+            KeyAction.EMOJI, KeyAction.KAOMOJI, KeyAction.CALCULATOR, KeyAction.CANDIDATES, KeyAction.CLIPBOARD, KeyAction.PAGES, KeyAction.PREV_PAGE, KeyAction.NEXT_PAGE -> false // Panel actions are handled by IpaBoardService.
             else -> true
         }
         if (handled && (slot.action == KeyAction.TEXT) && slot.text.isNotEmpty()) {

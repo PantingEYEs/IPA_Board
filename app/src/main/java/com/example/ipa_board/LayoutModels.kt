@@ -259,6 +259,7 @@ enum class KeyAction(val wireValue: String, val title: String, val keyLabel: Str
     END("end", "End", "End", "Move to the end of the line. Shift extends the selection."),
     EMOJI("emoji", "Emoji", "☺", "Open the scrollable emoji panel. Tap an emoji to insert it; Return closes the panel."),
     KAOMOJI("kaomoji", "顔文字", "顔", "Open the scrollable 顔文字 panel. Tap a 顔文字 to insert it; Return closes the panel."),
+    CALCULATOR("calculator", "计算器", "∑", "Toggle calculator mode. Evaluate math expressions and output results as candidates."),
     CANDIDATES("candidates", "Candidates", "⋯", "Open the candidate word list panel."),
     CLIPBOARD("clipboard", "Clipboard", "⧉", "Open the clipboard panel. Tap an item to insert it; Return closes the panel."),
     PAGES("pages", "Keyboard Pages", "⊞", "Open the keyboard page picker panel to switch active layouts."),

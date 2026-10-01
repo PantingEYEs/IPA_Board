@@ -360,7 +360,7 @@ class KeyboardPageActivity : Activity() {
         fun updateEditor() {
             val action = actions[types.selectedItemPosition]
             input.visibility = if (action == KeyAction.TEXT) View.VISIBLE else View.GONE
-            behavior.visibility = if (action == KeyAction.TEXT) View.VISIBLE else View.GONE
+            behavior.visibility = View.GONE
             help.text = action.help
             error.visibility = View.GONE
         }

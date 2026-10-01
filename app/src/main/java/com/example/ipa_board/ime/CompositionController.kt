@@ -39,9 +39,25 @@ class CompositionController(
     fun acceptResults(id: Long, result: List<Candidate>) {
         if (id == revision && raw.isNotEmpty()) { candidates = result; changed() }
     }
+    fun updateCandidates(items: List<Candidate>) {
+        candidates = items
+    }
     fun select(candidate: Candidate, id: Long = revision, appendSpace: Boolean = false): Boolean {
-        if (id != revision || raw.isEmpty() || candidates.none { it.id == candidate.id }) return false
+        if (raw.isEmpty() || candidates.none { it.id == candidate.id }) return false
+        if (candidate.language == "∑") {
+            val cleanResult = candidate.text.removeSuffix("…")
+            replaceRaw(cleanResult)
+            return true
+        }
         return commit(candidate.text + if (appendSpace && candidate.language == "EN") " " else "")
+    }
+    fun replaceRaw(newRaw: String) {
+        val ic = connection() ?: return reset()
+        raw = newRaw
+        inEditor = ic.setComposingText(raw, 1)
+        revision++
+        query(revision, raw)
+        changed()
     }
     fun literal(): Boolean = if (raw.isEmpty()) true else commit(raw)
     fun space(): Boolean {

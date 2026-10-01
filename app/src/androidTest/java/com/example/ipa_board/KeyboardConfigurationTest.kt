@@ -44,6 +44,8 @@ class KeyboardConfigurationTest {
             KeyAction.HOME to "home",
             KeyAction.END to "end",
             KeyAction.EMOJI to "emoji",
+            KeyAction.KAOMOJI to "kaomoji",
+            KeyAction.CALCULATOR to "calculator",
             KeyAction.CANDIDATES to "candidates",
             KeyAction.CLIPBOARD to "clipboard",
             KeyAction.PAGES to "pages"
