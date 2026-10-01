@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<input-method xmlns:android="http://schemas.android.com/apk/res/android"
+    android:supportsSwitchingToNextInputMethod="true"
+    android:settingsActivity="com.example.ipa_board.SettingsActivity">
+
+    <subtype>
+        android:label="IPA Board"
+        android:isAsciiCapable="true"
+    </subtype>
+</input-method>

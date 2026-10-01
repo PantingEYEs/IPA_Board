@@ -1,0 +1,17 @@
+schema:
+  schema_id: easy_en
+  name: English
+  version: "ipa-1"
+engine:
+  processors: [speller, selector, express_editor]
+  segmentors: [abc_segmentor, fallback_segmentor]
+  translators: [table_translator]
+  filters: [uniquifier]
+speller:
+  alphabet: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
+  delimiter: "'"
+translator:
+  dictionary: easy_en
+  enable_user_dict: false
+  enable_sentence: false
+  enable_completion: true

@@ -1,0 +1,296 @@
+{
+  "archives": [
+    {
+      "file": "mozc.apk",
+      "url": "https://github.com/elizagamedev/android-libre-japanese-input/releases/download/v0.1.2/app-release.apk",
+      "sha256": "6b946fc78d333055027eebc92c9b28f3e4c55c539306c979158e7043ac5aa55b"
+    },
+    {
+      "file": "trime-arm64.apk",
+      "url": "https://github.com/osfans/trime/releases/download/v3.3.12/com.osfans.trime-v3.3.12-0-ge09ac711-arm64-v8a-release.apk",
+      "sha256": "c727d509cbae8ba6a6b3616f57ea299d46bb13072812342811d03aea0bc3cb98"
+    },
+    {
+      "file": "trime-x64.apk",
+      "url": "https://github.com/osfans/trime/releases/download/v3.3.12/com.osfans.trime-v3.3.12-0-ge09ac711-x86_64-release.apk",
+      "sha256": "0b32fee993f59614a69269aea30f817c48d7af67b35965ed4eb107e68340ee6f"
+    },
+    {
+      "file": "jna.aar",
+      "url": "https://repo.maven.apache.org/maven2/net/java/dev/jna/jna/5.17.0/jna-5.17.0.aar",
+      "sha256": "4dbeffffa665d97ad5aa7eee297531d3c841a86716ab7f774fd6956422b3cf38"
+    }
+  ],
+  "files": [
+    {
+      "path": "app/libs/jna-5.17.0.aar",
+      "sha256": "4dbeffffa665d97ad5aa7eee297531d3c841a86716ab7f774fd6956422b3cf38",
+      "bytes": 522249
+    },
+    {
+      "path": "app/src/main/assets/engines/mozc.data",
+      "sha256": "a905f88e772bafd4b070cebfe66fbb061fab04496f22166fd37875aa34713ccd",
+      "bytes": 20489885
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/default.custom.yaml",
+      "sha256": "2dc2eb9e9d56ed9dd7678838a8724b8c297bfbfa6aa6199ea7bb03c614e230e4",
+      "bytes": 70
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/default.yaml",
+      "sha256": "dd55653a991f9418eb425ee2112666f82e3e753c5ce3ed5702dd243041a45382",
+      "bytes": 1365
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/easy_en.dict.yaml",
+      "sha256": "4f039026b2746fa9b0d4d7a248cdf866b64609dca2317708f04e9e68ac7d868a",
+      "bytes": 14566541
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/easy_en.schema.yaml",
+      "sha256": "728d91a47dd1db9b0fe6f4f10cdd539cb2ebbde8756b5ce918a44344bc29adcb",
+      "bytes": 432
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/essay.txt",
+      "sha256": "196d508a9bb12fc6d711eed83f5ddc4d5c2d382d92d15b4e51175e4d3802cfab",
+      "bytes": 5887784
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/key_bindings.yaml",
+      "sha256": "5c484257cccbab899bc874dfeb9257ce7190c99fee3abc33321767c8dac56af9",
+      "bytes": 2954
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/luna_pinyin.custom.yaml",
+      "sha256": "f287778fd6b352aa3a40ddd959d37771236d79b59f45c250f99a457817d1111c",
+      "bytes": 105
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/luna_pinyin.dict.yaml",
+      "sha256": "270b0c6879436d7b0b606aa684507ea7e173c62b6d5df3966804637872d520fd",
+      "bytes": 891247
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/luna_pinyin.schema.yaml",
+      "sha256": "df48caa2901ca04d79978af926c79b118b3e6e5b5cf97b9d8c9b9d67d748a744",
+      "bytes": 2077
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/luna_pinyin_fluency.schema.yaml",
+      "sha256": "e616957b46d0b920c93937db67711c6aa3dd23a7249f8e22d79676bebedb4bc2",
+      "bytes": 527
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/luna_pinyin_simp.schema.yaml",
+      "sha256": "82d9a2b44fa207d4d49416d16af5d2fcab6b1604f4083c384372360c824ea919",
+      "bytes": 739
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/luna_pinyin_tw.schema.yaml",
+      "sha256": "a65ae62280bd907df84309c05df7ba27ac8fcaa88933bde5d969c4a4634875f4",
+      "bytes": 623
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/luna_quanpin.schema.yaml",
+      "sha256": "1d2bc8f0a62179f149f6449185ed787f761e8f53c304e5e11a78461b9a8d7999",
+      "bytes": 398
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/HKVariants.txt",
+      "sha256": "a5ea8ec2061f066bc7c2b4679ea32efb8e169b9b0ce3fb8d0ce6caed65d7df4f",
+      "bytes": 770
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/HKVariantsRev.txt",
+      "sha256": "1b9d1a6bae833245d547ba7299d53d99cb22ed22477241c6f5d16df1c0182404",
+      "bytes": 560
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/HKVariantsRevPhrases.txt",
+      "sha256": "5e9fdcd7c9e4cef05307ce24ebacf521bc785ad259cf4ef010337296327ed300",
+      "bytes": 2957
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/JPShinjitaiCharacters.txt",
+      "sha256": "243215a72d888d3ec940577bed3ef6e4ecd3e1aa5258efa2a32ca78a32038298",
+      "bytes": 334
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/JPShinjitaiPhrases.txt",
+      "sha256": "1a62c8d52306eb3be8896f86039b384eef881bb52f14251eefb25b546e4c5150",
+      "bytes": 2779
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/JPVariants.txt",
+      "sha256": "aef8a9d03ada7cd786a5ecf71ebfebb3e34d0520b60c072b2d5ed4564682a5a2",
+      "bytes": 3195
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/JPVariantsRev.txt",
+      "sha256": "3f79ca93c29571dae02aaf1cf7f949fa6165d268ad795259f6f7d4a1aaf7ba8c",
+      "bytes": 2968
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/STCharacters.txt",
+      "sha256": "9cedfb8bf13a220087103d9a96d9f56050c341c24a809cbce5c85c9045456557",
+      "bytes": 34615
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/STPhrases.txt",
+      "sha256": "1ce1869151530b6ea388ace1ae4efb3d51d1faa6e01c957f8d60313083a3969f",
+      "bytes": 1006868
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/TSCharacters.txt",
+      "sha256": "ad870b4feeb494cfa7b3b05242bd79af574b22f6b2bdeb89a1633e4b50ed0a3c",
+      "bytes": 34889
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/TSPhrases.txt",
+      "sha256": "54170de095c6d389d557d0d0b0e1a10033f397d4feca80aaa30a74a67836f43a",
+      "bytes": 5440
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/TWPhrases.txt",
+      "sha256": "34e0208f1167dfc8f52ab4560b0d262f4758363578ec4bfa928a863b310d435e",
+      "bytes": 10802
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/TWPhrasesRev.txt",
+      "sha256": "55640442ad60b686d75798306999dabede9794262255389dd0341250f1ac223a",
+      "bytes": 10844
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/TWVariants.txt",
+      "sha256": "89473e96e3f61e9bd3f2e303b9d88ac9caa61effb1faadcef94ff5e65b8ed54b",
+      "bytes": 562
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/TWVariantsRev.txt",
+      "sha256": "aed256cd515db700cbd96fae5d2158d6a98c9628ee51e14ac1e1c182f6041c90",
+      "bytes": 312
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/TWVariantsRevPhrases.txt",
+      "sha256": "6b58c0687af26b13cde81c1442dd6f570cc93f398c7ff361782244b47941ff43",
+      "bytes": 1335
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/hk2s.json",
+      "sha256": "eb651448d8b536d6131e53e254e8ca2c158c9ced50fd55ee88a76e606dd32efa",
+      "bytes": 644
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/hk2t.json",
+      "sha256": "1e5df53815d42a9ff5a1c6333b3987c072e27a27376d33f1864dc7b302751bb1",
+      "bytes": 451
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/jp2t.json",
+      "sha256": "3f9b091520ba0d55ecfe6fca719a672bb2691b1eb9b0c0a43a4aa4326b15fd9e",
+      "bytes": 540
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/s2hk.json",
+      "sha256": "3708e756ea01783e9cf6b3cce527580810b3d539b8c7fcc3594dd1517aa05bff",
+      "bytes": 507
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/s2t.json",
+      "sha256": "710bb970e406d9c0a3dd33c609248686cf1c5578d064b7b7fc89e70fbb9ea75d",
+      "bytes": 406
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/s2tw.json",
+      "sha256": "67ce1f5aa3d6b21ebb523084b40e66f80bec27bb2dc6b540d44dac2e27f7194e",
+      "bytes": 505
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/s2twp.json",
+      "sha256": "72d187574510542be608c862d5359d29480ee61f137082df8a06d74f7bcfc79c",
+      "bytes": 599
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/t2hk.json",
+      "sha256": "a8531beb7430fe1afed0294a893af529c7b7fd2ad41567b5daccb8399c8ef2f0",
+      "bytes": 304
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/t2jp.json",
+      "sha256": "4fb22429d63173715fec30524111ec141c0577b66c9f090513ea8bac4741ad77",
+      "bytes": 318
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/t2s.json",
+      "sha256": "3585fe92c75ade682e4bbe7528d98d7a311a7bb244064484e7876063e200ec37",
+      "bytes": 403
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/t2tw.json",
+      "sha256": "11495bf144cd932a9568810822a5af0fbba2db9c2e06a2bb2871583423fac24a",
+      "bytes": 302
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/tw2s.json",
+      "sha256": "fd3e758691a87c9246d081612021c7f9186ce7abe845cd4eff3e7326c300434d",
+      "bytes": 642
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/tw2sp.json",
+      "sha256": "d107837817e7704cec83a9ff7b876c289eb0ae752722c790c9bf967509c9eaa6",
+      "bytes": 728
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/tw2t.json",
+      "sha256": "046fbdf089388d11d51e5ac415e82564ff71b6e9add008cce7488e845d798c57",
+      "bytes": 449
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/pinyin.yaml",
+      "sha256": "22915339d6505d8911edd929b055145235eb4f66ee6d4dbdedb832e31be40c35",
+      "bytes": 4820
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/punctuation.yaml",
+      "sha256": "d6f89592149098f0a2d0ed3e5c83f49adb6226cdf1d967b0bc0d293f4e5c496a",
+      "bytes": 2107
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/stroke.dict.yaml",
+      "sha256": "db0b3459545f0299728e14271431b025b58ea530f4d5bf49b7a89dcaf2b9650b",
+      "bytes": 2219276
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/stroke.schema.yaml",
+      "sha256": "6f0bb7aec4eb243011c3958b891d6a719553847a93f20bf7fa820b9185525aa3",
+      "bytes": 3043
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/symbols.yaml",
+      "sha256": "f2d366c82120d46a4790ed37ca93b687f3c9001c555986a549ddeefb81038c55",
+      "bytes": 28356
+    },
+    {
+      "path": "app/src/main/jniLibs/arm64-v8a/libmozc.so",
+      "sha256": "07dfa8131d8f0081baa771c771eea7198886860deab3ecff4ccd151fdf2eec2f",
+      "bytes": 14739336
+    },
+    {
+      "path": "app/src/main/jniLibs/arm64-v8a/librime_jni.so",
+      "sha256": "6e2543f874f247016d791c91ab82e53979157f217be80efc472c9537afaff75f",
+      "bytes": 5521416
+    },
+    {
+      "path": "app/src/main/jniLibs/x86_64/libmozc.so",
+      "sha256": "225729497d0f32fbd567517c8a88a51e8f028e1febd0df6788fbad1c688785ad",
+      "bytes": 13677848
+    },
+    {
+      "path": "app/src/main/jniLibs/x86_64/librime_jni.so",
+      "sha256": "98869ae0866f4f5ea452f76cfaa0889b98bf9b11ac33a62d0534d43c14cb9128",
+      "bytes": 5516376
+    }
+  ]
+}

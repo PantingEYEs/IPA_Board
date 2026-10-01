@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "emojiVersion": "18.0",
+  "sourceUrl": "https://www.unicode.org/Public/18.0.0/emoji/emoji-test.txt",
+  "latestSourceUrl": "https://www.unicode.org/Public/emoji/latest/emoji-test.txt",
+  "retrievedOn": "2026-09-28",
+  "sha256": "8f3735cda1f92a779d78af67cf86066bb1f07143dc22f2ac29394d9bc57ab21a",
+  "fullyQualifiedCount": 3963,
+  "componentCount": 9,
+  "license": "Unicode License V3",
+  "licenseFile": "LICENSE.txt"
+}
