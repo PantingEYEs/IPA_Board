@@ -6,4 +6,5 @@
     <item name="btn_entry_shortcut" type="id" />
     <item name="btn_entry_emoji" type="id" />
     <item name="btn_entry_kaomoji" type="id" />
+    <item name="btn_entry_clipboard" type="id" />
 </resources>

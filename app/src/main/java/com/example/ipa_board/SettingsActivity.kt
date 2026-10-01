@@ -35,5 +35,9 @@ class SettingsActivity : Activity() {
         findViewById<View>(R.id.btn_entry_kaomoji).setOnClickListener {
             startActivity(Intent(this, KaomojiManagerActivity::class.java))
         }
+
+        findViewById<View>(R.id.btn_entry_clipboard).setOnClickListener {
+            startActivity(Intent(this, ClipboardManagerActivity::class.java))
+        }
     }
 }

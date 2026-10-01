@@ -7,6 +7,8 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.inputmethodservice.InputMethodService
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.text.InputType
 import android.view.KeyEvent
@@ -53,6 +55,16 @@ class IpaBoardService : InputMethodService() {
     private val clipboard by lazy { getSystemService(ClipboardManager::class.java) }
     private val clipboardRepository by lazy { ClipboardRepository(this) }
     private var lastSyncedText: String? = null
+
+    private data class QuickPasteState(
+        val text: String,
+        val timestamp: Long,
+        var remainingUses: Int
+    )
+    private var quickPasteState: QuickPasteState? = null
+    private val quickPasteHandler = Handler(Looper.getMainLooper())
+    private var quickPasteRunnable: Runnable? = null
+
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
         syncClipboardHistory()
         if (chrome?.panel == ImeChromeView.Panel.CLIPBOARD) showClipboard()
@@ -64,12 +76,100 @@ class IpaBoardService : InputMethodService() {
         if (!text.isNullOrEmpty()) {
             lastSyncedText = text
             clipboardRepository.addClip(text, sensitive)
+            onNewClipCopied(text)
         }
     }
+
+    private fun onNewClipCopied(text: String) {
+        val enabled = prefs.getBoolean(SettingsConstants.KEY_QUICK_PASTE_ENABLED, true)
+        if (!enabled) {
+            quickPasteState = null
+            updateQuickPasteStatus()
+            return
+        }
+        val usageType = prefs.getString(SettingsConstants.KEY_QUICK_PASTE_USAGE_TYPE, "CUSTOM") ?: "CUSTOM"
+        val usageTimes = prefs.getInt(SettingsConstants.KEY_QUICK_PASTE_USAGE_TIMES, 1)
+        val allowedUses = if (usageType == "NEVER_EXHAUSTED") Int.MAX_VALUE else usageTimes
+
+        quickPasteState = QuickPasteState(text, System.currentTimeMillis(), allowedUses)
+
+        quickPasteRunnable?.let { quickPasteHandler.removeCallbacks(it) }
+        val retentionType = prefs.getString(SettingsConstants.KEY_QUICK_PASTE_RETENTION_TYPE, "CUSTOM") ?: "CUSTOM"
+        val retentionSeconds = prefs.getInt(SettingsConstants.KEY_QUICK_PASTE_RETENTION_SECONDS, 60)
+        if (retentionType == "CUSTOM" && retentionSeconds > 0) {
+            val runnable = Runnable { updateQuickPasteStatus() }
+            quickPasteRunnable = runnable
+            quickPasteHandler.postDelayed(runnable, retentionSeconds * 1000L)
+        }
+
+        updateQuickPasteStatus()
+    }
+
+    private fun updateQuickPasteStatus() {
+        val view = chrome ?: return
+        val state = quickPasteState
+        val enabled = prefs.getBoolean(SettingsConstants.KEY_QUICK_PASTE_ENABLED, true)
+
+        if (!enabled || state == null) {
+            if (view.panel == ImeChromeView.Panel.KEYBOARD) {
+                view.onStatusClick = null
+                view.status.text = if (directOnly) "Direct Input" else engineStatus
+            }
+            return
+        }
+
+        if (view.panel != ImeChromeView.Panel.KEYBOARD && view.panel != ImeChromeView.Panel.CLIPBOARD) {
+            return
+        }
+
+        val now = System.currentTimeMillis()
+        val retentionType = prefs.getString(SettingsConstants.KEY_QUICK_PASTE_RETENTION_TYPE, "CUSTOM") ?: "CUSTOM"
+        val retentionSeconds = prefs.getInt(SettingsConstants.KEY_QUICK_PASTE_RETENTION_SECONDS, 60)
+
+        var isValid = state.remainingUses > 0
+        if (isValid && retentionType == "CUSTOM") {
+            if ((now - state.timestamp) > retentionSeconds * 1000L) {
+                isValid = false
+            }
+        } else if (isValid && retentionType == "UNTIL_DISAPPEAR") {
+            val exists = clipboardRepository.getItems().any { it.text == state.text }
+            if (!exists) {
+                isValid = false
+            }
+        }
+
+        if (!isValid) {
+            quickPasteState = null
+            if (view.panel == ImeChromeView.Panel.KEYBOARD) {
+                view.onStatusClick = null
+                view.status.text = if (directOnly) "Direct Input" else engineStatus
+            }
+            return
+        }
+
+        val snippet = state.text.replace('\n', ' ').trim().let {
+            if (it.length > 18) it.take(18) + "…" else it
+        }
+        view.status.text = "📋 粘贴: $snippet"
+        view.onStatusClick = {
+            if (composition.literal()) {
+                currentInputConnection?.commitText(state.text, 1)
+            }
+            val usageType = prefs.getString(SettingsConstants.KEY_QUICK_PASTE_USAGE_TYPE, "CUSTOM") ?: "CUSTOM"
+            if (usageType != "NEVER_EXHAUSTED") {
+                state.remainingUses--
+            }
+            updateQuickPasteStatus()
+        }
+    }
+
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key in setOf(KEY_LAYOUT_REVISION, KEY_BG_COLOR_HEX, KEY_ACTIVE_LAYOUT_FILE, KEY_KEYBOARD_HEIGHT, KEY_SYMBOL_COLOR_HEX, KEY_SHIFT_SHORTCUTS, KEY_CTRL_SHORTCUTS)) {
+        if (key in setOf(KEY_LAYOUT_REVISION, KEY_BG_COLOR_HEX, KEY_ACTIVE_LAYOUT_FILE, KEY_KEYBOARD_HEIGHT, KEY_SYMBOL_COLOR_HEX, KEY_SHIFT_SHORTCUTS, KEY_CTRL_SHORTCUTS,
+            SettingsConstants.KEY_QUICK_PASTE_ENABLED, SettingsConstants.KEY_QUICK_PASTE_RETENTION_TYPE, SettingsConstants.KEY_QUICK_PASTE_RETENTION_SECONDS,
+            SettingsConstants.KEY_QUICK_PASTE_USAGE_TYPE, SettingsConstants.KEY_QUICK_PASTE_USAGE_TIMES)) {
             if (key == KEY_ACTIVE_LAYOUT_FILE || key == KEY_LAYOUT_REVISION) inputController.reset()
             applySettings()
+            updateQuickPasteStatus()
             if (key == KEY_LAYOUT_REVISION && chrome?.panel == ImeChromeView.Panel.PAGES) showPages()
         }
     }
@@ -93,10 +193,14 @@ class IpaBoardService : InputMethodService() {
             view.onPanel = { panel ->
                 updatePanelBack(panel != ImeChromeView.Panel.KEYBOARD)
                 when (panel) {
-                    ImeChromeView.Panel.CLIPBOARD -> showClipboard()
+                    ImeChromeView.Panel.CLIPBOARD -> {
+                        showClipboard()
+                        updateQuickPasteStatus()
+                    }
                     ImeChromeView.Panel.PAGES -> showPages()
                     ImeChromeView.Panel.EMOJI -> showEmoji()
                     ImeChromeView.Panel.KAOMOJI -> showKaomojiPanel()
+                    ImeChromeView.Panel.KEYBOARD -> updateQuickPasteStatus()
                     else -> Unit
                 }
             }
@@ -106,6 +210,7 @@ class IpaBoardService : InputMethodService() {
     }
     private fun refreshCandidates() {
         chrome?.render(composition.raw, composition.candidates, if (directOnly) "Direct Input" else engineStatus, composition.revision)
+        updateQuickPasteStatus()
     }
     private fun applySettings() {
         val view = chrome ?: return

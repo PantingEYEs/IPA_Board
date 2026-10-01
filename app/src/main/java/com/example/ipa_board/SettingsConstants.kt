@@ -23,6 +23,15 @@ object SettingsConstants {
     const val KEY_SHIFT_SHORTCUTS = "shift_shortcuts_json"
     const val KEY_CTRL_SHORTCUTS = "ctrl_shortcuts_json"
 
+    const val KEY_QUICK_PASTE_ENABLED = "quick_paste_enabled"
+    const val KEY_QUICK_PASTE_RETENTION_TYPE = "quick_paste_retention_type"
+    const val KEY_QUICK_PASTE_RETENTION_SECONDS = "quick_paste_retention_seconds"
+    const val KEY_QUICK_PASTE_USAGE_TYPE = "quick_paste_usage_type"
+    const val KEY_QUICK_PASTE_USAGE_TIMES = "quick_paste_usage_times"
+
+    const val KEY_SMS_OTP_AUTO_COPY_ENABLED = "sms_otp_auto_copy_enabled"
+    const val KEY_SMS_OTP_MODE = "sms_otp_mode"
+
     fun parseShortcutsJson(jsonStr: String?): Map<String, KeyAction> {
         if (jsonStr.isNullOrEmpty()) return emptyMap()
         return try {
