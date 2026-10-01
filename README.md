@@ -2,12 +2,23 @@
 
 可自定义的 Android 音标键盘，使用 Kotlin 和原生 View，支持 IPA 直接输入、中文/英文/日文混合候选、Emoji、颜文字、剪贴板和行内计算。
 
-当前准备版本：**0.0.1**（`versionCode = 1`），尚未打正式标签或发布 Release。版本变化见 [更新日志](CHANGELOG.md)。
+当前开发版本：**0.0.2-dev**（`versionCode = 2`），开发分支为 `0.0.2-dev`。已发布版本为 [0.0.1](https://github.com/PantingEYEs/IPA_Board/releases/tag/v0.0.1)。版本变化见 [更新日志](CHANGELOG.md)。
+
+## 0.0.2 开发计划
+
+本版计划推进以下四项工作，目前尚未实现：
+
+1. 联想输入。
+2. 可插拔输入法引擎。
+3. 更流畅的符号、数字、音节混合输入。
+4. 更合理的单元测试，并集中排查 0.0.1 的设备测试问题。
+
+详细范围、验收方向与历史测试记录见 [0.0.2 开发计划](docs/0.0.2-development-plan.md)。下文功能说明描述现有实现。
 
 ## 安装与兼容性
 
 - 最低 Android 15（API 35）；原生引擎包含 `arm64-v8a` 和 `x86_64`。
-- 正式发布后，从 [GitHub Releases](https://github.com/PantingEYEs/IPA_Board/releases) 下载签名 APK，允许安装该来源的应用后安装。
+- 从 [GitHub Releases](https://github.com/PantingEYEs/IPA_Board/releases) 下载签名 APK，允许安装该来源的应用后安装。
 - 在 Android 系统设置中启用 IPA Board，并将它选择为当前输入法。
 - 首次混合输入需要后台部署离线词库；基础输入无需联网，Emoji 目录更新需要网络。
 - Mozc 原生库为 4KB 对齐，尚未完成 16KB 页设备兼容验证。原生资源来源、许可证和限制见 [引擎接入说明](docs/engine-integration.md)。
@@ -92,8 +103,8 @@ python3 tools/verify_engine_assets.py
 
 ## 发布流程
 
-功能分支合并到 `0.0.1-dev` 后，在开发分支完成正式版本号、README、更新日志及验证；再合并到 `main`，从最终提交构建并验证签名 release APK，创建 `v0.0.1` 标签并发布 GitHub Release。下一版从 `main` 创建 `0.0.2-dev`。
+从 `main` 创建版本开发分支（当前为 `0.0.2-dev`）。功能分支使用 `--no-ff` 合入版本开发分支；在开发分支完成正式版本号、README、更新日志及验证后，再使用 `--no-ff` 合入 `main`，保留两次集成边界。从最终提交构建并验证签名 release APK，创建对应版本标签并发布 GitHub Release。已合并的功能分支和旧开发分支在发布后清理。
 
-正式版本号必须在构建前提交，每次正式发布递增 `versionCode`。发布包与版本标签对应同一源码提交，正式标签保持不变。
+开发阶段使用 `0.0.2-dev`；准备正式发布时，在构建前将 `versionName` 改为 `0.0.2`。每次正式发布递增 `versionCode`；若连续分发开发安装包并要求覆盖升级，也应分配递增的 `versionCode`。发布包与版本标签对应同一源码提交，正式标签保持不变。
 
 当前 Gradle 配置没有 release 签名配置，`assembleRelease` 的产物不能直接当作已签名发布包；可在 Android Studio 中使用 Generate Signed App Bundle / APK 完成签名。签名密钥和密码不提交到仓库。对外分发前需落实组合原生依赖的源码与许可材料，见 [引擎接入说明](docs/engine-integration.md)。
