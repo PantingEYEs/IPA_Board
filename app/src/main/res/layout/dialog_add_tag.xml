@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:background="#222222">
+
+    <TextView
+        android:id="@+id/tv_dialog_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Add Tag"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="12dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Select Color:"
+        android:textColor="#BBBBBB"
+        android:textSize="13sp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Desaturated color swatches without text labels -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <Button
+            android:id="@+id/btn_color_red"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text=""
+            android:backgroundTint="#A85555"
+            android:layout_marginEnd="3dp"/>
+
+        <Button
+            android:id="@+id/btn_color_orange"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text=""
+            android:backgroundTint="#A3622D"
+            android:layout_marginEnd="3dp"/>
+
+        <Button
+            android:id="@+id/btn_color_yellow"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text=""
+            android:backgroundTint="#998436"
+            android:layout_marginEnd="3dp"/>
+
+        <Button
+            android:id="@+id/btn_color_green"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text=""
+            android:backgroundTint="#4E8058"
+            android:layout_marginEnd="3dp"/>
+
+        <Button
+            android:id="@+id/btn_color_cyan"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text=""
+            android:backgroundTint="#3F7E85"
+            android:layout_marginEnd="3dp"/>
+
+        <Button
+            android:id="@+id/btn_color_blue"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text=""
+            android:backgroundTint="#466580"
+            android:layout_marginEnd="3dp"/>
+
+        <Button
+            android:id="@+id/btn_color_purple"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text=""
+            android:backgroundTint="#784E82" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Or enter text tag:"
+        android:textColor="#BBBBBB"
+        android:textSize="13sp"
+        android:layout_marginBottom="8dp" />
+
+    <EditText
+        android:id="@+id/et_tag_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="e.g. Happy, Cute..."
+        android:textColor="#FFFFFF"
+        android:textColorHint="#777777"
+        android:background="#333333"
+        android:padding="10dp"
+        android:textSize="14sp"
+        android:singleLine="true"
+        android:layout_marginBottom="16dp"
+        android:autofillHints=""
+        android:inputType="text" />
+
+</LinearLayout>

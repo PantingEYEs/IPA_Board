@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="emoji_grid" type="id" />
+    <item name="emoji_category" type="id" />
+    <item name="btn_entry_keyboard_page" type="id" />
+    <item name="btn_entry_shortcut" type="id" />
+    <item name="btn_entry_emoji" type="id" />
+    <item name="btn_entry_kaomoji" type="id" />
+    <item name="btn_entry_clipboard" type="id" />
+</resources>
