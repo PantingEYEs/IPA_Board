@@ -1,6 +1,7 @@
 package com.example.ipa_board
 
 import android.content.Context
+import android.util.AtomicFile
 import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT
 import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT_FILENAME
 import org.json.JSONArray
@@ -84,11 +85,47 @@ object LayoutFileManager {
         return createLayout(context, layoutName, DEFAULT_LAYOUT.copy(name = layoutName))
     }
 
-    fun renameLayout(context: Context, filename: String, name: String) {
+    fun renameLayout(context: Context, filename: String, name: String): String {
         val trimmed = name.trim()
         require(trimmed.isNotEmpty() && trimmed.length <= 80) { "Enter a name of 1–80 characters" }
+        val oldFile = layoutFile(context, filename)
+        require(oldFile.exists()) { "Unable to read layout" }
         val layout = requireNotNull(loadLayout(context, filename)) { "Unable to read layout" }
-        saveLayout(context, filename, layout.copy(name = trimmed))
+
+        val existing = listLayoutFiles(context) - filename
+        val newFilename = availableFilename(trimmed, existing)
+        val displayName = newFilename.removeSuffix(".json")
+        val updatedLayout = layout.copy(name = displayName)
+
+        if (filename.equals(newFilename, ignoreCase = true)) {
+            saveLayout(context, filename, updatedLayout)
+            return filename
+        }
+
+        saveLayout(context, newFilename, updatedLayout)
+
+        if (oldFile.exists()) {
+            oldFile.delete()
+            AtomicFile(oldFile).delete()
+        }
+
+        val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        val active = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME)
+        if (active.equals(filename, ignoreCase = true)) {
+            prefs.edit().putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, newFilename).apply()
+        }
+
+        val order = getLayoutOrder(context).toMutableList()
+        val index = order.indexOf(filename)
+        if (index >= 0) {
+            order[index] = newFilename
+            saveLayoutOrder(context, order)
+        }
+
+        prefs.edit().putLong(SettingsConstants.KEY_LAYOUT_REVISION,
+            prefs.getLong(SettingsConstants.KEY_LAYOUT_REVISION, 0) + 1).apply()
+
+        return newFilename
     }
 
     fun initDefaultLayout(context: Context) {

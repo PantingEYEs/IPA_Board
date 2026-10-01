@@ -4,7 +4,10 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.inputmethodservice.InputMethodService
+import android.view.Gravity
 import android.text.InputType
 import android.view.KeyEvent
 import android.view.View
@@ -36,7 +39,7 @@ class IpaBoardService : InputMethodService() {
     private val inputController = KeyboardInputController()
     private lateinit var engines: EngineCoordinator
     private lateinit var composition: CompositionController
-    private val emojiRepository by lazy { EmojiCatalogRepository(BundledEmojiCatalogSource(this)) }
+    private val emojiRepository by lazy { EmojiCatalogRepository.getInstance(this) }
     private val kaomojiRepository by lazy { KaomojiRepository(this) }
     private val emojiExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
     private val emojiHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -278,6 +281,7 @@ class IpaBoardService : InputMethodService() {
                     }
                     picker.onCategorySelected = { _, _ -> updateStatus() }
                     view.onStatusClick = { showEmojiCategoryMenu(picker) }
+                    picker.refreshMostCommonly()
                     updateStatus()
                 }, onFailure = {
                     view.onStatusClick = null
@@ -310,7 +314,249 @@ class IpaBoardService : InputMethodService() {
                 // Keep panel open so user can input multiple kaomojis
             }
         }
+        val statusView = KaomojiStatusView(this, panelView) {
+            showKaomojiFilterPopup(panelView, view.statusContainer)
+        }
+        view.setStatusCustomView(statusView)
+        view.onStatusClick = {
+            showKaomojiFilterPopup(panelView, view.statusContainer)
+        }
         view.showContent("顔文字", panelView)
+    }
+
+    private fun showKaomojiFilterPopup(panelView: KaomojiPanelView, anchorView: View) {
+        val context = this
+        val density = resources.displayMetrics.density
+        fun dp(v: Int) = (v * density).toInt()
+
+        val root = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.parseColor("#1C1C1E"))
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+        }
+
+        // Section 1: Color Tags
+        val tvColorHeader = TextView(context).apply {
+            text = "Color Tags:"
+            setTextColor(Color.parseColor("#AAAAAA"))
+            textSize = 11f
+        }
+        root.addView(tvColorHeader)
+
+        val colorScroll = HorizontalScrollView(context).apply {
+            isHorizontalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+        }
+        val colorRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, dp(4), 0, dp(8))
+        }
+
+        val colorList = listOf(
+            "Red" to "#A85555",
+            "Orange" to "#A3622D",
+            "Yellow" to "#998436",
+            "Green" to "#4E8058",
+            "Cyan" to "#3F7E85",
+            "Blue" to "#466580",
+            "Purple" to "#784E82"
+        )
+
+        val colorChips = mutableMapOf<String, TextView>()
+        val tagChips = mutableListOf<Pair<String, TextView>>()
+        var chipNormalOrder: TextView? = null
+        var chipReversedOrder: TextView? = null
+
+        fun updatePopupUI() {
+            colorList.forEach { (enName, hex) ->
+                val chip = colorChips[enName] ?: return@forEach
+                val isSelected = panelView.isColorTagSelected(enName)
+                chip.text = if (isSelected) "✓" else ""
+                val bg = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(Color.parseColor(hex))
+                    if (isSelected) {
+                        setStroke(dp(2), Color.WHITE)
+                    }
+                }
+                chip.background = bg
+                chip.alpha = if (isSelected) 1.0f else 0.45f
+            }
+
+            tagChips.forEach { (tag, chip) ->
+                val isSelected = panelView.isTagSelected(tag)
+                chip.text = if (isSelected && tag != "All") "✓ $tag" else tag
+                val bg = GradientDrawable().apply {
+                    setColor(if (isSelected) Color.parseColor("#38383A") else Color.parseColor("#222222"))
+                    cornerRadius = dp(12).toFloat()
+                    if (isSelected) setStroke(dp(1), Color.parseColor("#007AFF"))
+                }
+                chip.background = bg
+                chip.setTextColor(if (isSelected) Color.WHITE else Color.LTGRAY)
+            }
+
+            val isRev = panelView.isReversed
+            chipNormalOrder?.let { chip ->
+                val bg = GradientDrawable().apply {
+                    setColor(if (!isRev) Color.parseColor("#38383A") else Color.parseColor("#222222"))
+                    cornerRadius = dp(12).toFloat()
+                    if (!isRev) setStroke(dp(1), Color.parseColor("#007AFF"))
+                }
+                chip.background = bg
+                chip.setTextColor(if (!isRev) Color.WHITE else Color.LTGRAY)
+            }
+            chipReversedOrder?.let { chip ->
+                val bg = GradientDrawable().apply {
+                    setColor(if (isRev) Color.parseColor("#38383A") else Color.parseColor("#222222"))
+                    cornerRadius = dp(12).toFloat()
+                    if (isRev) setStroke(dp(1), Color.parseColor("#007AFF"))
+                }
+                chip.background = bg
+                chip.setTextColor(if (isRev) Color.WHITE else Color.LTGRAY)
+            }
+        }
+
+        colorList.forEach { (enName, hex) ->
+            val size = dp(26)
+            val chip = TextView(context).apply {
+                textSize = 12f
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(size, size).apply {
+                    setMargins(0, 0, dp(8), 0)
+                }
+
+                setOnClickListener {
+                    panelView.toggleColorTag(enName)
+                    updatePopupUI()
+                }
+            }
+            colorChips[enName] = chip
+            colorRow.addView(chip)
+        }
+        colorScroll.addView(colorRow)
+        root.addView(colorScroll)
+
+        // Section 2: Tag Categories
+        val tvTagHeader = TextView(context).apply {
+            text = "Tag Categories:"
+            setTextColor(Color.parseColor("#AAAAAA"))
+            textSize = 11f
+        }
+        root.addView(tvTagHeader)
+
+        val tagScroll = HorizontalScrollView(context).apply {
+            isHorizontalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+        }
+        val tagRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, dp(4), 0, dp(8))
+        }
+
+        val availableTags = panelView.getAvailableTags()
+
+        availableTags.forEach { tag ->
+            val chip = TextView(context).apply {
+                text = tag
+                textSize = 12f
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+                setPadding(dp(10), dp(4), dp(10), dp(4))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, 0, dp(6), 0) }
+
+                setOnClickListener {
+                    panelView.toggleTag(tag)
+                    updatePopupUI()
+                }
+            }
+            tagChips.add(tag to chip)
+            tagRow.addView(chip)
+        }
+        tagScroll.addView(tagRow)
+        root.addView(tagScroll)
+
+        // Section 3: Sort Order
+        val tvOrderHeader = TextView(context).apply {
+            text = "Sort Order:"
+            setTextColor(Color.parseColor("#AAAAAA"))
+            textSize = 11f
+        }
+        root.addView(tvOrderHeader)
+
+        val orderRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, dp(4), 0, dp(8))
+        }
+
+        chipNormalOrder = TextView(context).apply {
+            text = "Normal"
+            textSize = 12f
+            gravity = Gravity.CENTER
+            setPadding(dp(12), dp(4), dp(12), dp(4))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, dp(6), 0) }
+
+            setOnClickListener {
+                if (panelView.isReversed) panelView.toggleReversed()
+                updatePopupUI()
+            }
+        }
+        orderRow.addView(chipNormalOrder)
+
+        chipReversedOrder = TextView(context).apply {
+            text = "Reversed"
+            textSize = 12f
+            gravity = Gravity.CENTER
+            setPadding(dp(12), dp(4), dp(12), dp(4))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, dp(6), 0) }
+
+            setOnClickListener {
+                if (!panelView.isReversed) panelView.toggleReversed()
+                updatePopupUI()
+            }
+        }
+        orderRow.addView(chipReversedOrder)
+        root.addView(orderRow)
+
+        // Section 4: Reset Button
+        val btnReset = Button(context).apply {
+            text = "Reset Filters"
+            textSize = 11f
+            setTextColor(Color.LTGRAY)
+            setBackgroundColor(Color.TRANSPARENT)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                dp(28)
+            ).apply { gravity = Gravity.END }
+            setOnClickListener {
+                panelView.resetFilters()
+                updatePopupUI()
+            }
+        }
+        root.addView(btnReset)
+
+        updatePopupUI()
+
+        val popup = PopupWindow(
+            root,
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            true
+        ).apply {
+            isOutsideTouchable = true
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        }
+
+        popup.showAsDropDown(anchorView)
     }
 
     private fun showClipboard() {
@@ -329,13 +575,14 @@ class IpaBoardService : InputMethodService() {
         val layouts = LayoutFileManager.getLayoutOrder(this).mapNotNull { file -> LayoutFileManager.loadLayout(this, file)?.let { file to it } }
         val grid = GridLayout(this).apply { columnCount = 2 }
         layouts.forEach { (file, layout) ->
+            val pageName = file.removeSuffix(".json")
             val cell = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(8, 8, 8, 8)
                 isFocusable = true
-                contentDescription = layout.name + if (file == active) ", Current Page" else ", Switch Page"
+                contentDescription = pageName + if (file == active) ", Current Page" else ", Switch Page"
                 setBackgroundColor(if (file == active) Color.rgb(55,65,88) else Color.rgb(35,38,46))
-                addView(TextView(this@IpaBoardService).apply { text = (if (file == active) "✓ " else "") + layout.name; setTextColor(Color.WHITE); textSize = 15f })
+                addView(TextView(this@IpaBoardService).apply { text = (if (file == active) "✓ " else "") + pageName; setTextColor(Color.WHITE); textSize = 15f })
                 val preview = LinearLayout(this@IpaBoardService).apply { orientation = LinearLayout.VERTICAL; importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS }
                 KeyboardRenderer.render(this@IpaBoardService, preview, layout, (80 * resources.displayMetrics.density).toInt(), Color.LTGRAY)
                 addView(preview)

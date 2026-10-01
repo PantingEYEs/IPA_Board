@@ -6,12 +6,18 @@ import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
 import android.widget.*
 import androidx.core.graphics.PaintCompat
 import com.example.ipa_board.R
 
 /** GridView recycles cells instead of inflating thousands of emoji views at once. */
-class EmojiPickerView(context: Context, catalog: EmojiCatalog, private val onEmoji: (EmojiEntry) -> Unit) : LinearLayout(context) {
+class EmojiPickerView(
+    context: Context,
+    private val catalog: EmojiCatalog,
+    val usageRepository: EmojiUsageRepository = EmojiUsageRepository(context),
+    private val onEmoji: (EmojiEntry) -> Unit
+) : LinearLayout(context) {
     val grid = GridView(context).apply {
         id = R.id.emoji_grid
         numColumns = GridView.AUTO_FIT
@@ -23,8 +29,11 @@ class EmojiPickerView(context: Context, catalog: EmojiCatalog, private val onEmo
         setBackgroundColor(Color.BLACK)
     }
     private val allEntries = catalog.entries
-    private val emojiAdapter = EmojiAdapter(allEntries)
-    val categories: List<String> = listOf(context.getString(R.string.emoji_all)) + catalog.groups
+    private val emojiAdapter = EmojiAdapter(emptyList())
+    val categories: List<String> = listOf(
+        context.getString(R.string.emoji_most_commonly),
+        context.getString(R.string.emoji_all)
+    ) + catalog.groups
     var currentCategoryIndex: Int = 0
         private set
     val currentCategoryName: String
@@ -34,17 +43,41 @@ class EmojiPickerView(context: Context, catalog: EmojiCatalog, private val onEmo
     init {
         orientation = VERTICAL
         grid.adapter = emojiAdapter
-        grid.setOnItemClickListener { _, _, position, _ -> onEmoji(emojiAdapter.getItem(position)) }
+        grid.setOnItemClickListener { _, _, position, _ ->
+            handleEmojiClick(emojiAdapter.getItem(position))
+        }
         addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        filterCategory(0)
+    }
+
+    private fun handleEmojiClick(entry: EmojiEntry) {
+        usageRepository.recordUsage(entry.text)
+        if (currentCategoryIndex == 0) {
+            filterCategory(0)
+        }
+        onEmoji(entry)
     }
 
     fun filterCategory(position: Int) {
         if (position !in categories.indices) return
         currentCategoryIndex = position
-        emojiAdapter.items = if (position == 0) allEntries else allEntries.filter { it.group == categories[position] }
+        emojiAdapter.items = when (position) {
+            0 -> usageRepository.getMostCommonlyUsed(catalog, 20)
+            1 -> allEntries
+            else -> {
+                val groupName = categories[position]
+                allEntries.filter { it.group == groupName }
+            }
+        }
         emojiAdapter.notifyDataSetChanged()
         grid.setSelection(0)
         onCategorySelected?.invoke(position, currentCategoryName)
+    }
+
+    fun refreshMostCommonly() {
+        if (currentCategoryIndex == 0) {
+            filterCategory(0)
+        }
     }
 
     override fun onAttachedToWindow() {
@@ -52,9 +85,9 @@ class EmojiPickerView(context: Context, catalog: EmojiCatalog, private val onEmo
         requestApplyInsets()
     }
 
-    override fun onApplyWindowInsets(insets: android.view.WindowInsets): android.view.WindowInsets {
+    override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
         // Edge-to-edge IME windows may extend behind the system navigation bar.
-        val bottom = insets.getInsets(android.view.WindowInsets.Type.navigationBars()).bottom
+        val bottom = insets.getInsets(WindowInsets.Type.navigationBars()).bottom
         grid.setPadding(0, 0, 0, bottom)
         return super.onApplyWindowInsets(insets)
     }
@@ -81,7 +114,9 @@ class EmojiPickerView(context: Context, catalog: EmojiCatalog, private val onEmo
             cell.textSize = if (supported) 28f else 11f
             cell.maxLines = if (supported) 1 else 3
             cell.contentDescription = "${entry.name}, Emoji ${entry.emojiVersion}"
-            cell.setOnClickListener { onEmoji(entry) }
+            cell.setOnClickListener {
+                handleEmojiClick(getItem(position))
+            }
             return cell
         }
     }

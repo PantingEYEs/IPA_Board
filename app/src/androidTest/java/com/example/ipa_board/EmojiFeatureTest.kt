@@ -1,5 +1,6 @@
 package com.example.ipa_board
 
+import android.content.Context
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onData
 import androidx.test.espresso.Espresso.onView
@@ -21,7 +22,7 @@ class EmojiFeatureTest {
         val filename = LayoutFileManager.createLayout(context, "Emoji test", layout)
         try {
             prefs.edit().putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, filename).commit()
-            ActivityScenario.launch(SettingsActivity::class.java).use {
+            ActivityScenario.launch(KeyboardPageActivity::class.java).use {
                 onView(withId(R.id.btn_edit)).perform(scrollTo(), click())
                 onView(withId(R.id.sp_key_type)).perform(click())
                 onData(equalTo("Emoji")).inRoot(isPlatformPopup()).perform(click())
@@ -49,6 +50,8 @@ class EmojiFeatureTest {
             }
             instrumentation.waitForIdleSync()
             scenario.onActivity {
+                assertEquals(0, picker.currentCategoryIndex)
+                picker.filterCategory(1) // Category 1 is "All emoji"
                 assertEquals(3972, picker.grid.adapter.count)
                 assertTrue(picker.grid.childCount in 1..200)
                 picker.grid.setSelection(catalog.entries.lastIndex)
@@ -59,7 +62,7 @@ class EmojiFeatureTest {
                 val position = picker.grid.lastVisiblePosition
                 picker.grid.performItemClick(picker.grid.getChildAt(position - picker.grid.firstVisiblePosition), position, position.toLong())
                 assertEquals(catalog.entries.last(), selected)
-                picker.filterCategory(catalog.groups.indexOf("Component") + 1)
+                picker.filterCategory(catalog.groups.indexOf("Component") + 2) // Most commonly (0), All (1), then groups
             }
             instrumentation.waitForIdleSync()
             scenario.onActivity {

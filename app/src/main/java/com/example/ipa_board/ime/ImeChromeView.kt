@@ -17,7 +17,9 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     private val overlay = LinearLayout(context).apply { orientation = VERTICAL }
     private val candidateRow = LinearLayout(context)
     private val expand = button("⋯", "Expand") { showPanel(if (panel == Panel.KEYBOARD) Panel.CANDIDATES else Panel.KEYBOARD) }
+    val statusContainer = FrameLayout(context)
     val status = TextView(context)
+    private var customStatusView: View? = null
     var onStatusClick: (() -> Unit)? = null
         set(value) {
             field = value
@@ -38,14 +40,17 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         orientation = VERTICAL
         setBackgroundColor(Color.rgb(0, 0, 0))
         val toolbar = LinearLayout(context).apply {
-            addView(button("⧉", "Clipboard") { toggle(Panel.CLIPBOARD) })
-            addView(button("⊞", "Keyboard Overview") { toggle(Panel.PAGES) })
-            addView(button("顔", "顔文字") { toggle(Panel.KAOMOJI) })
+            addView(toolbarButton("⧉", "Clipboard") { toggle(Panel.CLIPBOARD) })
+            addView(toolbarButton("⊞", "Keyboard Overview") { toggle(Panel.PAGES) })
+            addView(toolbarButton("顔", "顔文字") { toggle(Panel.KAOMOJI) })
             status.setTextColor(Color.LTGRAY)
             status.textSize = 10f
             status.gravity = Gravity.CENTER_VERTICAL
             status.setOnClickListener { onStatusClick?.invoke() }
-            addView(status, LayoutParams(0, dp(28), 1f))
+            statusContainer.addView(status, FrameLayout.LayoutParams(-1, -1).apply {
+                setMargins(dp(6), 0, dp(6), 0)
+            })
+            addView(statusContainer, LayoutParams(0, dp(28), 1f))
         }
         addView(toolbar, LayoutParams(-1, dp(28)))
         val strip = LinearLayout(context)
@@ -65,6 +70,21 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         body.layoutParams = LayoutParams(-1, px)
     }
 
+    fun setStatusCustomView(view: View?) {
+        customStatusView = view
+        statusContainer.removeAllViews()
+        if (view != null) {
+            (view.parent as? ViewGroup)?.removeView(view)
+            val lp = FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(22)).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                setMargins(dp(2), dp(3), dp(6), dp(3))
+            }
+            statusContainer.addView(view, lp)
+        } else {
+            statusContainer.addView(status, FrameLayout.LayoutParams(-1, -1))
+        }
+    }
+
     fun render(raw: String, items: List<Candidate>, message: String, generation: Long) {
         engineMessage = message
         if (panel == Panel.KEYBOARD) status.text = engineMessage
@@ -80,6 +100,9 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
 
     fun showPanel(next: Panel) {
         panel = next
+        if (next != Panel.KAOMOJI) {
+            setStatusCustomView(null)
+        }
         overlay.visibility = if (next == Panel.KEYBOARD) GONE else VISIBLE
         keyboardHost.importantForAccessibility = if (next == Panel.KEYBOARD) IMPORTANT_FOR_ACCESSIBILITY_AUTO else IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         // Invisible keeps the geometry but prevents any underlying hit target or focus.
@@ -94,7 +117,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
             expand.text = "Return"
             expand.contentDescription = "Return to Keyboard"
             expand.isEnabled = true
-            if (panelTitle.isNotEmpty()) status.text = panelTitle
+            if (panelTitle.isNotEmpty() && customStatusView == null) status.text = panelTitle
         }
         if (next == Panel.CANDIDATES) renderCandidates()
         onPanel(next)
@@ -102,7 +125,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
 
     fun showContent(title: String, content: View) {
         panelTitle = title
-        if (panel != Panel.KEYBOARD) status.text = title
+        if (panel != Panel.KEYBOARD && customStatusView == null) status.text = title
         if (overlay.childCount == 0 || overlay.getChildAt(0) !== content) {
             overlay.removeAllViews()
             overlay.addView(content, LayoutParams(-1, -1))
@@ -183,6 +206,21 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         text = label; contentDescription = description; isAllCaps = false; textSize = 10f
         setTextColor(Color.WHITE); setBackgroundColor(Color.TRANSPARENT)
         minHeight = dp(20); minimumHeight = dp(20); minWidth = dp(48)
+        setOnClickListener { click() }
+    }
+    private fun toolbarButton(label: String, description: String, click: () -> Unit) = Button(context).apply {
+        text = label
+        contentDescription = description
+        isAllCaps = false
+        textSize = 12f
+        setTextColor(Color.WHITE)
+        setBackgroundColor(Color.TRANSPARENT)
+        setPadding(dp(4), 0, dp(4), 0)
+        minHeight = dp(28)
+        minimumHeight = dp(28)
+        minWidth = dp(32)
+        minimumWidth = dp(32)
+        gravity = Gravity.CENTER
         setOnClickListener { click() }
     }
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()

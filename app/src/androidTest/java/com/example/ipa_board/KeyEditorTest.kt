@@ -28,7 +28,7 @@ class KeyEditorTest {
         try {
             LayoutFileManager.saveLayout(context, filename, SettingsConstants.DEFAULT_LAYOUT)
             prefs.edit().putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, filename).commit()
-            ActivityScenario.launch(SettingsActivity::class.java).use {
+            ActivityScenario.launch(KeyboardPageActivity::class.java).use {
                 onView(withId(R.id.btn_edit)).perform(click())
                 onView(withId(R.id.sp_key_type)).perform(click())
                 onData(equalTo("Backspace")).inRoot(isPlatformPopup()).perform(click())

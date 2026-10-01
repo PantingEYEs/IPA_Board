@@ -16,7 +16,7 @@ class KeyPressPreviewTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
 
     @Test fun tapAndHoldPreviewBeforeCommittingOnRelease() {
-        ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+        ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
             lateinit var key: KeyPreviewFrameLayout
             var taps = 0
             var holds = 0
@@ -53,7 +53,7 @@ class KeyPressPreviewTest {
     }
 
     @Test fun movingOutCancellingAndDetachingNeverCommitOrLeavePopup() {
-        ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+        ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
             lateinit var key: KeyPreviewFrameLayout
             lateinit var host: LinearLayout
             var commits = 0
@@ -91,7 +91,7 @@ class KeyPressPreviewTest {
     }
 
     @Test fun longPressSwipeSelectsActionsInCycle() {
-        ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+        ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
             lateinit var key: KeyPreviewFrameLayout
             var selectedItem: LongPressItem? = null
             scenario.onActivity { activity ->
@@ -155,7 +155,7 @@ class KeyPressPreviewTest {
     }
 
     @Test fun longPressMicroJitterStaysOnInitialAction() {
-        ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+        ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
             lateinit var key: KeyPreviewFrameLayout
             var selectedItem: LongPressItem? = null
             scenario.onActivity { activity ->
@@ -197,7 +197,7 @@ class KeyPressPreviewTest {
     }
 
     @Test fun longPressSwipeDownCancelsOperation() {
-        ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+        ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
             lateinit var key: KeyPreviewFrameLayout
             var committed = false
             scenario.onActivity { activity ->
@@ -236,7 +236,7 @@ class KeyPressPreviewTest {
     }
 
     @Test fun quickSwipeLeftAndRightTriggerBeforeLongPress() {
-        ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+        ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
             lateinit var key: KeyPreviewFrameLayout
             var swipedItem: LongPressItem? = null
             scenario.onActivity { activity ->
@@ -279,7 +279,7 @@ class KeyPressPreviewTest {
     }
 
     @Test fun quickSwipeHeldDownEntersLongPress() {
-        ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+        ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
             lateinit var key: KeyPreviewFrameLayout
             var longItem: LongPressItem? = null
             var quickItem: LongPressItem? = null

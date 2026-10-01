@@ -30,7 +30,7 @@ class LayoutManagementTest {
             val original = KeyboardLayout("Before", listOf(RowLayout(1f, listOf(KeySlot(1f, "a", longPressText = "ɑ")))))
             val filename = fixture.create(original)
             fixture.select(filename)
-            ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+            ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
                 onView(withId(R.id.btn_rename_layout)).perform(scrollTo(), click())
                 onView(withId(R.id.et_layout_name)).check(matches(withText("Before")))
                 onView(withId(R.id.et_layout_name)).perform(replaceText("Cancelled"), closeSoftKeyboard())
@@ -43,12 +43,13 @@ class LayoutManagementTest {
                 assertEquals(original, LayoutFileManager.loadLayout(fixture.context, filename))
                 onView(withId(R.id.et_layout_name)).perform(replaceText("  IPA renamed  "), closeSoftKeyboard())
                 onView(withText("Save")).perform(click())
-                assertEquals(original.copy(name = "IPA renamed"), LayoutFileManager.loadLayout(fixture.context, filename))
-                assertEquals(filename, fixture.activeFilename())
-                onView(withId(R.id.tv_layout_name)).check(matches(withText("Page: IPA renamed")))
+                val newFilename = "IPA renamed.json"
+                assertEquals(original.copy(name = "IPA renamed"), LayoutFileManager.loadLayout(fixture.context, newFilename))
+                assertEquals(newFilename, fixture.activeFilename())
+                onView(withId(R.id.tv_layout_name)).check(matches(withText("IPA renamed")))
                 scenario.recreate()
-                onView(withId(R.id.tv_layout_name)).check(matches(withText("Page: IPA renamed")))
-                assertEquals(filename, fixture.activeFilename())
+                onView(withId(R.id.tv_layout_name)).check(matches(withText("IPA renamed")))
+                assertEquals(newFilename, fixture.activeFilename())
             }
         }
     }
@@ -57,7 +58,7 @@ class LayoutManagementTest {
         LayoutFixture().use { fixture ->
             val filename = fixture.create(SettingsConstants.DEFAULT_LAYOUT)
             fixture.select(filename)
-            ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+            ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
                 onView(withId(R.id.btn_delete_layout)).perform(scrollTo(), click())
                 onView(withText("Cancel")).perform(click())
                 assertEquals(filename, fixture.activeFilename())
@@ -101,12 +102,12 @@ class LayoutManagementTest {
             val sourceFile = File.createTempFile("layout_import_test_", ".json", fixture.context.cacheDir)
             try {
                 sourceFile.writeText(config.toString())
-                ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+                ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
                     onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(originalFilename)))
                     scenario.onActivity { activity ->
                         // File URIs can be read but provide no DISPLAY_NAME, exercising the name fallback.
                         val result = Intent().setData(Uri.fromFile(sourceFile))
-                        SettingsActivity::class.java.getDeclaredMethod(
+                        KeyboardPageActivity::class.java.getDeclaredMethod(
                             "onActivityResult", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, Intent::class.java
                         ).apply { isAccessible = true }.invoke(activity, 123, Activity.RESULT_OK, result)
                     }
@@ -138,7 +139,7 @@ class LayoutManagementTest {
             val expectedFilename = "$name.json"
             fixture.track(expectedFilename)
 
-            ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+            ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
                 onView(withId(R.id.btn_new_layout)).perform(scrollTo(), click())
                 onView(withText("New Blank Layout")).check(matches(isDisplayed()))
                 onView(withId(R.id.et_layout_name)).perform(replaceText(name), closeSoftKeyboard())
@@ -166,7 +167,7 @@ class LayoutManagementTest {
             val cancelledName = "Test Cancelled ${System.nanoTime()}"
             fixture.track("$cancelledName.json")
 
-            ActivityScenario.launch(SettingsActivity::class.java).use {
+            ActivityScenario.launch(KeyboardPageActivity::class.java).use {
                 val filesBefore = LayoutFileManager.listLayoutFiles(fixture.context)
                 onView(withId(R.id.btn_new_layout)).perform(scrollTo(), click())
                 onView(withId(R.id.et_layout_name)).perform(replaceText(cancelledName), closeSoftKeyboard())
@@ -188,7 +189,7 @@ class LayoutManagementTest {
             val filename = fixture.create(original)
             fixture.select(filename)
 
-            ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+            ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
                 onView(withId(R.id.btn_undo_clear)).check(matches(withEffectiveVisibility(Visibility.GONE)))
                 onView(withId(R.id.btn_clear_layout)).perform(scrollTo(), click())
 
@@ -224,7 +225,7 @@ class LayoutManagementTest {
             val secondFilename = fixture.create(other)
             fixture.select(firstFilename)
 
-            ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+            ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
                 onView(withId(R.id.btn_clear_layout)).perform(scrollTo(), click())
                 onView(withId(R.id.btn_undo_clear)).check(matches(withEffectiveVisibility(Visibility.VISIBLE)))
                 scenario.onActivity { activity ->

@@ -3,6 +3,7 @@ package com.example.ipa_board
 import android.graphics.Color
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.ipa_board.ime.*
 import org.junit.Assert.*
@@ -48,6 +49,20 @@ class ImeChromeTest {
             }
         }
     }
+    @Test fun statusCustomViewIsSetAndClearedWhenPanelChanges() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val context = InstrumentationRegistry.getInstrumentation().targetContext
+            val chrome = ImeChromeView(context)
+            val customView = EditText(context)
+            chrome.showPanel(ImeChromeView.Panel.KAOMOJI)
+            chrome.setStatusCustomView(customView)
+            assertSame(customView.parent, chrome.statusContainer)
+            chrome.showPanel(ImeChromeView.Panel.KEYBOARD)
+            assertNull(customView.parent)
+            assertSame(chrome.status.parent, chrome.statusContainer)
+        }
+    }
+
     @Test fun oldLayoutsRemainLiteralAndRoutingRoundTrips() {
         val old = KeyboardLayout.fromJson("""{"name":"old","rows":[{"heightWeight":1,"slots":[{"widthWeight":1,"text":"a"}]}]}""")
         assertEquals(TextBehavior.LITERAL, old.rows[0].slots[0].textBehavior)
