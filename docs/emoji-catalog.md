@@ -6,14 +6,12 @@ Provenance, SHA-256, counts and schema version are in `assets/emoji/metadata.jso
 
 The picker uses a recycled GridView and an optional category filter. Data loading runs off the IME main thread and is cached per service. Selecting an entry first commits pending composition literally, then inserts the exact Unicode string. The panel stays open for repeated entry; Return or system Back restores the keyboard. Rendering uses Android's font; unavailable glyphs display their Unicode names and remain selectable. Adding newer catalog data does not upgrade the system font or the receiving app's font.
 
-## Reserved update integration
+## Manual catalog updates
 
-No network permission, update button, downloader or automatic update is implemented in this release.
+The Emoji management screen provides a manual update button. `EmojiUpdateManager` downloads the Unicode latest catalog in a background executor, checks that parsing produces a nonempty catalog, stores it in app-private files, and invalidates the shared repository cache. The app declares INTERNET permission; bundled data remains available offline.
 
-- `EmojiCatalogSource.load()` is the data-source boundary. The current source is `BundledEmojiCatalogSource`. A future implementation can prefer a verified installed file and fall back to the bundled asset.
-- `BundledEmojiCatalogSource.LATEST_DATA_URL` and `METADATA_ASSET_PATH` identify upstream data and local metadata.
-- `EmojiCatalogParser.parse(Reader)` accepts the official format and returns version, category, subgroup, name, per-entry version and complete sequence.
-- `EmojiCatalogRepository.invalidate()` is the cache refresh hook after a successful installation. The IME must be notified to invalidate its repository and reload an open Emoji panel; swapping only a settings-process cache is insufficient.
-- `TODO(emoji-update)` marks the update integration point. The future app button should download off-main with size/time limits, validate the official version/counts and catalog before writing, atomically install it in app-private storage, retain the old valid data on failure, and publish a revision notification to the IME. Licensing/provenance metadata should accompany every installed version.
+`InstalledEmojiCatalogSource` prefers a valid installed catalog and falls back to bundled data when the installed file cannot be parsed. Updating catalog data does not update Android fonts. Usage counts provide a frequently used emoji list.
+
+Current implementation limitations: the downloader has connection/read timeouts but no download size limit, and file replacement does not check rename success. Bundled metadata and licensing describe the bundled catalog; updates do not refresh provenance metadata.
 
 `KeyAction.EMOJI` is serialized as `"emoji"`; it is a panel action rather than an editor key event. Existing layouts can assign it using the app's Key type selector.

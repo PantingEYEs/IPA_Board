@@ -1,81 +1,99 @@
 # IPA Board
 
-Android 音标键盘原型，使用 Kotlin 和原生 View，最低 API 35。
+可自定义的 Android 音标键盘，使用 Kotlin 和原生 View，支持 IPA 直接输入、中文/英文/日文混合候选、Emoji、颜文字、剪贴板和行内计算。
 
-## 使用
+当前准备版本：**0.0.1**（`versionCode = 1`），尚未打正式标签或发布 Release。版本变化见 [更新日志](CHANGELOG.md)。
 
-1. 安装应用，在 Android 系统设置中启用 IPA Board 并选择为输入法。
-2. 打开 IPA Board 应用，点击页面中部偏上的键盘预览中的任意按键。
-3. 在编辑对话框的 Key type 中选择 Text 或所需功能键。Text 支持多字符、组合音标、空格和换行；清空后保存即取消映射。功能键自动显示对应标签。保存后立即同步到输入法。
-   在 Long-press symbols / text 中填写长按时输入的内容（功能键也可设置）。留空禁用长按；长按直接输入完整文本，不触发短按功能，不应用 Shift/Ctrl 或混合输入转换。若有待确认编码，会先原样上屏。键帽右上角显示长按内容。
-4. 在其他应用的文本框中按下按键，上方显示白底黑字预览；达到长按时长后切换为长按内容，松手才输入。滑出按键或取消触摸会取消输入并隐藏预览。
-5. 点击 Export，在系统文件选择器中保存 JSON 配置，默认沿用当前布局的文件名。点击 Import 可恢复配置，导入成功后自动启用。
+## 安装与兼容性
 
-默认键位尚未分配字符，仅在应用内预览中显示 ∅ 以便编辑，实际输入法中的未配置键不显示文字。如果手动将按键映射为字符 `∅`，实际键盘仍会显示并输入该字符。可粘贴字符来配置，也可从系统输入法切换入口切换到其他键盘输入。应用内编辑对话框点击保存后生效，取消不改变映射。
+- 最低 Android 15（API 35）；原生引擎包含 `arm64-v8a` 和 `x86_64`。
+- 正式发布后，从 [GitHub Releases](https://github.com/PantingEYEs/IPA_Board/releases) 下载签名 APK，允许安装该来源的应用后安装。
+- 在 Android 系统设置中启用 IPA Board，并将它选择为当前输入法。
+- 首次混合输入需要后台部署离线词库；基础输入无需联网，Emoji 目录更新需要网络。
+- Mozc 原生库为 4KB 对齐，尚未完成 16KB 页设备兼容验证。原生资源来源、许可证和限制见 [引擎接入说明](docs/engine-integration.md)。
 
-## 候选词栏与混合输入
+## 键盘与布局
 
-IME 顶部新增固定多功能栏和候选词栏，它们位于按键布局之外，不在应用布局编辑器中显示，不受布局颜色、键盘高度或导入文件修改。
+打开应用后，在主设置页进入 **Keyboard Page**，点击预览中的按键进行编辑。其他设置入口为 Shortcut、Emoji、顔文字和 Clipboard。
 
-- 多功能栏提供“剪贴板”和“键盘页”。剪贴板展示系统当前文本，点击粘贴；敏感内容不显示预览，不采集历史。
-- 键盘页总览显示各布局缩略图，点击即可切页；正在输入的组合文本保留。
-- 更新后会新增“多语言 QWERTY”页。从键盘页总览选择此页，即可在同一键盘输入中文全拼、英文和日文罗马字。旧布局继续直接输入 IPA。
-- 候选同时混排简体、繁体、英文和日文；点击右侧箭头展开，候选面板覆盖按键区域，窗口高度不变。点击候选上屏；“原样上屏”保留原始字母。展开面板或工具面板内的“返回”恢复键盘。
-- 输入中按空格选择首选词，英文追加空格；Enter 原样结束本次组合，再次按 Enter 执行编辑器动作。标点、IPA 和粘贴会先原样结束未确认的编码。
-- 键位编辑中的输入方式可选 `Direct text / IPA` 或 `Mixed input`。后者将字母交给引擎；缺少此字段的旧配置仍为直接输入。
+- Text 可设置 IPA、多字符文本、空格与换行；清空文本即取消映射。默认空白布局的未配置键只在编辑预览中显示 ∅。
+- 按键可设置短按、长按文本或功能；支持多项长按循环选择、长按持续退格以及左右滑动动作。
+- 输入方式可选 Direct text / IPA 或 Mixed input。直接文本不交给混合输入引擎；长按文本会先原样结束待确认编码。
+- 支持设置键盘颜色、高度、行高与按键宽度比例，以及键盘页排序。
+- New Layout 创建并启用空白布局；Rename Keyboard Page 重命名当前页和对应文件；Delete Active Layout File 删除当前文件并回到默认布局，默认布局不可删除。
+- Clear Keys 清空文本与功能映射，保留布局结构和外观；未切页且未进行其他编辑时，可用 Undo Clear 恢复。
+- Export / Import 通过系统文件选择器保存或导入 JSON。导入保留来源文件名；重名时追加数字后缀，不覆盖已有布局。
+- 尚未实现增删行列的布局编辑器。
 
-引擎与词库随应用离线打包，首次使用需要后台编译 Rime 词库。当前为逐词混输，排序使用启发式规则，尚不支持整串跨语言自动分词。原生引擎资源、许可证及 16KB 页设备限制见 [接入说明](docs/engine-integration.md)。
+## 混合输入与候选
 
-## 布局管理
+从键盘页总览选择“多语言 QWERTY”，可输入中文全拼、英文和日文罗马字。中文简繁体、英文和日文候选混排；当前采用逐词混输与启发式排序，尚无整串跨语言自动分词或持久化个性学习。
 
-- 点击 New Layout，在 New Blank Layout 对话框中输入名称后点击 Create，创建并自动启用一个空白布局文件。新布局使用默认的行列和按键尺寸，所有按键均未分配字符或功能；已有布局不受影响。
-- 点击 Rename Keyboard Page 修改当前键盘页名称；直接重命名 active `.json` 布局文件名称并同步更新页面标题，按键映射保持不变。
-- 点击 Delete Active Layout File，确认后删除当前文件并自动启用默认布局；默认布局不可删除。
-- 点击 Clear Keys，一键清空当前布局的所有短按、长按字符和功能键映射，并立即保存、同步到输入法。布局名称、行数、行高与按键宽度保持不变。保持当前布局且尚未进行其他编辑时，可点击 Undo Clear 恢复清空前的配置；切换布局后撤销入口消失。
-- 导入优先保留系统文件提供的文件名（`DISPLAY_NAME`）；无法取得文件名时使用配置内的布局名称，并补上 `.json` 扩展名。与已有文件重名时依次添加 ` (2)`、` (3)` 等后缀，例如 `My IPA (2).json`，不会覆盖原文件。新建布局也使用相同的重名处理方式。
+点击候选上屏，点击右侧箭头展开候选面板。“原样上屏”保留输入字母。空格选择首选词，英文追加空格；Enter 原样结束组合，再次按 Enter 执行编辑器动作。IPA、标点与粘贴会先结束待确认编码。切换键盘页保留组合文本。
 
-## Emoji 面板
+工具栏和候选栏独立于布局 JSON，不在布局预览中显示。候选和工具面板覆盖按键区，窗口高度保持不变；Return 或系统返回键恢复键盘。
 
-在 app 中点击任意预览按键，将 Key type 设置为 **Emoji** 并保存。输入时点击该键，会打开覆盖键盘区域的 Emoji 面板；上下滑动浏览，可按类别筛选。点击 Emoji 直接输入，面板保持打开以便连续输入；点击 Return 或系统返回键回到键盘。
+## 功能键与快捷键
 
-内置 Unicode Emoji 18.0 全部 3,972 项标准 Emoji 和组件，离线可用，包含肤色、性别、组合表情和旗帜。Android 字体尚不支持的新 Emoji 会显示名称，点击仍输入完整字符序列。已预留版本元数据、数据源接口和缓存刷新接口，更新按钮与下载功能以后再做，详见 [Emoji 数据与更新接口](docs/emoji-catalog.md)。
-
-## 功能键
-
-现有键位可设置为以下功能，无需重新创建布局：
-
-| Key type | 功能 |
+| 功能 | 用途 |
 | --- | --- |
-| Candidates | 打开候选词列表面板。 |
-| Clipboard | 打开剪贴板面板。 |
-| Keyboard Pages | 打开键盘页列表面板，用于切换激活的布局。 |
-| Emoji | 打开可上下滚动的 Emoji 面板。 |
-| Backspace | 删除选中文本或光标前的字符。 |
-| Arrow Left / Right / Up / Down | 移动光标，启用 Shift 后扩展选区。 |
-| Shift / Uppercase | 开关大写和 Shift 导航。启用后文本键显示并输入大写；再次点击或结束当前输入时关闭。 |
-| Ctrl | 为下一个非修饰键启用 Ctrl，随后自动关闭；再次点击可取消。 |
-| Enter | 执行文本框的输入动作；多行文本框中换行。 |
-| Tab | 发送 Tab，焦点切换行为由接收应用决定。 |
-| Home / End | 移动至行首或行尾，启用 Shift 后扩展选区。 |
+| Backspace / Continuous Delete | 删除文本；持续退格用于长按。 |
+| Arrow Left / Right / Up / Down、Home / End | 移动光标，Shift 可扩展选区。 |
+| Shift / Uppercase、Ctrl | 大写、导航选择与 Ctrl 快捷键。 |
+| Enter / Tab | 编辑器动作、换行或焦点切换，行为取决于接收应用。 |
+| Select All / Copy / Cut / Paste | 选择与剪贴板操作。 |
+| Candidates / Clipboard / Keyboard Pages | 打开候选、剪贴板或键盘页面板。 |
+| Previous / Next Keyboard Page | 切换前一页或后一页。 |
+| Emoji / 顔文字 | 打开表情或颜文字面板。 |
+| Calculator | 切换行内计算模式。 |
 
-启用的 Shift 和 Ctrl 会在键盘中高亮。Ctrl+A、Ctrl+C、Ctrl+X、Ctrl+V 分别请求全选、复制、剪切、粘贴；其他支持的单个 ASCII 字符通过 Ctrl 组合按键事件发送。快捷键及光标移动的具体支持由接收应用决定，Ctrl 不用于多字符文本或 IPA 组合音标。
+Shortcut 设置页可配置 Shift/Ctrl 映射。Ctrl+A/C/X/V 请求全选、复制、剪切和粘贴；其他单个 ASCII 字符可发送 Ctrl 组合键事件。快捷键支持取决于接收应用。
 
-## 配置
+## Emoji 与颜文字
 
-导出配置含 `version: 4`、`layout` 和 `appearance`。布局包含名称、各行的 `heightWeight`、各键的 `widthWeight`、`text`、`action`、`textBehavior` 与 `longPressText`；外观包含 `backgroundColor`、`symbolColor` 与 `heightDp`。不包含设备或账户数据。
+Emoji 面板支持分类筛选和连续点击输入。内置目录元数据标记为 Emoji 18.0，共 3,972 项 Emoji 和组件；Emoji 管理页提供常用表情及一键目录更新。更新从 Unicode 官方地址下载，不会更新系统字体；字体不支持的表情显示名称，仍可输入完整字符序列。见 [目录实现说明](docs/emoji-catalog.md)。
 
-`action` 可取 `text`、`backspace`、`left`、`right`、`up`、`down`、`shift`、`ctrl`、`enter`、`tab`、`home`、`end`、`emoji`、`candidates`、`clipboard` 或 `pages`。例如 `{"widthWeight": 1, "text": "", "action": "backspace"}` 表示退格键。导出和重新导入会保留功能键配置。
+顔文字管理页支持添加、编辑、搜索、标签、批量管理及 JSON 导入/导出；输入法面板支持筛选和使用频率排序。
 
-旧版 `version: 1` / `version: 2` / `version: 3` 配置以及只有 `name` 和 `rows` 的布局文件仍可导入：缺少 `action` 的键按文本键处理，缺少 `text` 的键视为未分配。缺少 `longPressText` 时不启用长按。未知的 `action` 会被拒绝。导入不会覆盖已有布局，会创建新文件。配置最大 1 MB，支持 1–20 行、每行 1–40 个键、每键最多 1000 个 UTF-16 代码单元；比例必须为有限正数。
+## 剪贴板与验证码
 
-目前通过修改现有键位添加功能键，尚未实现增删行列的布局编辑器。
+输入法会在系统允许读取剪贴板时，将文本保存到应用本地历史。未固定项最多保留 20 条，固定项单独保留；面板支持粘贴、固定与删除。Clipboard 设置可控制快捷粘贴的开关、保留时间和使用次数。
 
-## 验证
+敏感标记不代表不保存。当前系统备份规则也未排除剪贴板历史，请及时删除不希望保留的内容。
+
+短信验证码自动复制默认关闭。Broadcast 模式需要短信接收权限，使用本地规则提取并复制验证码。AutoFill 模式目前仅启动 Google Play services SMS Retriever，尚未实现检索结果接收处理，不应视为可用的自动复制功能。短信权限不是基础输入的必需权限。
+
+## 行内计算
+
+工具栏 ∑ 或 Calculator 功能键可切换计算模式。在混合输入中输入四则运算表达式时，结果以 ∑ 候选显示，点击即可上屏。
+
+支持小数、负数和 `+`、`-`、`*`/`×`、`/`/`÷`。结果最多显示四位小数，舍入结果追加省略号；不支持括号或科学计算。
+
+## 配置格式
+
+布局导出使用 `version: 4`，包含 `layout` 和 `appearance`。按键字段包括 `text`、`action`、`textBehavior`、`longPressText`、`longPressAction`、`longPressItems`，以及左右滑动文本和动作；比例字段为行的 `heightWeight` 与键的 `widthWeight`。外观包括 `backgroundColor`、`symbolColor` 与 `heightDp`。布局导出不包含剪贴板历史、颜文字库或应用的全部设置。
+
+动作序列化值包括 `text`、`backspace`、`repeat_backspace`、`left`、`right`、`up`、`down`、`shift`、`ctrl`、`enter`、`tab`、`home`、`end`、`emoji`、`kaomoji`、`calculator`、`candidates`、`clipboard`、`pages`、`prev_page`、`next_page`、`select_all`、`copy`、`cut`、`paste`。
+
+旧版配置及只有 `name` 和 `rows` 的布局仍可导入，缺少新增字段时使用兼容默认值；未知动作会被拒绝。配置最大 1 MB，支持 1–20 行、每行 1–40 个键，短按与长按文本最多 1000 个 UTF-16 代码单元；比例必须为有限正数。
+
+## 构建与验证
+
+使用 Android Studio 打开项目，配置 Android SDK，并使用 Gradle Wrapper 构建。
 
 ```sh
+python3 tools/verify_engine_assets.py
 ./gradlew testDebugUnitTest assembleDebug lintDebug assembleDebugAndroidTest
-# 连接 API 35+ 设备或模拟器后运行配置序列化及兼容测试：
+# 连接 API 35+ 的测试设备或模拟器后：
 ./gradlew connectedDebugAndroidTest
 ```
 
-手工验证：编辑任意键为 `t͡ʃ` → 切换到文本框输入 → 导出配置 → 修改该键 → 导入原配置 → 确认映射、颜色、高度恢复及文件名保留（同名时添加数字后缀）；同时检查取消编辑、空映射及旋转屏幕后导出。将其他键设为 Backspace、方向键、Shift、Ctrl 和字符 `a`/`c`/`v`，验证删除、移动与选择、大写、Ctrl+A/C/V，并导出后重新导入确认功能键保留。新建命名空白布局后检查自动选中和未配置键的实际显示；对含字符及功能键的布局执行 Clear Keys，确认尺寸未变，再执行 Undo Clear 确认恢复。
+发布前还需手工检查：IPA 与混合输入、候选展开和返回、布局导入/导出、长按与左右滑动、切页、快捷键、Emoji/颜文字、剪贴板与 ∑ 计算候选。分别确认旧配置兼容和更新后数据保留。
+
+## 发布流程
+
+功能分支合并到 `0.0.1-dev` 后，在开发分支完成正式版本号、README、更新日志及验证；再合并到 `main`，从最终提交构建并验证签名 release APK，创建 `v0.0.1` 标签并发布 GitHub Release。下一版从 `main` 创建 `0.0.2-dev`。
+
+正式版本号必须在构建前提交，每次正式发布递增 `versionCode`。发布包与版本标签对应同一源码提交，正式标签保持不变。
+
+当前 Gradle 配置没有 release 签名配置，`assembleRelease` 的产物不能直接当作已签名发布包；可在 Android Studio 中使用 Generate Signed App Bundle / APK 完成签名。签名密钥和密码不提交到仓库。对外分发前需落实组合原生依赖的源码与许可材料，见 [引擎接入说明](docs/engine-integration.md)。
