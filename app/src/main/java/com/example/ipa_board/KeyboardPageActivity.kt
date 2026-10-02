@@ -106,6 +106,27 @@ class KeyboardPageActivity : Activity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
+        val fontSizeSlider = findViewById<SeekBar>(R.id.sb_font_size)
+        val fontSizeValue = findViewById<TextView>(R.id.tv_font_size_value)
+        val currentFontSize = prefs.getInt(SettingsConstants.KEY_KEYBOARD_FONT_SIZE,
+            SettingsConstants.DEFAULT_KEYBOARD_FONT_SIZE)
+            .coerceIn(SettingsConstants.MIN_KEYBOARD_FONT_SIZE, SettingsConstants.MAX_KEYBOARD_FONT_SIZE)
+        fontSizeSlider.max = SettingsConstants.MAX_KEYBOARD_FONT_SIZE - SettingsConstants.MIN_KEYBOARD_FONT_SIZE
+        fontSizeSlider.progress = currentFontSize - SettingsConstants.MIN_KEYBOARD_FONT_SIZE
+        fontSizeValue.text = "${currentFontSize}sp"
+        fontSizeSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val size = progress + SettingsConstants.MIN_KEYBOARD_FONT_SIZE
+                fontSizeValue.text = "${size}sp"
+                if (fromUser) {
+                    prefs.edit().putInt(SettingsConstants.KEY_KEYBOARD_FONT_SIZE, size).apply()
+                    refreshPreview()
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
         // 3. Layout Setup
         updateLayoutSpinner()
 
@@ -302,6 +323,7 @@ class KeyboardPageActivity : Activity() {
         if (clearedLayout?.filename != layoutFile) clearedLayout = null
         findViewById<Button>(R.id.btn_undo_clear).visibility = if (clearedLayout != null) View.VISIBLE else View.GONE
         KeyboardRenderer.render(this, previewContainer, layout, heightPx, symbolColor,
+            fontSizeSp = prefs.getInt(SettingsConstants.KEY_KEYBOARD_FONT_SIZE, SettingsConstants.DEFAULT_KEYBOARD_FONT_SIZE),
             showUnassignedPlaceholders = true) { row, column, _ ->
             showKeyEditor(row, column)
         }
@@ -592,8 +614,9 @@ class KeyboardPageActivity : Activity() {
     }
 
     private fun startImport() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             type = "application/json"
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
             addCategory(Intent.CATEGORY_OPENABLE)
         }
         startActivityForResult(intent, IMPORT_REQUEST_CODE)
@@ -616,28 +639,42 @@ class KeyboardPageActivity : Activity() {
             pendingExport = null
         }
         if (requestCode == IMPORT_REQUEST_CODE && resultCode == RESULT_OK) {
-            data?.data?.let { uri ->
-                importFile(uri)
-            }
+            data?.selectedImportUris()?.takeIf { it.isNotEmpty() }?.let { importFiles(it) }
         }
     }
 
-    private fun importFile(uri: Uri) {
-        try {
-            requireNotNull(contentResolver.openInputStream(uri)) { "Unable to read file" }.use { inputStream ->
-                val filename = LayoutFileManager.importLayout(this, inputStream, sourceFileName(uri))
-                clearedLayout = null
-                setupColorControls()
-                val heightDp = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .getInt(KEY_KEYBOARD_HEIGHT, DEFAULT_KEYBOARD_HEIGHT)
-                sbHeight.progress = heightDp - MIN_HEIGHT_DP
-                tvHeightValue.text = "${heightDp}dp"
-                updateLayoutSpinner()
-                refreshPreview()
-                Toast.makeText(this, "Imported and activated $filename", Toast.LENGTH_SHORT).show()
+    private fun importFiles(uris: List<Uri>) {
+        var imported = 0
+        var lastFilename: String? = null
+        val failures = mutableListOf<String>()
+        uris.forEach { uri ->
+            val sourceName = sourceFileName(uri)
+            try {
+                lastFilename = requireNotNull(contentResolver.openInputStream(uri)) { "Unable to read file" }
+                    .use { LayoutFileManager.importLayout(this, it, sourceName) }
+                imported++
+            } catch (e: Exception) {
+                failures.add("${sourceName ?: uri.lastPathSegment ?: "File"}: ${e.message}")
             }
-        } catch (e: Exception) {
-            Toast.makeText(this, "Failed to import: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+        if (imported > 0) {
+            clearedLayout = null
+            setupColorControls()
+            val heightDp = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .getInt(KEY_KEYBOARD_HEIGHT, DEFAULT_KEYBOARD_HEIGHT)
+            sbHeight.progress = heightDp - MIN_HEIGHT_DP
+            tvHeightValue.text = "${heightDp}dp"
+            updateLayoutSpinner()
+            refreshPreview()
+        }
+        val summary = "Imported $imported/${uris.size} keyboard pages" +
+            (lastFilename?.let { "; active: $it" } ?: "")
+        if (failures.isEmpty()) {
+            Toast.makeText(this, summary, Toast.LENGTH_LONG).show()
+        } else {
+            AlertDialog.Builder(this).setTitle("Import results")
+                .setMessage(summary + "\n\n" + failures.joinToString("\n"))
+                .setPositiveButton("OK", null).show()
         }
     }
 

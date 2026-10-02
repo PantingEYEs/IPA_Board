@@ -10,12 +10,13 @@ import com.example.ipa_board.kaomoji.KaomojiManagerActivity
 
 /**
  * Main Activity screen titled "IPA Board Settings".
- * Serves as the primary launcher screen with 5 entries:
+ * Serves as the primary launcher screen with 6 entries:
  * 1. Keyboard Page
  * 2. Shortcut
  * 3. Emoji
  * 4. 顔文字
  * 5. Clipboard
+ * 6. Engine
  */
 class SettingsActivity : Activity() {
 
@@ -28,7 +29,8 @@ class SettingsActivity : Activity() {
             R.id.icon_entry_shortcut to "⌘",
             R.id.icon_entry_emoji to KeyAction.EMOJI.keyLabel,
             R.id.icon_entry_kaomoji to KeyAction.KAOMOJI.keyLabel,
-            R.id.icon_entry_clipboard to KeyAction.CLIPBOARD.keyLabel
+            R.id.icon_entry_clipboard to KeyAction.CLIPBOARD.keyLabel,
+            R.id.icon_entry_engine to "⚙"
         )
         entrySymbols.forEach { (id, symbol) ->
             // Request text presentation for symbols that also have an emoji variant.
@@ -66,6 +68,10 @@ class SettingsActivity : Activity() {
 
         findViewById<View>(R.id.btn_entry_kaomoji).setOnClickListener {
             startActivity(Intent(this, KaomojiManagerActivity::class.java))
+        }
+
+        findViewById<View>(R.id.btn_entry_engine).setOnClickListener {
+            startActivity(Intent(this, EngineManagementActivity::class.java))
         }
 
         findViewById<View>(R.id.btn_entry_clipboard).setOnClickListener {

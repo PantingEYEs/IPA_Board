@@ -16,6 +16,7 @@ object KeyboardRenderer {
         ctrlEnabled: Boolean = false,
         showUnassignedPlaceholders: Boolean = false,
         showKeyPreview: Boolean = false,
+        fontSizeSp: Int = SettingsConstants.DEFAULT_KEYBOARD_FONT_SIZE,
         onKeyQuickSwipeItemClick: ((Int, Int, KeySlot, LongPressItem) -> Unit)? = null,
         onKeyLongItemClick: ((Int, Int, KeySlot, LongPressItem) -> Unit)? = null,
         onKeyLongClick: ((Int, Int, KeySlot) -> Unit)? = null,
@@ -76,6 +77,7 @@ object KeyboardRenderer {
                 val unassigned = slot.action == KeyAction.TEXT && slot.text.isEmpty()
                 val label = if (unassigned && !showUnassignedPlaceholders) "" else slot.displayText(shiftEnabled)
                 val textView = TextView(context).apply {
+                    textSize = fontSizeSp.coerceIn(SettingsConstants.MIN_KEYBOARD_FONT_SIZE, SettingsConstants.MAX_KEYBOARD_FONT_SIZE).toFloat()
                     text = label + if (active) " •" else ""
                     maxLines = 2
                     gravity = Gravity.CENTER
@@ -132,15 +134,12 @@ object KeyboardRenderer {
                 slotView.addView(textView, FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT,
-                    if (slot.hasLongPress) (Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL) else Gravity.CENTER
-                ).apply {
-                    if (slot.hasLongPress) {
-                        bottomMargin = (3 * context.resources.displayMetrics.density).toInt()
-                    }
-                })
+                    Gravity.CENTER
+                ))
                 if (slot.hasLongPress) {
                     val firstItem = slot.effectiveLongPressItems.firstOrNull()
-                    val longPressLabel = firstItem?.previewText(shiftEnabled, ctrlEnabled)
+                    // The persistent corner label shows the symbol, independently of Ctrl input mode.
+                    val longPressLabel = firstItem?.previewText(shiftEnabled)
                         ?: if (slot.longPressAction != KeyAction.TEXT) slot.longPressAction.keyLabel else slot.longPressText
                     val longPressDesc = slot.effectiveLongPressItems.joinToString(", ") { it.description() }.ifEmpty {
                         if (slot.longPressAction != KeyAction.TEXT) slot.longPressAction.title else slot.longPressText
@@ -148,7 +147,7 @@ object KeyboardRenderer {
                     slotView.contentDescription = "${slotView.contentDescription}, long press: $longPressDesc"
                     slotView.addView(TextView(context).apply {
                         text = longPressLabel
-                        textSize = 9f
+                        textSize = fontSizeSp.coerceIn(SettingsConstants.MIN_KEYBOARD_FONT_SIZE, SettingsConstants.MAX_KEYBOARD_FONT_SIZE) * 9f / SettingsConstants.DEFAULT_KEYBOARD_FONT_SIZE
                         setTextColor(symbolColor)
                         alpha = 0.65f
                         maxLines = 1

@@ -28,7 +28,7 @@ internal class RimeEngine(private val context: Context) : QueryEngine {
 
     init {
         check(Native.POINTER_SIZE == 8) { "Only 64-bit engine binaries are bundled" }
-        val dir = File(context.noBackupFilesDir, "rime-3.3.12-v2").apply { mkdirs() }
+        val dir = File(context.noBackupFilesDir, "rime-3.3.12-v3").apply { mkdirs() }
         val shared = File(dir, "shared")
         if (!File(shared, ".ready").exists()) {
             copyAssets("engines/rime", shared)
@@ -43,7 +43,7 @@ internal class RimeEngine(private val context: Context) : QueryEngine {
         }
         void("setup", traits); void("initialize", traits)
         int("start_maintenance", 0); void("join_maintenance_thread")
-        for (schema in listOf("luna_pinyin", "easy_en")) {
+        for (schema in listOf("luna_pinyin")) {
             val id = fn("create_session").invokeLong(emptyArray())
             check(id != 0L && int("select_schema", id, schema) != 0) { "Rime schema not ready: $schema" }
             sessions[schema] = id
@@ -97,10 +97,8 @@ internal class RimeEngine(private val context: Context) : QueryEngine {
                 val text = drainCommit(id) ?: continue
                 val remaining = fn("get_input").invokePointer(arrayOf(id))?.getString(0, "UTF-8").orEmpty()
                 if (remaining.isNotEmpty()) continue
-                if (schema == "easy_en") result.add(Candidate(text, "EN", index)) else {
-                    result.add(Candidate(text, "繁", index))
-                    result.add(Candidate(convert(text), "简", index))
-                }
+                result.add(Candidate(text, "繁", index))
+                result.add(Candidate(convert(text), "简", index))
             }
             void("clear_composition", id)
         }

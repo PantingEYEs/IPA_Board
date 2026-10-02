@@ -19,6 +19,18 @@
       "file": "jna.aar",
       "url": "https://repo.maven.apache.org/maven2/net/java/dev/jna/jna/5.17.0/jna-5.17.0.aar",
       "sha256": "4dbeffffa665d97ad5aa7eee297531d3c841a86716ab7f774fd6956422b3cf38"
+    },
+    {
+      "file": "heliboard-4.1-heli.apk",
+      "url": "https://github.com/HeliBorg/HeliBoard/releases/download/v4.1/HeliBoard_4.1-release.apk",
+      "sha256": "eb9c06685ebd5b7307491da9ef15fb5e29694077a934a8699b9b6772c6f76075",
+      "source_revision": "9f5bb635c2e8609dcd95dc7506c0c58fba82a52c"
+    },
+    {
+      "file": "heliboard-4.1-source.tar.gz",
+      "url": "https://api.github.com/repos/HeliBorg/HeliBoard/tarball/v4.1",
+      "sha256": "4089242b9e102467b5c3875a42794b16c9d1162ad263c0828e2a1a24124f1fd8",
+      "source_revision": "9f5bb635c2e8609dcd95dc7506c0c58fba82a52c"
     }
   ],
   "files": [
@@ -28,29 +40,24 @@
       "bytes": 522249
     },
     {
+      "path": "app/src/main/assets/engines/english/main_en-US.dict",
+      "sha256": "bd950ef4b57655120eee65cee62a5d216a63f721d9a8bb759ce2022437840443",
+      "bytes": 2956881
+    },
+    {
       "path": "app/src/main/assets/engines/mozc.data",
       "sha256": "a905f88e772bafd4b070cebfe66fbb061fab04496f22166fd37875aa34713ccd",
       "bytes": 20489885
     },
     {
       "path": "app/src/main/assets/engines/rime/default.custom.yaml",
-      "sha256": "2dc2eb9e9d56ed9dd7678838a8724b8c297bfbfa6aa6199ea7bb03c614e230e4",
-      "bytes": 70
+      "sha256": "20b8c83ef07e670c3f940214a1aa96e111c02ebf0b7e5a9614da18f8276d7d95",
+      "bytes": 48
     },
     {
       "path": "app/src/main/assets/engines/rime/default.yaml",
       "sha256": "dd55653a991f9418eb425ee2112666f82e3e753c5ce3ed5702dd243041a45382",
       "bytes": 1365
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/easy_en.dict.yaml",
-      "sha256": "4f039026b2746fa9b0d4d7a248cdf866b64609dca2317708f04e9e68ac7d868a",
-      "bytes": 14566541
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/easy_en.schema.yaml",
-      "sha256": "728d91a47dd1db9b0fe6f4f10cdd539cb2ebbde8756b5ce918a44344bc29adcb",
-      "bytes": 432
     },
     {
       "path": "app/src/main/assets/engines/rime/essay.txt",
@@ -273,6 +280,66 @@
       "bytes": 28356
     },
     {
+      "path": "app/src/main/assets/licenses/English-dictionary-source.txt",
+      "sha256": "a4a8a2580d999dccf7bad2ac152d1ac19d4db359a834e86b1d27f35711d283b8",
+      "bytes": 583
+    },
+    {
+      "path": "app/src/main/assets/licenses/HeliBoard-GPL-3.0.txt",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "bytes": 35149
+    },
+    {
+      "path": "app/src/main/assets/licenses/LatinIME-Apache-2.0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "bytes": 11358
+    },
+    {
+      "path": "app/src/main/assets/licenses/jna.txt",
+      "sha256": "07c938b23950ab7d47a24ef35f9f5da3a05ae164278dc959ad6994135ed59ff1",
+      "bytes": 797
+    },
+    {
+      "path": "app/src/main/assets/licenses/luna-pinyin.txt",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+      "bytes": 7651
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc-credits.html",
+      "sha256": "25d6ecc9ee462302ef810cccfbd59218e582f1cde5351787d31b0cd20129a995",
+      "bytes": 41175
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc.txt",
+      "sha256": "44cdd923b91ea9199293abecc2762c70c87dbf1e581c027a94c416368d1a648c",
+      "bytes": 5734
+    },
+    {
+      "path": "app/src/main/assets/licenses/opencc.txt",
+      "sha256": "b534e465949558eec2597b04f5092b5e161236a68dfbfd04d547592ac3964308",
+      "bytes": 9165
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-essay.txt",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+      "bytes": 7651
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime.txt",
+      "sha256": "f67d27a6d2d586fcfed4b4c886a83747095396a39b6641e18e855086be2ec400",
+      "bytes": 1513
+    },
+    {
+      "path": "app/src/main/assets/licenses/trime-GPL-3.0.txt",
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+      "bytes": 35147
+    },
+    {
+      "path": "app/src/main/jniLibs/arm64-v8a/libjni_latinime.so",
+      "sha256": "a97b09fd3de5395023df9fb4ddc2b1eef44162bd6e987b975897d74fc3ee7081",
+      "bytes": 1347040
+    },
+    {
       "path": "app/src/main/jniLibs/arm64-v8a/libmozc.so",
       "sha256": "07dfa8131d8f0081baa771c771eea7198886860deab3ecff4ccd151fdf2eec2f",
       "bytes": 14739336
@@ -281,6 +348,11 @@
       "path": "app/src/main/jniLibs/arm64-v8a/librime_jni.so",
       "sha256": "6e2543f874f247016d791c91ab82e53979157f217be80efc472c9537afaff75f",
       "bytes": 5521416
+    },
+    {
+      "path": "app/src/main/jniLibs/x86_64/libjni_latinime.so",
+      "sha256": "6f85b8fcb378ce0e53bf6df12ec2ad69286c0e61bda21cb2eb565dcbeb2fd0d0",
+      "bytes": 1339072
     },
     {
       "path": "app/src/main/jniLibs/x86_64/libmozc.so",

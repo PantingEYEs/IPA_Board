@@ -11,9 +11,11 @@ class CompositionController(
     var raw = ""; private set
     var revision = 0L; private set
     var candidates = emptyList<Candidate>(); private set
+    var beforeCursor = ""; private set
     private var inEditor = false
+    private var active = true
 
-    fun start() { reset() }
+    fun start() { active = true; reset() }
     fun input(text: String) {
         if (raw.length + text.length > 64) {
             if (!literal()) return
@@ -34,29 +36,39 @@ class CompositionController(
         val ic = connection() ?: return reset()
         inEditor = ic.setComposingText(raw, 1)
         revision++; candidates = emptyList()
-        query(revision, raw); changed()
+        request(); changed()
     }
     fun acceptResults(id: Long, result: List<Candidate>) {
-        if (id == revision && raw.isNotEmpty()) { candidates = result; changed() }
+        if (active && id == revision) {
+            candidates = result.filter { if (raw.isEmpty()) it.kind == CandidateKind.PREDICTION else it.kind != CandidateKind.PREDICTION }
+            changed()
+        }
     }
     fun updateCandidates(items: List<Candidate>) {
         candidates = items
     }
     fun select(candidate: Candidate, id: Long = revision, appendSpace: Boolean = false): Boolean {
-        if (raw.isEmpty() || candidates.none { it.id == candidate.id }) return false
+        if (!active || id != revision || candidates.none { it == candidate }) return false
+        if (raw.isEmpty()) {
+            if (candidate.kind != CandidateKind.PREDICTION) return false
+            val ic = connection() ?: return false
+            if (!ic.getSelectedText(0).isNullOrEmpty() || readBeforeCursor() != beforeCursor) return false
+            return commit(EnglishContext.insertionPrefix(beforeCursor) + candidate.text + " ")
+        }
         if (candidate.language == "∑") {
             val cleanResult = candidate.text.removeSuffix("…")
             replaceRaw(cleanResult)
             return true
         }
-        return commit(candidate.text + if (appendSpace && candidate.language == "EN") " " else "")
+        return commit(candidate.text + if (appendSpace && candidate.language.split('/').contains("EN")) " " else "")
     }
     fun replaceRaw(newRaw: String) {
         val ic = connection() ?: return reset()
         raw = newRaw
         inEditor = ic.setComposingText(raw, 1)
         revision++
-        query(revision, raw)
+        candidates = emptyList()
+        request()
         changed()
     }
     fun literal(): Boolean = if (raw.isEmpty()) true else commit(raw)
@@ -72,7 +84,9 @@ class CompositionController(
         ic.finishComposingText(); reset(); return true
     }
     fun externalSelection(start: Int, end: Int, composingEnd: Int) {
-        if (raw.isEmpty() || !inEditor) return
+        if (!active) return
+        if (raw.isEmpty()) { refreshContext(); return }
+        if (!inEditor) return
         // The expected composing end is authoritative for our own asynchronous editor callbacks.
         if (start == end && end == composingEnd) return
         if (composingEnd < 0 || start != end || end != composingEnd) {
@@ -81,10 +95,23 @@ class CompositionController(
     }
     fun finish() {
         if (inEditor) connection()?.finishComposingText()
+        active = false
         reset()
+    }
+    fun refreshContext() {
+        if (!active || raw.isNotEmpty()) return
+        revision++; candidates = emptyList(); request(); changed()
+    }
+    private fun readBeforeCursor(): String {
+        val text = connection()?.getTextBeforeCursor(256 + raw.length, 0)?.toString().orEmpty()
+        return (if (inEditor && raw.isNotEmpty() && text.endsWith(raw)) text.dropLast(raw.length) else text).takeLast(256)
+    }
+    private fun request() {
+        beforeCursor = if (active && connection()?.getSelectedText(0).isNullOrEmpty()) readBeforeCursor() else ""
+        query(revision, raw)
     }
     private fun reset() {
         raw = ""; candidates = emptyList(); inEditor = false
-        revision++; query(revision, ""); changed()
+        revision++; request(); changed()
     }
 }

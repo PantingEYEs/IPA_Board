@@ -20,6 +20,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ipa_board.R
+import com.example.ipa_board.selectedImportUris
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -77,22 +78,31 @@ class KaomojiManagerActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK) {
-            val uri = result.data?.data
-            if (uri != null) {
-                try {
-                    val importResult = contentResolver.openInputStream(uri)?.use { isStream ->
-                        repository.importJson(isStream)
+            val uris = result.data?.selectedImportUris().orEmpty()
+            if (uris.isNotEmpty()) {
+                var imported = 0
+                var added = 0
+                var merged = 0
+                val failures = mutableListOf<String>()
+                uris.forEach { uri ->
+                    try {
+                        val importResult = requireNotNull(contentResolver.openInputStream(uri)) { "Unable to read file" }
+                            .use { repository.importJson(it) }
+                        imported++
+                        added += importResult.addedCount
+                        merged += importResult.mergedCount
+                    } catch (e: Exception) {
+                        failures.add("${uri.lastPathSegment ?: "File"}: ${e.message}")
                     }
-                    if (importResult != null) {
-                        Toast.makeText(
-                            this,
-                            "Import successful: ${importResult.addedCount} added, ${importResult.mergedCount} merged",
-                            Toast.LENGTH_LONG
-                        ).show()
-                        refreshData()
-                    }
-                } catch (e: Exception) {
-                    Toast.makeText(this, "Import failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+                if (imported > 0) refreshData()
+                val summary = "Imported $imported/${uris.size} files: $added added, $merged merged"
+                if (failures.isEmpty()) {
+                    Toast.makeText(this, summary, Toast.LENGTH_LONG).show()
+                } else {
+                    AlertDialog.Builder(this).setTitle("Import results")
+                        .setMessage(summary + "\n\n" + failures.joinToString("\n"))
+                        .setPositiveButton("OK", null).show()
                 }
             }
         }
@@ -192,6 +202,7 @@ class KaomojiManagerActivity : AppCompatActivity() {
             val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
                 type = "*/*"
+                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
             }
             importLauncher.launch(intent)
         }

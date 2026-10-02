@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import java.security.MessageDigest
 
 class ClipboardRepository(
     context: Context? = null,
@@ -35,6 +36,19 @@ class ClipboardRepository(
 
     @Synchronized
     fun getItemById(id: String): ClipboardItem? = items.firstOrNull { it.id == id }
+
+    /** A panel refresh is not a new copy event; retain this marker across service restarts. */
+    @Synchronized
+    fun syncSystemClip(text: String, copiedAt: Long, isSensitive: Boolean = false): ClipboardItem? {
+        if (text.isBlank()) return null
+        val digest = MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+        val fingerprint = "$copiedAt:$digest"
+        if (prefs.getString(KEY_SYNCED_SYSTEM_CLIP, null) == fingerprint) return null
+        val item = addClip(text, isSensitive)
+        prefs.edit().putString(KEY_SYNCED_SYSTEM_CLIP, fingerprint).apply()
+        return item
+    }
 
     @Synchronized
     fun addClip(text: String, isSensitive: Boolean = false): ClipboardItem? {
@@ -161,6 +175,7 @@ class ClipboardRepository(
     companion object {
         const val PREFS_NAME = "ipa_board_prefs"
         const val KEY_CLIPBOARD_ITEMS = "clipboard_history_items"
+        private const val KEY_SYNCED_SYSTEM_CLIP = "clipboard_synced_system_clip"
         const val MAX_UNPINNED = 20
     }
 }

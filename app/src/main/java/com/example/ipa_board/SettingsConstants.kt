@@ -19,9 +19,14 @@ object SettingsConstants {
     
     const val KEY_KEYBOARD_HEIGHT = "keyboard_height_dp"
     const val DEFAULT_KEYBOARD_HEIGHT = 210
+    const val KEY_KEYBOARD_FONT_SIZE = "keyboard_font_size_sp"
+    const val DEFAULT_KEYBOARD_FONT_SIZE = 14
+    const val MIN_KEYBOARD_FONT_SIZE = 10
+    const val MAX_KEYBOARD_FONT_SIZE = 40
 
     const val KEY_SHIFT_SHORTCUTS = "shift_shortcuts_json"
     const val KEY_CTRL_SHORTCUTS = "ctrl_shortcuts_json"
+    const val KEY_SEMANTIC_CONTEXT_ENABLED = "semantic_context_enabled"
 
     const val KEY_QUICK_PASTE_ENABLED = "quick_paste_enabled"
     const val KEY_QUICK_PASTE_RETENTION_TYPE = "quick_paste_retention_type"

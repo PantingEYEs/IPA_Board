@@ -6,17 +6,18 @@ import android.os.*
 class EngineCoordinator(private val context: Context, private val changed: (Long, List<Candidate>, String) -> Unit) {
     private var revision = 0L
     private var raw = ""
+    private var beforeCursor = ""
     private var closed = false
-    private val clients = listOf(Client(RimeService::class.java, "ZH/EN"), Client(MozcService::class.java, "JA"))
+    private val clients = listOf(Client(RimeService::class.java, "ZH"), Client(MozcService::class.java, "JA"), Client(EnglishService::class.java, "EN"))
     fun start() { clients.filter { !it.bound }.forEach { it.bind() } }
-    fun query(nextRevision: Long, value: String) {
-        revision = nextRevision; raw = value
+    fun query(nextRevision: Long, value: String, contextBeforeCursor: String = "") {
+        revision = nextRevision; raw = value; beforeCursor = contextBeforeCursor.takeLast(256)
         clients.forEach { it.items = emptyList(); it.send() }
         publish()
     }
     fun close() { closed = true; clients.forEach { if (it.bound) context.unbindService(it) } }
     private fun publish() {
-        if (!closed) changed(revision, CandidateRanker.merge(raw, clients.flatMap { it.items }),
+        if (!closed) changed(revision, CandidateRanker.merge(raw, clients.flatMap { it.items }, beforeCursor),
             clients.filter { it.state != "" }.joinToString(" · ") { it.label + it.state })
     }
     private inner class Client(val type: Class<out EngineService>, val label: String) : ServiceConnection {
@@ -30,8 +31,12 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
                 val texts = d.getStringArrayList("text").orEmpty()
                 val languages = d.getStringArrayList("language").orEmpty()
                 val ranks = d.getIntArray("rank") ?: intArrayOf()
+                val kinds = d.getIntArray("kind") ?: intArrayOf()
+                val scores = d.getIntArray("score") ?: intArrayOf()
                 items = texts.mapIndexedNotNull { i, text ->
-                    if (i < languages.size && i < ranks.size) Candidate(text, languages[i], ranks[i]) else null
+                    if (i < languages.size && i < ranks.size) Candidate(text, languages[i], ranks[i],
+                        CandidateKind.entries.getOrNull(kinds.getOrNull(i) ?: 0) ?: CandidateKind.CONVERSION,
+                        scores.getOrNull(i) ?: 0) else null
                 }
                 state = if (d.containsKey("error")) "Unavailable" else ""
                 publish()
@@ -42,7 +47,7 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
         fun send() {
             try { remote?.send(Message.obtain(null, 1).apply {
                 replyTo = response
-                data = Bundle().apply { putLong("revision", revision); putString("raw", raw) }
+                data = Bundle().apply { putLong("revision", revision); putString("raw", raw); putString("beforeCursor", beforeCursor) }
             }) } catch (_: RemoteException) { state = "Unavailable"; items = emptyList() }
         }
         override fun onServiceConnected(name: ComponentName, service: IBinder) { remote = Messenger(service); send() }

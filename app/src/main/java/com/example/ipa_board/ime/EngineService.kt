@@ -14,6 +14,7 @@ abstract class EngineService : Service() {
         var failure: String? = null
     }
     internal abstract fun createEngine(): QueryEngine
+    internal open val supportsPrediction = false
     private val requests = Messenger(Handler(Looper.getMainLooper()) { message ->
         val data = Bundle(message.data)
         val reply = message.replyTo
@@ -26,10 +27,13 @@ abstract class EngineService : Service() {
                 check(failure == null) { failure.orEmpty() }
                 val raw = data.getString("raw").orEmpty()
                 val isPinyinRomaji = raw.length <= 64 && raw.all { it in 'a'..'z' || it in 'A'..'Z' || it == '\'' }
-                val candidates = if (isPinyinRomaji && raw.isNotEmpty() && engine != null) engine!!.query(raw) else emptyList()
+                val candidates = if (isPinyinRomaji && (raw.isNotEmpty() || supportsPrediction) && engine != null)
+                    engine!!.query(raw, data.getString("beforeCursor").orEmpty().takeLast(256)) else emptyList()
                 result.putStringArrayList("text", ArrayList(candidates.map { it.text }))
                 result.putStringArrayList("language", ArrayList(candidates.map { it.language }))
                 result.putIntArray("rank", candidates.map { it.rank }.toIntArray())
+                result.putIntArray("kind", candidates.map { it.kind.ordinal }.toIntArray())
+                result.putIntArray("score", candidates.map { it.nativeScore }.toIntArray())
             } catch (e: Exception) {
                 failure = e.javaClass.simpleName
                 android.util.Log.e("IPAEngine", "Engine query failed", e)
@@ -48,3 +52,7 @@ abstract class EngineService : Service() {
 }
 class RimeService : EngineService() { override fun createEngine(): QueryEngine = RimeEngine(this) }
 class MozcService : EngineService() { override fun createEngine(): QueryEngine = MozcEngine(this) }
+class EnglishService : EngineService() {
+    override val supportsPrediction = true
+    override fun createEngine(): QueryEngine = EnglishEngine(this)
+}

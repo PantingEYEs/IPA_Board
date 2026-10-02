@@ -48,4 +48,7 @@ internal class MozcEngine(context: Context) : QueryEngine {
     }
 }
 
-internal interface QueryEngine { fun query(raw: String): List<Candidate> }
+internal interface QueryEngine {
+    fun query(raw: String): List<Candidate>
+    fun query(raw: String, beforeCursor: String): List<Candidate> = query(raw)
+}

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="engine_management_title">Engine Management</string>
+    <string name="engine_back">Back</string>
+    <string name="engine_category_expanded">Expanded</string>
+    <string name="engine_category_collapsed">Collapsed</string>
+    <string name="engine_arrow_expanded" translatable="false">▴</string>
+    <string name="engine_arrow_collapsed" translatable="false">▾</string>
+    <string name="engine_version">Version: %1$s</string>
+    <string name="engine_version_unknown">Unknown</string>
+    <string name="engine_entry_description">%1$s, version %2$s</string>
+    <string name="engine_status_integrated">Integrated</string>
+    <string name="engine_status_replacement_planned">Integrated · replacement planned</string>
+    <string name="engine_status_planned">Planned</string>
+    <string name="engine_planned_version">Version not selected · not integrated</string>
+    <string name="engine_semantic_context">Semantic Context Ranking</string>
+    <string name="engine_semantic_latency_notice">Use the surrounding text to help rank multilingual candidates by meaning. May increase candidate latency. Off by default.</string>
+    <string name="engine_semantic_pending">Preference saved; the semantic engine is pending integration.</string>
+</resources>

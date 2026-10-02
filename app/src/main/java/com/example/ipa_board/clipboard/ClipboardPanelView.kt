@@ -244,7 +244,7 @@ class ClipboardPanelView(
             }
 
             val pinTextView = TextView(context).apply {
-                text = "📌 Pinned"
+                text = "Pinned"
                 setTextColor(Color.parseColor("#FFD700"))
                 textSize = 11f
                 setPadding(0, 0, dp(12), 0)

@@ -56,7 +56,6 @@ class IpaBoardService : InputMethodService() {
     private val panelBackCallback = android.window.OnBackInvokedCallback { chrome?.showPanel(ImeChromeView.Panel.KEYBOARD) }
     private val clipboard by lazy { getSystemService(ClipboardManager::class.java) }
     private val clipboardRepository by lazy { ClipboardRepository(this) }
-    private var lastSyncedText: String? = null
 
     private data class QuickPasteState(
         val text: String,
@@ -75,10 +74,10 @@ class IpaBoardService : InputMethodService() {
         val clip = try { clipboard.primaryClip } catch (_: SecurityException) { null }
         val text = if (clip != null && clip.itemCount > 0) clip.getItemAt(0).text?.toString() else null
         val sensitive = clip?.description?.extras?.getBoolean("android.content.extra.IS_SENSITIVE", false) == true
-        if (!text.isNullOrEmpty()) {
-            lastSyncedText = text
-            clipboardRepository.addClip(text, sensitive)
-            onNewClipCopied(text)
+        if (clip != null && !text.isNullOrEmpty()) {
+            if (clipboardRepository.syncSystemClip(text, clip.description.timestamp, sensitive) != null) {
+                onNewClipCopied(text)
+            }
         }
     }
 
@@ -107,16 +106,23 @@ class IpaBoardService : InputMethodService() {
         updateQuickPasteStatus()
     }
 
+    private fun clearQuickPasteStatus() {
+        val view = chrome ?: return
+        view.onStatusClick = null
+        when (view.panel) {
+            ImeChromeView.Panel.KEYBOARD -> view.status.text = if (directOnly) "Direct Input" else engineStatus
+            ImeChromeView.Panel.CLIPBOARD -> view.status.text = "Clipboard"
+            else -> Unit
+        }
+    }
+
     private fun updateQuickPasteStatus() {
         val view = chrome ?: return
         val state = quickPasteState
         val enabled = prefs.getBoolean(SettingsConstants.KEY_QUICK_PASTE_ENABLED, true)
 
         if (!enabled || state == null) {
-            if (view.panel == ImeChromeView.Panel.KEYBOARD) {
-                view.onStatusClick = null
-                view.status.text = if (directOnly) "Direct Input" else engineStatus
-            }
+            clearQuickPasteStatus()
             return
         }
 
@@ -142,18 +148,18 @@ class IpaBoardService : InputMethodService() {
 
         if (!isValid) {
             quickPasteState = null
-            if (view.panel == ImeChromeView.Panel.KEYBOARD) {
-                view.onStatusClick = null
-                view.status.text = if (directOnly) "Direct Input" else engineStatus
-            }
+            clearQuickPasteStatus()
             return
         }
 
         val snippet = state.text.replace('\n', ' ').trim().let {
             if (it.length > 18) it.take(18) + "…" else it
         }
-        view.status.text = "📋 粘贴: $snippet"
-        view.onStatusClick = {
+        view.status.text = snippet
+        view.onStatusClick = quickPasteClick@{
+            // Revalidate in case this callback outlives a panel transition or expiry.
+            updateQuickPasteStatus()
+            if (quickPasteState !== state || state.remainingUses <= 0) return@quickPasteClick
             if (composition.literal()) {
                 currentInputConnection?.commitText(state.text, 1)
             }
@@ -166,7 +172,7 @@ class IpaBoardService : InputMethodService() {
     }
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key in setOf(KEY_LAYOUT_REVISION, KEY_BG_COLOR_HEX, KEY_ACTIVE_LAYOUT_FILE, KEY_KEYBOARD_HEIGHT, KEY_SYMBOL_COLOR_HEX, KEY_SHIFT_SHORTCUTS, KEY_CTRL_SHORTCUTS,
+        if (key in setOf(KEY_LAYOUT_REVISION, SettingsConstants.KEY_KEYBOARD_FONT_SIZE, KEY_BG_COLOR_HEX, KEY_ACTIVE_LAYOUT_FILE, KEY_KEYBOARD_HEIGHT, KEY_SYMBOL_COLOR_HEX, KEY_SHIFT_SHORTCUTS, KEY_CTRL_SHORTCUTS,
             SettingsConstants.KEY_QUICK_PASTE_ENABLED, SettingsConstants.KEY_QUICK_PASTE_RETENTION_TYPE, SettingsConstants.KEY_QUICK_PASTE_RETENTION_SECONDS,
             SettingsConstants.KEY_QUICK_PASTE_USAGE_TYPE, SettingsConstants.KEY_QUICK_PASTE_USAGE_TIMES)) {
             if (key == KEY_ACTIVE_LAYOUT_FILE || key == KEY_LAYOUT_REVISION) inputController.reset()
@@ -180,7 +186,9 @@ class IpaBoardService : InputMethodService() {
         LayoutFileManager.initDefaultLayout(this)
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
-        composition = CompositionController({ currentInputConnection }, { id, raw -> engines.query(id, raw) }, { refreshCandidates() })
+        composition = CompositionController({ currentInputConnection }, { id, raw ->
+            engines.query(id, if (directOnly) "" else raw, if (directOnly) "" else composition.beforeCursor)
+        }, { refreshCandidates() })
         engines = EngineCoordinator(this) { id, candidates, state ->
             engineStatus = state
             composition.acceptResults(id, candidates)
@@ -275,6 +283,7 @@ class IpaBoardService : InputMethodService() {
         KeyboardRenderer.render(this, view.keyboardHost, layout, height, color(KEY_SYMBOL_COLOR_HEX, DEFAULT_SYMBOL_COLOR_HEX),
             inputController.shiftEnabled, inputController.ctrlEnabled,
             showKeyPreview = true,
+            fontSizeSp = prefs.getInt(SettingsConstants.KEY_KEYBOARD_FONT_SIZE, SettingsConstants.DEFAULT_KEYBOARD_FONT_SIZE),
             onKeyQuickSwipeItemClick = { _, _, slot, item -> handleLongPressItem(slot, item) },
             onKeyLongItemClick = { _, _, slot, item -> handleLongPressItem(slot, item) },
             onKeyLongClick = { _, _, slot -> handleLongPress(slot) }) { _, _, slot -> handleKey(slot) }
@@ -417,7 +426,7 @@ class IpaBoardService : InputMethodService() {
                     if (inputController.consumeSingleShift()) applySettings()
                     return
                 }
-                slot.action == KeyAction.TEXT && text.isNotEmpty() -> {
+                slot.action == KeyAction.TEXT && text != " " && text.isNotEmpty() -> {
                     composition.input(text)
                     if (inputController.consumeSingleShift()) applySettings()
                     return
@@ -426,6 +435,7 @@ class IpaBoardService : InputMethodService() {
         }
         if (!isModifier && !composition.literal()) return
         if (!inputController.handle(slot, ic, currentInputEditorInfo)) Toast.makeText(this, R.string.unsupported_shortcut, Toast.LENGTH_SHORT).show()
+        if (!directOnly && !isModifier) composition.refreshContext()
         if (beforeShiftState != inputController.shiftState || beforeCtrl != inputController.ctrlEnabled) applySettings()
     }
     private fun showEmoji() {
@@ -770,11 +780,11 @@ class IpaBoardService : InputMethodService() {
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
         inputController.reset()
-        composition.start()
         val type = attribute?.inputType ?: 0
         val variation = type and InputType.TYPE_MASK_VARIATION
         directOnly = (type and InputType.TYPE_MASK_CLASS) != InputType.TYPE_CLASS_TEXT ||
             variation in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)
+        composition.start()
         chrome?.showPanel(ImeChromeView.Panel.KEYBOARD)
         refreshCandidates()
     }
@@ -785,7 +795,8 @@ class IpaBoardService : InputMethodService() {
     }
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
-        composition.externalSelection(newSelStart, newSelEnd, candidatesEnd)
+        if (composition.raw.isNotEmpty() || oldSelStart != newSelStart || oldSelEnd != newSelEnd)
+            composition.externalSelection(newSelStart, newSelEnd, candidatesEnd)
     }
     override fun onEvaluateFullscreenMode() = false
     private fun updatePanelBack(open: Boolean) {

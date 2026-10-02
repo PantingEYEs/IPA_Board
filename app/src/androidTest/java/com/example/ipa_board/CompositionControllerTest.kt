@@ -76,4 +76,47 @@ class CompositionControllerTest {
             assertEquals(listOf("nihao"), committed)
         }
     }
+    @Test fun predictionUsesCursorContextAndNeverReplacesPreviousWordsOrSelection() {
+        instrumentation.runOnMainSync {
+            val editor = EditText(instrumentation.targetContext)
+            val ic = editor.onCreateInputConnection(EditorInfo())!!
+            val controller = CompositionController({ ic }, { _, _ -> }, {})
+            ic.commitText("你好 thank ", 1)
+            controller.start()
+            assertEquals("你好 thank ", controller.beforeCursor)
+            val prediction = Candidate("you", "EN", kind = CandidateKind.PREDICTION)
+            controller.acceptResults(controller.revision, listOf(prediction))
+            assertTrue(controller.select(prediction))
+            assertEquals("你好 thank you ", editor.text.toString())
+            controller.acceptResults(controller.revision, listOf(prediction))
+            val old = controller.revision
+            controller.input("hel")
+            assertEquals("你好 thank you ", controller.beforeCursor)
+            assertFalse(controller.select(prediction, old))
+            controller.literal()
+            controller.acceptResults(controller.revision, listOf(prediction))
+            editor.setSelection(0, 2)
+            assertFalse(controller.select(prediction))
+            assertEquals("你好 thank you hel", editor.text.toString())
+        }
+    }
+    @Test fun sameWordInNewRevisionCannotBeCommittedFromOldCandidateSnapshot() {
+        instrumentation.runOnMainSync {
+            val editor = EditText(instrumentation.targetContext)
+            val ic = editor.onCreateInputConnection(EditorInfo())!!
+            val controller = CompositionController({ ic }, { _, _ -> }, {})
+            controller.input("hel")
+            val word = Candidate("hello", "EN", kind = CandidateKind.COMPLETION)
+            val old = controller.revision
+            controller.acceptResults(old, listOf(word))
+            controller.input("l")
+            controller.acceptResults(controller.revision, listOf(word))
+            assertFalse(controller.select(word, old))
+            assertEquals("hell", editor.text.toString())
+            assertTrue(controller.select(word))
+            controller.acceptResults(controller.revision, listOf(Candidate("world", "EN", kind = CandidateKind.PREDICTION)))
+            assertTrue(controller.select(controller.candidates.single()))
+            assertEquals("hello world ", editor.text.toString())
+        }
+    }
 }

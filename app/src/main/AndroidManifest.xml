@@ -18,6 +18,7 @@
 
         <service android:name=".ime.RimeService" android:exported="false" android:process=":rime" />
         <service android:name=".ime.MozcService" android:exported="false" android:process=":mozc" />
+        <service android:name=".ime.EnglishService" android:exported="false" android:process=":english" />
 
         <service
             android:name=".IpaBoardService"
@@ -57,6 +58,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".EngineManagementActivity"
+            android:label="Engine Management"
+            android:theme="@style/Theme.IPA_Board.NoActionBar"
+            android:exported="false" />
 
         <activity
             android:name=".KeyboardPageActivity"
