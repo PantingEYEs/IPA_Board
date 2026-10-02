@@ -37,7 +37,9 @@ object EngineCatalog {
         )),
         EngineCategory("ranking", "Candidate Ranking Engines", listOf(
             EngineInfo("IPA Board · CandidateRanker", "Built-in · IPA Board $appVersion",
-                detail = "Multilingual ranking using source rank, preceding English context and candidate type.")
+                detail = "Input-compatible multilingual ranking with dictionary associations; no surrounding-language bonus."),
+            EngineInfo("Multilingual E5 · Semantic context ranking", "e5-small · int8 · rev 614241f622f5 · ONNX Runtime 1.23.2",
+                detail = "Experimental, opt-in offline reranking with both sides of the cursor; preserves language diversity.")
         )),
         EngineCategory("calculation", "Calculation Engines", listOf(
             EngineInfo("IPA Board · CalculatorEvaluator", "Built-in · IPA Board $appVersion")

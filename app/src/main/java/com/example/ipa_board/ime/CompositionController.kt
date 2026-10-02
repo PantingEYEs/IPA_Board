@@ -6,12 +6,14 @@ import android.view.inputmethod.InputConnection
 class CompositionController(
     private val connection: () -> InputConnection?,
     private val query: (Long, String) -> Unit,
-    private val changed: () -> Unit
+    private val changed: () -> Unit,
+    private val contextAllowed: () -> Boolean = { true }
 ) {
     var raw = ""; private set
     var revision = 0L; private set
     var candidates = emptyList<Candidate>(); private set
     var beforeCursor = ""; private set
+    var afterCursor = ""; private set
     private var inEditor = false
     private var active = true
 
@@ -49,8 +51,11 @@ class CompositionController(
     }
     fun select(candidate: Candidate, id: Long = revision, appendSpace: Boolean = false): Boolean {
         if (!active || id != revision || candidates.none { it == candidate }) return false
+        if (contextAllowed() && (readBeforeCursor() != beforeCursor || readAfterCursor() != afterCursor)) {
+            refreshContext(); return false
+        }
         if (raw.isEmpty()) {
-            if (candidate.kind != CandidateKind.PREDICTION) return false
+            if (!contextAllowed() || candidate.kind != CandidateKind.PREDICTION) return false
             val ic = connection() ?: return false
             if (!ic.getSelectedText(0).isNullOrEmpty() || readBeforeCursor() != beforeCursor) return false
             return commit(EnglishContext.insertionPrefix(beforeCursor) + candidate.text + " ")
@@ -88,7 +93,7 @@ class CompositionController(
         if (raw.isEmpty()) { refreshContext(); return }
         if (!inEditor) return
         // The expected composing end is authoritative for our own asynchronous editor callbacks.
-        if (start == end && end == composingEnd) return
+        if (start == end && end == composingEnd) { refreshContext(); return }
         if (composingEnd < 0 || start != end || end != composingEnd) {
             connection()?.finishComposingText(); reset()
         }
@@ -99,7 +104,9 @@ class CompositionController(
         reset()
     }
     fun refreshContext() {
-        if (!active || raw.isNotEmpty()) return
+        if (!active) return
+        val context = readContext()
+        if (beforeCursor == context.first && afterCursor == context.second) return
         revision++; candidates = emptyList(); request(); changed()
     }
     private fun readBeforeCursor(): String {
@@ -107,9 +114,14 @@ class CompositionController(
         return (if (inEditor && raw.isNotEmpty() && text.endsWith(raw)) text.dropLast(raw.length) else text).takeLast(256)
     }
     private fun request() {
-        beforeCursor = if (active && connection()?.getSelectedText(0).isNullOrEmpty()) readBeforeCursor() else ""
+        val context = readContext()
+        beforeCursor = context.first; afterCursor = context.second
         query(revision, raw)
     }
+    private fun readAfterCursor(): String = connection()?.getTextAfterCursor(256, 0)?.toString().orEmpty().take(256)
+    private fun readContext(): Pair<String, String> =
+        if (active && contextAllowed() && connection()?.getSelectedText(0).isNullOrEmpty())
+            readBeforeCursor() to readAfterCursor() else "" to ""
     private fun reset() {
         raw = ""; candidates = emptyList(); inEditor = false
         revision++; request(); changed()

@@ -28,12 +28,14 @@ abstract class EngineService : Service() {
                 val raw = data.getString("raw").orEmpty()
                 val isPinyinRomaji = raw.length <= 64 && raw.all { it in 'a'..'z' || it in 'A'..'Z' || it == '\'' }
                 val candidates = if (isPinyinRomaji && (raw.isNotEmpty() || supportsPrediction) && engine != null)
-                    engine!!.query(raw, data.getString("beforeCursor").orEmpty().takeLast(256)) else emptyList()
+                    engine!!.query(raw, data.getString("beforeCursor").orEmpty().takeLast(256),
+                        data.getString("afterCursor").orEmpty().take(256)) else emptyList()
                 result.putStringArrayList("text", ArrayList(candidates.map { it.text }))
                 result.putStringArrayList("language", ArrayList(candidates.map { it.language }))
                 result.putIntArray("rank", candidates.map { it.rank }.toIntArray())
                 result.putIntArray("kind", candidates.map { it.kind.ordinal }.toIntArray())
                 result.putIntArray("score", candidates.map { it.nativeScore }.toIntArray())
+                result.putFloatArray("affinity", candidates.map { it.contextAffinity }.toFloatArray())
             } catch (e: Exception) {
                 failure = e.javaClass.simpleName
                 android.util.Log.e("IPAEngine", "Engine query failed", e)

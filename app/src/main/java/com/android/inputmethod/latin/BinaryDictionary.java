@@ -25,7 +25,7 @@ public final class BinaryDictionary {
     private static native int getFormatVersionNative(long dict);
     public static native int getProbabilityNative(long dict, int[] word);
     private static native int getMaxProbabilityOfExactMatchesNative(long dict, int[] word);
-    private static native int getNgramProbabilityNative(long dict, int[][] prevWordCodePointArrays,
+    public static native int getNgramProbabilityNative(long dict, int[][] prevWordCodePointArrays,
             boolean[] isBeginningOfSentenceArray, int[] word);
     private static native void getWordPropertyNative(long dict, int[] word,
             boolean isBeginningOfSentence, int[] outCodePoints, boolean[] outFlags,

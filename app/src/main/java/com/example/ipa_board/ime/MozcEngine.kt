@@ -25,7 +25,12 @@ internal class MozcEngine(context: Context) : QueryEngine {
     private fun send(input: ByteArray): List<ProtoWire.Field> = ProtoWire.read(
         ProtoWire.read(MozcJNI.evalCommand(m(1, input))).blob(2)
     )
-    override fun query(raw: String): List<Candidate> {
+    override fun query(raw: String): List<Candidate> = query(raw, "", "")
+
+    override fun query(raw: String, beforeCursor: String, afterCursor: String): List<Candidate> {
+        // Input.context=6, Context.preceding_text=1, following_text=2 in the pinned Mozc protocol.
+        val surrounding = m(6, m(1, beforeCursor.takeLast(256).toByteArray(Charsets.UTF_8)) +
+            m(2, afterCursor.take(256).toByteArray(Charsets.UTF_8)))
         val id = send(n(1, 1)).value(1)
         check(id != 0L) { "Mozc session creation failed" }
         try {
@@ -33,7 +38,7 @@ internal class MozcEngine(context: Context) : QueryEngine {
             send(n(1, 5) + n(2, id) + m(4, n(1, 5) + n(3, 1)))
             var output = emptyList<ProtoWire.Field>()
             raw.lowercase(java.util.Locale.ROOT).forEach { c ->
-                output = send(n(1, 3) + n(2, id) + m(3, n(1, c.code.toLong()) + n(7, 1) + n(9, 1)))
+                output = send(n(1, 3) + n(2, id) + m(3, n(1, c.code.toLong()) + n(7, 1) + n(9, 1)) + surrounding)
             }
             val list = ProtoWire.read(output.blob(14))
             val results = list.filter { it.tag == 2 }.take(60).mapIndexedNotNull { rank, item ->
@@ -51,4 +56,5 @@ internal class MozcEngine(context: Context) : QueryEngine {
 internal interface QueryEngine {
     fun query(raw: String): List<Candidate>
     fun query(raw: String, beforeCursor: String): List<Candidate> = query(raw)
+    fun query(raw: String, beforeCursor: String, afterCursor: String): List<Candidate> = query(raw, beforeCursor)
 }

@@ -15,4 +15,7 @@ object EnglishContext {
 
     fun insertionPrefix(beforeCursor: String): String =
         if (beforeCursor.lastOrNull()?.let { it in 'a'..'z' || it in 'A'..'Z' || it == '\'' } == true) " " else ""
+
+    fun followingWord(afterCursor: String): String? = Regex("^[ \\t]*([A-Za-z]+(?:'[A-Za-z]+)*)")
+        .find(afterCursor.take(256))?.groupValues?.get(1)?.lowercase(Locale.ROOT)?.takeIf { it.length < 48 }
 }

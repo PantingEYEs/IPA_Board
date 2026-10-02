@@ -1,0 +1,26 @@
+{
+  "version": "e5-small-614241f6-q8-v1",
+  "modelSha256": "dd476dd0c2514e9b9be83aeb3853fac0763e0bdf4a71645407587d77c48a2d88",
+  "modelSize": 118346824,
+  "parts": [
+    {
+      "name": "model.part0",
+      "size": 41943040,
+      "sha256": "7dd0923fa60b82970fbeba26c264b84507741ea463b670f263b2207b5f902c4f"
+    },
+    {
+      "name": "model.part1",
+      "size": 41943040,
+      "sha256": "8dce92133bdf354187b396ff5c3d98f3459e659601c017b59fdee86fad1038bc"
+    },
+    {
+      "name": "model.part2",
+      "size": 34460744,
+      "sha256": "3b5b43def6e8cd95448518c6cb2d4cd3614cffad31dad5b1b9031d337a78caa3"
+    }
+  ],
+  "tokenizerSha256": "4d28a2a61017a7b222164065d832e51103fbb3a4451c4e4938a2eeb8e83e44e8",
+  "source": "intfloat/multilingual-e5-small",
+  "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+  "upstreamFile": "onnx/model_qint8_avx512_vnni.onnx"
+}

@@ -19,6 +19,7 @@
         <service android:name=".ime.RimeService" android:exported="false" android:process=":rime" />
         <service android:name=".ime.MozcService" android:exported="false" android:process=":mozc" />
         <service android:name=".ime.EnglishService" android:exported="false" android:process=":english" />
+        <service android:name=".ime.SemanticService" android:exported="false" android:process=":semantic" />
 
         <service
             android:name=".IpaBoardService"

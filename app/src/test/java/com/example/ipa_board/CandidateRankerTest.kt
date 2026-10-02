@@ -20,12 +20,14 @@ class CandidateRankerTest {
         assertEquals("hello", result.first().text)
         assertEquals(2, result.size)
     }
-    @Test fun englishContextPrefersEnglishWithoutRemovingOtherLanguages() {
+    @Test fun surroundingLanguageAloneDoesNotChangeRanking() {
         val input = listOf(Candidate("你好", "简", 0), Candidate("日本", "日", 0),
             Candidate("help", "EN", 0, CandidateKind.COMPLETION, 100))
         val result = CandidateRanker.merge("hel", input, "can you ")
         assertEquals("help", result.first().text)
         assertEquals(3, result.size)
         assertEquals(100, result.first().nativeScore)
+        assertEquals(result, CandidateRanker.merge("hel", input, "这里都是中文"))
+        assertEquals(result, CandidateRanker.merge("hel", input))
     }
 }

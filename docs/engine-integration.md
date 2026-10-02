@@ -16,7 +16,7 @@
 
 Engine Management 展示已接入的输入功能及版本，也单独标记计划项，不代表瞬时原生加载状态。LatinIME 英文补全、拼写纠错与短上下文下一词预测已接入，个人学习仍属后续计划。已打包的 librime 版本为 1.17.0：x86_64 二进制的 `RimeGetVersion()` 返回该字符串；arm64 库同样包含 1.17.0 版本字符串。下述 1.14.0 是适配器采用的 C API 表定义来源，不是已打包引擎版本。Mozc 使用固定源码 revision 与 Libre Japanese Input 来源版本；OpenCC 的独立版本未在当前锁定资源中确认，界面明确标注来源为 Trime 3.3.12。方案/词典版本来自资源声明，内置排序、计算和验证码规则模块随应用版本显示。
 
-语义排序设置接口为 `ContextRankingSettings`：使用现有 `ipa_board_prefs` 的 `semantic_context_enabled` 布尔值，默认 false，上下文读取上限 256 字符。Engine Management 提供开关和延迟提示。接口提交阶段只保存用户选择，不改变现有候选查询；后续语义引擎必须遵守该选择，关闭时不得加载模型或执行语义推理，开启时也应先保留普通候选再异步更新排序。
+语义排序设置接口为 `ContextRankingSettings`：使用现有 `ipa_board_prefs` 的 `semantic_context_enabled` 布尔值，默认 false，每侧上下文读取上限 256 字符。Engine Management 提供开关和延迟提示。接口先在 `6f4bc71` 提交并推送，再接入实现，保持同一键与默认值。关闭时不绑定语义服务、不部署或加载模型；关闭已启用的开关会取消请求、解绑并释放模型。普通候选始终先显示。详见 [实验性上下文联想](context-ranking.md)。
 
 Rime function table顺序来自 librime 1.14.0 的 rime_api.h。适配器限定 64 位 ABI，并在访问函数前检查表大小。Mozc 的小型 wire reader 对应上述 revision 的 commands.proto / candidates.proto，支持该协议使用的 group、嵌套消息、未知字段跳过及输入长度限制。
 
@@ -47,8 +47,8 @@ adb shell am instrument -w com.example.ipa_board.test/androidx.test.runner.Andro
 
 - 首次 Rime 部署需编译词典，界面保持可用并显示加载状态；后续复用部署结果。
 - 候选当前为有界列表：Rime 检查前 40 个原生候选，Mozc 最多 60 个，LatinIME 最多 18 个。展开显示这一批结果，尚无滚动到末尾继续向引擎分页。
-- 排序采用来源内排名、原文匹配、英文上下文与候选类型等启发式特征；不是经过跨语言语料校准的概率。尚无持久化个性学习，也没有无分隔整串跨语言分词。
-- Rime 的两个二进制为 16KB ELF 对齐；当前 Mozc 上游发布库为 **4KB 对齐**。此次真机验证不等于 16KB 页设备兼容验证；面向此类设备发布前，应按上游 source revision 重编译 Mozc 并验证。不要通过修改 ELF 头伪造兼容性。
+- 排序采用来源内排名、原文匹配、具体 bigram 关联与候选类型等启发式特征，另有可选的实验性语义重排；不是经过跨语言语料校准的概率。尚无持久化个性学习，也没有无分隔整串跨语言分词。
+- Rime 的两个二进制为 16KB ELF 对齐；当前 Mozc 上游发布库和 ONNX Runtime Extensions 0.13.0 AAR 中的原生库为 **4KB 对齐**。此次真机验证不等于 16KB 页设备兼容验证；面向此类设备发布前，应按上游 source revision 重编译 Mozc 与 Extensions 并验证。不要通过修改 ELF 头伪造兼容性。
 - 当前使用 Trime 发布的组合 JNI 库，其中包含 GPL 代码，不能仅将其视为 BSD 的 librime。许可证文本和原始声明在 app/src/main/assets/licenses。对外分发需按实际组合依赖提供相应源码/许可材料；若要求宽松许可发行，需独立构建纯 librime/OpenCC 并替换该二进制。本次未发布软件，也未给项目自有代码指定新许可证。
 - HeliBoard 发布核心及适配的上游声明包含 Apache-2.0 与 GPL-3.0；两份许可证已保存，官方源码归档的 SHA-256 与固定 revision 已记录。未包含其图标或外部手势库。LatinIME 两个 ABI 的 ELF LOAD 对齐均为 16KB；这不改变 Mozc 的上述兼容限制。
 

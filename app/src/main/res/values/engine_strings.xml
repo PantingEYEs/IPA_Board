@@ -14,6 +14,6 @@
     <string name="engine_status_planned">Planned</string>
     <string name="engine_planned_version">Version not selected · not integrated</string>
     <string name="engine_semantic_context">Semantic Context Ranking</string>
-    <string name="engine_semantic_latency_notice">Use the surrounding text to help rank multilingual candidates by meaning. May increase candidate latency. Off by default.</string>
-    <string name="engine_semantic_pending">Preference saved; the semantic engine is pending integration.</string>
+    <string name="engine_semantic_latency_notice">Experimental: use surrounding text to help rank multilingual candidates by meaning. May increase candidate latency and memory use. Off by default.</string>
+    <string name="engine_semantic_pending">Offline processing. Native candidates appear immediately; semantic ranking follows when there is useful context.</string>
 </resources>

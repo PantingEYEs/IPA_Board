@@ -187,8 +187,9 @@ class IpaBoardService : InputMethodService() {
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
         composition = CompositionController({ currentInputConnection }, { id, raw ->
-            engines.query(id, if (directOnly) "" else raw, if (directOnly) "" else composition.beforeCursor)
-        }, { refreshCandidates() })
+            engines.query(id, if (directOnly) "" else raw, if (directOnly) "" else composition.beforeCursor,
+                if (directOnly) "" else composition.afterCursor)
+        }, { refreshCandidates() }, contextAllowed = { !directOnly })
         engines = EngineCoordinator(this) { id, candidates, state ->
             engineStatus = state
             composition.acceptResults(id, candidates)
@@ -784,6 +785,7 @@ class IpaBoardService : InputMethodService() {
         val variation = type and InputType.TYPE_MASK_VARIATION
         directOnly = (type and InputType.TYPE_MASK_CLASS) != InputType.TYPE_CLASS_TEXT ||
             variation in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)
+        if (directOnly) engines.suspendSemantic()
         composition.start()
         chrome?.showPanel(ImeChromeView.Panel.KEYBOARD)
         refreshCandidates()
@@ -795,8 +797,7 @@ class IpaBoardService : InputMethodService() {
     }
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
-        if (composition.raw.isNotEmpty() || oldSelStart != newSelStart || oldSelEnd != newSelEnd)
-            composition.externalSelection(newSelStart, newSelEnd, candidatesEnd)
+        composition.externalSelection(newSelStart, newSelEnd, candidatesEnd)
     }
     override fun onEvaluateFullscreenMode() = false
     private fun updatePanelBack(open: Boolean) {
@@ -820,10 +821,10 @@ class IpaBoardService : InputMethodService() {
     override fun onFinishInputView(finishingInput: Boolean) {
         clipboard.removePrimaryClipChangedListener(clipboardListener)
         chrome?.showPanel(ImeChromeView.Panel.KEYBOARD)
-        composition.finish(); inputController.reset()
+        composition.finish(); engines.suspendSemantic(); inputController.reset()
         super.onFinishInputView(finishingInput)
     }
-    override fun onFinishInput() { composition.finish(); inputController.reset(); super.onFinishInput() }
+    override fun onFinishInput() { composition.finish(); engines.suspendSemantic(); inputController.reset(); super.onFinishInput() }
     override fun onDestroy() {
         emojiClosed = true
         emojiRequest++

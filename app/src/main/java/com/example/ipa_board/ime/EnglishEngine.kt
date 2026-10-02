@@ -36,7 +36,9 @@ internal class EnglishEngine(context: Context) : QueryEngine {
 
     override fun query(raw: String): List<Candidate> = query(raw, "")
 
-    override fun query(raw: String, beforeCursor: String): List<Candidate> {
+    override fun query(raw: String, beforeCursor: String): List<Candidate> = query(raw, beforeCursor, "")
+
+    override fun query(raw: String, beforeCursor: String, afterCursor: String): List<Candidate> {
         if (raw.length >= 48 || raw.any { it !in 'a'..'z' && it !in 'A'..'Z' && it != '\'' }) return emptyList()
         val words = EnglishContext.previousWords(beforeCursor)
         if (raw.isEmpty() && words.isEmpty()) return emptyList()
@@ -76,7 +78,11 @@ internal class EnglishEngine(context: Context) : QueryEngine {
                 text.startsWith(raw, true) -> CandidateKind.COMPLETION
                 else -> CandidateKind.CORRECTION
             }
-            Candidate(text, "EN", index, kind, scores[index])
+            // Only measured dictionary collocations receive a bonus, never the context's script.
+            val lower = text.lowercase(Locale.ROOT)
+            val preceding = words.firstOrNull()?.let { association(it, lower) } ?: 0f
+            val following = EnglishContext.followingWord(afterCursor)?.let { association(lower, it) } ?: 0f
+            Candidate(text, "EN", index, kind, scores[index], maxOf(preceding, following))
         // JNI drains a worst-first priority queue. Array position is not candidate rank;
         // mirror the upstream frontend's score-descending, shorter-word-first ordering.
         }.sortedWith(compareByDescending<Candidate> { it.nativeScore }
@@ -84,5 +90,14 @@ internal class EnglishEngine(context: Context) : QueryEngine {
             .thenBy { it.text })
             .distinctBy { it.id }
             .mapIndexed { rank, candidate -> candidate.copy(rank = rank) }
+    }
+
+    private fun association(previous: String, word: String): Float {
+        val codePoints = word.codePoints().toArray()
+        val independent = BinaryDictionary.getNgramProbabilityNative(dictionary, emptyArray(), booleanArrayOf(), codePoints)
+        val contextual = BinaryDictionary.getNgramProbabilityNative(dictionary,
+            arrayOf(previous.codePoints().toArray()), booleanArrayOf(false), codePoints)
+        if (independent < 0 || contextual < 0) return 0f
+        return ((contextual - independent) / 64f).coerceIn(0f, 1f)
     }
 }
