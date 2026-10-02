@@ -257,7 +257,7 @@ enum class KeyAction(val wireValue: String, val title: String, val keyLabel: Str
     TAB("tab", "Tab", "Tab", "Send Tab. Focus movement depends on the receiving app."),
     HOME("home", "Home", "Home", "Move to the beginning of the line. Shift extends the selection."),
     END("end", "End", "End", "Move to the end of the line. Shift extends the selection."),
-    EMOJI("emoji", "Emoji", "☺", "Open the scrollable emoji panel. Tap an emoji to insert it; Return closes the panel."),
+    EMOJI("emoji", "Emoji", "☺\uFE0E", "Open the scrollable emoji panel. Tap an emoji to insert it; Return closes the panel."),
     KAOMOJI("kaomoji", "顔文字", "顔", "Open the scrollable 顔文字 panel. Tap a 顔文字 to insert it; Return closes the panel."),
     CALCULATOR("calculator", "计算器", "∑", "Toggle calculator mode. Evaluate math expressions and output results as candidates."),
     CANDIDATES("candidates", "Candidates", "⋯", "Open the candidate word list panel."),

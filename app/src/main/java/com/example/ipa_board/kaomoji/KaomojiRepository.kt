@@ -320,9 +320,20 @@ class KaomojiRepository(
 
     private fun loadFromDisk() {
         items.clear()
+        val settings = if (storageDirOverride == null) context?.getSharedPreferences(
+            com.example.ipa_board.SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE
+        ) else null
         if (!configFile.exists()) {
-            loadDefaults()
+            if (settings != null && !settings.getBoolean("kaomoji_assets_initialized", false)) {
+                val assetDir = "initialization/kaomoji"
+                val filenames = context!!.assets.list(assetDir).orEmpty()
+                    .filter { it.endsWith(".json", ignoreCase = true) }.sorted()
+                filenames.forEach { filename ->
+                    context.assets.open("$assetDir/$filename").use { importJson(it) }
+                }
+            }
             saveToDisk()
+            if (configFile.exists()) settings?.edit()?.putBoolean("kaomoji_assets_initialized", true)?.apply()
             return
         }
 
@@ -330,9 +341,9 @@ class KaomojiRepository(
             val content = configFile.readText()
             val loaded = parseJsonString(content)
             items.addAll(loaded)
+            settings?.edit()?.putBoolean("kaomoji_assets_initialized", true)?.apply()
         } catch (e: Exception) {
             e.printStackTrace()
-            loadDefaults()
         }
     }
 
@@ -344,11 +355,4 @@ class KaomojiRepository(
         }
     }
 
-    private fun loadDefaults() {
-        items.add(KaomojiItem(text = "(^_^)v", tags = listOf("Happy", "Red"), usageCount = 0))
-        items.add(KaomojiItem(text = "(*^▽^*)", tags = listOf("Happy", "Yellow"), usageCount = 0))
-        items.add(KaomojiItem(text = "(;﹏;)", tags = listOf("Sad", "Blue"), usageCount = 0))
-        items.add(KaomojiItem(text = "(>_<)", tags = listOf("Sad", "Purple"), usageCount = 0))
-        items.add(KaomojiItem(text = "(╯°□°)╯︵ ┻━┻", tags = listOf("Angry", "Orange"), usageCount = 0))
-    }
 }

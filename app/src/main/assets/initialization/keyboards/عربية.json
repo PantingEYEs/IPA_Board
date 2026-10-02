@@ -1,0 +1,691 @@
+{
+  "version": 4,
+  "layout": {
+    "name": "عربية",
+    "rows": [
+      {
+        "heightWeight": 1,
+        "slots": [
+          {
+            "widthWeight": 1,
+            "text": "٠",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "١",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "٢",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "٣",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "٤",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "٥",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "٦",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "٧",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "٨",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "٩",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          }
+        ]
+      },
+      {
+        "heightWeight": 1,
+        "slots": [
+          {
+            "widthWeight": 1,
+            "text": "ض",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ص",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ث",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ق",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ف",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "غ",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ع",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ه",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "خ",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ح",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ج",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          }
+        ]
+      },
+      {
+        "heightWeight": 1,
+        "slots": [
+          {
+            "widthWeight": 1,
+            "text": "ش",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "س",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ي",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ب",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ل",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ا",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ت",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ن",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "م",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ك",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ة",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          }
+        ]
+      },
+      {
+        "heightWeight": 1,
+        "slots": [
+          {
+            "widthWeight": 1,
+            "text": "؛ ",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ظ",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ط",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ذ",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "د",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ز",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "ر",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "و",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "َ",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "",
+            "action": "backspace",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          }
+        ]
+      },
+      {
+        "heightWeight": 1,
+        "slots": [
+          {
+            "widthWeight": 1,
+            "text": "",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "،",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 5,
+            "text": " ",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "prev_page",
+            "swipeRightText": "",
+            "swipeRightAction": "next_page"
+          },
+          {
+            "widthWeight": 1,
+            "text": ".",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "",
+            "action": "enter",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          }
+        ]
+      },
+      {
+        "heightWeight": 1,
+        "slots": [
+          {
+            "widthWeight": 1,
+            "text": "",
+            "action": "up",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "",
+            "action": "down",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "",
+            "action": "left",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "",
+            "action": "right",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          }
+        ]
+      }
+    ]
+  },
+  "appearance": {
+    "backgroundColor": "#000000",
+    "symbolColor": "#4D4D4D",
+    "heightDp": 150
+  }
+}

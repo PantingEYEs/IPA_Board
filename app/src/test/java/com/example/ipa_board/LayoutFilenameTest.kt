@@ -30,7 +30,7 @@ class LayoutFilenameTest {
         assertEquals("My IPA (2).JSON", LayoutFileManager.availableFilename(
             "My IPA.JSON", listOf("my ipa.json")
         ))
-        assertEquals("default (2).json", LayoutFileManager.availableFilename("default.json", emptyList()))
+        assertEquals("default.json", LayoutFileManager.availableFilename("default.json", emptyList()))
     }
 
     @Test fun longUnicodeNamesFitInFilesystemWithoutSplittingSurrogates() {

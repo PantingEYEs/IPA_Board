@@ -34,8 +34,6 @@ import com.example.ipa_board.SettingsConstants.KEY_BG_COLOR_HEX
 import com.example.ipa_board.SettingsConstants.KEY_KEYBOARD_HEIGHT
 import com.example.ipa_board.SettingsConstants.KEY_SYMBOL_COLOR_HEX
 import com.example.ipa_board.SettingsConstants.PREFS_NAME
-import java.io.ByteArrayOutputStream
-import java.io.InputStream
 
 class KeyboardPageActivity : Activity() {
 
@@ -278,11 +276,14 @@ class KeyboardPageActivity : Activity() {
         val bgColorHex = prefs.getString(KEY_BG_COLOR_HEX, DEFAULT_BG_COLOR_HEX) ?: DEFAULT_BG_COLOR_HEX
         val symbolColorHex = prefs.getString(KEY_SYMBOL_COLOR_HEX, DEFAULT_SYMBOL_COLOR_HEX) ?: DEFAULT_SYMBOL_COLOR_HEX
         val heightDp = prefs.getInt(KEY_KEYBOARD_HEIGHT, DEFAULT_KEYBOARD_HEIGHT)
+        LayoutFileManager.activeLayout(this)
         val layoutFile = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
+        val hasPage = layoutFile in LayoutFileManager.listLayoutFiles(this)
+        previewContainer.visibility = if (hasPage) View.VISIBLE else View.GONE
 
         findViewById<Button>(R.id.btn_delete_layout).apply {
-            isEnabled = !layoutFile.equals(DEFAULT_LAYOUT_FILENAME, ignoreCase = true)
-            setText(if (isEnabled) R.string.delete_layout else R.string.default_layout_protected)
+            isEnabled = hasPage
+            setText(R.string.delete_layout)
         }
         val density = resources.displayMetrics.density
         val heightPx = (heightDp * density).toInt()
@@ -296,7 +297,7 @@ class KeyboardPageActivity : Activity() {
         previewContainer.setBackgroundColor(bgColor)
 
         val layout = LayoutFileManager.loadLayout(this, layoutFile) ?: SettingsConstants.DEFAULT_LAYOUT
-        val displayName = layoutFile.removeSuffix(".json")
+        val displayName = if (hasPage) layoutFile.removeSuffix(".json") else ""
         findViewById<TextView>(R.id.tv_layout_name).text = getString(R.string.current_page_name, displayName)
         if (clearedLayout?.filename != layoutFile) clearedLayout = null
         findViewById<Button>(R.id.btn_undo_clear).visibility = if (clearedLayout != null) View.VISIBLE else View.GONE
@@ -522,7 +523,6 @@ class KeyboardPageActivity : Activity() {
     private fun deleteCurrentLayout() {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val filename = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
-        if (filename.equals(DEFAULT_LAYOUT_FILENAME, ignoreCase = true)) return
         AlertDialog.Builder(this)
             .setTitle(R.string.delete_layout_title)
             .setMessage(getString(R.string.delete_layout_message, filename))
@@ -625,26 +625,7 @@ class KeyboardPageActivity : Activity() {
     private fun importFile(uri: Uri) {
         try {
             requireNotNull(contentResolver.openInputStream(uri)) { "Unable to read file" }.use { inputStream ->
-                val bytes = inputStream.readBytesWithLimit()
-                val config = JSONObject(String(bytes, Charsets.UTF_8))
-                val layout = KeyboardLayout.fromJson((config.optJSONObject("layout") ?: config).toString())
-                val appearance = config.optJSONObject("appearance")
-                if (config.has("version")) require(config.getInt("version") in 1..4) { "Unsupported configuration version" }
-                val bg = appearance?.getString("backgroundColor")
-                val symbol = appearance?.getString("symbolColor")
-                val height = appearance?.getInt("heightDp")
-                if (appearance != null) {
-                    require(bg != null && isValidHex(bg) && symbol != null && isValidHex(symbol)) { "Invalid colors" }
-                    require(height != null && height in 150..450) { "Invalid keyboard height" }
-                }
-                val filename = LayoutFileManager.createLayout(this, sourceFileName(uri) ?: layout.name, layout)
-                val editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                    .putString(KEY_ACTIVE_LAYOUT_FILE, filename)
-                if (appearance != null) {
-                    editor.putString(KEY_BG_COLOR_HEX, bg).putString(KEY_SYMBOL_COLOR_HEX, symbol)
-                        .putInt(KEY_KEYBOARD_HEIGHT, requireNotNull(height))
-                }
-                editor.apply()
+                val filename = LayoutFileManager.importLayout(this, inputStream, sourceFileName(uri))
                 clearedLayout = null
                 setupColorControls()
                 val heightDp = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
@@ -691,20 +672,4 @@ class KeyboardPageActivity : Activity() {
         }
     }
 
-    private fun InputStream.readBytesWithLimit(): ByteArray {
-        val output = ByteArrayOutputStream()
-        val buffer = ByteArray(8192)
-        while (true) {
-            val count = read(buffer)
-            if (count == -1) break
-            require(output.size() + count <= 1024 * 1024) { "Configuration must not exceed 1 MB" }
-            output.write(buffer, 0, count)
-        }
-        return output.toByteArray()
-    }
-
-    private fun isValidHex(color: String): Boolean {
-        val hexPattern = "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$".toRegex()
-        return hexPattern.matches(color)
-    }
 }

@@ -54,7 +54,7 @@ class LayoutManagementTest {
         }
     }
 
-    @Test fun deletingActiveLayoutCanBeCancelledAndFallsBackToProtectedDefault() {
+    @Test fun deletingActiveLayoutCanBeCancelledAndSelectsRemainingPage() {
         LayoutFixture().use { fixture ->
             val filename = fixture.create(SettingsConstants.DEFAULT_LAYOUT)
             fixture.select(filename)
@@ -67,14 +67,13 @@ class LayoutManagementTest {
                 onView(withText("Delete")).perform(click())
                 assertNull(LayoutFileManager.loadLayout(fixture.context, filename))
                 assertFalse(LayoutFileManager.listLayoutFiles(fixture.context).contains(filename))
-                assertEquals(SettingsConstants.DEFAULT_LAYOUT_FILENAME, fixture.activeFilename())
-                onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(SettingsConstants.DEFAULT_LAYOUT_FILENAME)))
+                assertEquals(LayoutFileManager.getLayoutOrder(fixture.context).first(), fixture.activeFilename())
+                onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(requireNotNull(fixture.activeFilename()).removeSuffix(".json"))))
                 scenario.onActivity { activity ->
-                    assertFalse(activity.findViewById<android.widget.Button>(R.id.btn_delete_layout).isEnabled)
+                    assertTrue(activity.findViewById<android.widget.Button>(R.id.btn_delete_layout).isEnabled)
                 }
                 scenario.recreate()
-                assertEquals(SettingsConstants.DEFAULT_LAYOUT_FILENAME, fixture.activeFilename())
-                assertFalse(LayoutFileManager.deleteLayout(fixture.context, SettingsConstants.DEFAULT_LAYOUT_FILENAME))
+                assertEquals(LayoutFileManager.getLayoutOrder(fixture.context).first(), fixture.activeFilename())
             }
         }
     }

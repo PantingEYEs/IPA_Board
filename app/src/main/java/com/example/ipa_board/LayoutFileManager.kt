@@ -5,6 +5,9 @@ import android.util.AtomicFile
 import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT
 import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT_FILENAME
 import org.json.JSONArray
+import org.json.JSONObject
+import java.io.InputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.util.Locale
@@ -43,8 +46,6 @@ object LayoutFileManager {
     internal fun availableFilename(preferredFilename: String, existingFilenames: Collection<String>): String {
         val filename = normalizeFilename(preferredFilename)
         val used = existingFilenames.mapTo(mutableSetOf()) { it.lowercase(Locale.ROOT) }
-        // The built-in layout must remain reserved even before it has been initialized.
-        used.add(DEFAULT_LAYOUT_FILENAME.lowercase(Locale.ROOT))
         if (filename.lowercase(Locale.ROOT) !in used) return filename
         val extension = filename.takeLast(5)
         val stem = filename.dropLast(5)
@@ -128,17 +129,54 @@ object LayoutFileManager {
         return newFilename
     }
 
+    /** Shared by manual import and bundled initialization, including appearance and activation. */
+    fun importLayout(context: Context, input: InputStream, sourceFilename: String? = null): String {
+        val output = ByteArrayOutputStream()
+        val buffer = ByteArray(8192)
+        while (true) {
+            val count = input.read(buffer)
+            if (count == -1) break
+            require(output.size() + count <= 1024 * 1024) { "Configuration must not exceed 1 MB" }
+            output.write(buffer, 0, count)
+        }
+        val config = JSONObject(output.toString("UTF-8"))
+        val layout = KeyboardLayout.fromJson((config.optJSONObject("layout") ?: config).toString())
+        if (config.has("version")) require(config.getInt("version") in 1..4) { "Unsupported configuration version" }
+        val appearance = config.optJSONObject("appearance")
+        val bg = appearance?.getString("backgroundColor")
+        val symbol = appearance?.getString("symbolColor")
+        val height = appearance?.getInt("heightDp")
+        if (appearance != null) {
+            val colorPattern = Regex("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$")
+            require(bg != null && colorPattern.matches(bg) && symbol != null && colorPattern.matches(symbol)) { "Invalid colors" }
+            require(height != null && height in 150..450) { "Invalid keyboard height" }
+        }
+        val filename = createLayout(context, sourceFilename ?: layout.name, layout)
+        val editor = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, filename)
+        if (appearance != null) {
+            editor.putString(SettingsConstants.KEY_BG_COLOR_HEX, bg)
+                .putString(SettingsConstants.KEY_SYMBOL_COLOR_HEX, symbol)
+                .putInt(SettingsConstants.KEY_KEYBOARD_HEIGHT, requireNotNull(height))
+        }
+        editor.apply()
+        return filename
+    }
+
+    @Synchronized
     fun initDefaultLayout(context: Context) {
-        val mixedFile = layoutFile(context, com.example.ipa_board.ime.BuiltinLayouts.MIXED_ID)
         val settings = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
-        if (!settings.getBoolean("mixed_layout_created", false)) {
-            if (!mixedFile.exists()) saveLayout(context, mixedFile.name, com.example.ipa_board.ime.BuiltinLayouts.mixed)
-            settings.edit().putBoolean("mixed_layout_created", true).apply()
+        // Retain the old initialization marker so upgrades do not reseed existing installations.
+        if (settings.getBoolean("default_layout_created", false)) return
+        if (listLayoutFiles(context).isEmpty()) {
+            val assetDir = "initialization/keyboards"
+            val filenames = context.assets.list(assetDir).orEmpty()
+                .filter { it.endsWith(".json", ignoreCase = true) }.sorted()
+            filenames.forEach { filename ->
+                context.assets.open("$assetDir/$filename").use { importLayout(context, it, filename) }
+            }
         }
-        val defaultFile = layoutFile(context, DEFAULT_LAYOUT_FILENAME)
-        if (!defaultFile.exists()) {
-            saveLayout(context, DEFAULT_LAYOUT_FILENAME, DEFAULT_LAYOUT)
-        }
+        settings.edit().putBoolean("default_layout_created", true).apply()
     }
 
     fun saveLayout(context: Context, filename: String, layout: KeyboardLayout) {
@@ -166,6 +204,18 @@ object LayoutFileManager {
         } catch (e: Exception) {
             null
         }
+    }
+
+    /** Resolve a saved page first, using the immutable template only when none are readable. */
+    fun activeLayout(context: Context): KeyboardLayout {
+        val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        val active = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME)
+        val pages = getLayoutOrder(context)
+        val filename = pages.firstOrNull { it == active && loadLayout(context, it) != null }
+            ?: pages.firstOrNull { loadLayout(context, it) != null }
+        if (filename == null) return DEFAULT_LAYOUT
+        if (filename != active) prefs.edit().putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, filename).apply()
+        return loadLayout(context, filename) ?: DEFAULT_LAYOUT
     }
 
     fun listLayoutFiles(context: Context): List<String> {
@@ -226,17 +276,16 @@ object LayoutFileManager {
     }
     
     fun deleteLayout(context: Context, filename: String): Boolean {
-        if (filename.equals(DEFAULT_LAYOUT_FILENAME, ignoreCase = true)) return false // Prevent deleting default
         return try {
             val file = layoutFile(context, filename)
             val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
             val isActive = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) == filename
-            if (isActive) initDefaultLayout(context)
             if (!file.delete()) return false
             // Remove any AtomicFile recovery files so a deleted layout cannot reappear.
             android.util.AtomicFile(file).delete()
             prefs.edit().apply {
-                if (isActive) putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME)
+                if (isActive) putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE,
+                    getLayoutOrder(context).firstOrNull() ?: DEFAULT_LAYOUT_FILENAME)
                 putLong(SettingsConstants.KEY_LAYOUT_REVISION, prefs.getLong(SettingsConstants.KEY_LAYOUT_REVISION, 0) + 1)
             }.apply()
             true

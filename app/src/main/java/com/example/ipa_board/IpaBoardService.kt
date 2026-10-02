@@ -271,8 +271,7 @@ class IpaBoardService : InputMethodService() {
         view.setKeyboardHeight(height)
         fun color(key: String, fallback: String) = try { Color.parseColor(prefs.getString(key, fallback)) } catch (_: IllegalArgumentException) { Color.parseColor(fallback) }
         view.keyboardHost.setBackgroundColor(color(KEY_BG_COLOR_HEX, DEFAULT_BG_COLOR_HEX))
-        val filename = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
-        val layout = LayoutFileManager.loadLayout(this, filename) ?: DEFAULT_LAYOUT
+        val layout = LayoutFileManager.activeLayout(this)
         KeyboardRenderer.render(this, view.keyboardHost, layout, height, color(KEY_SYMBOL_COLOR_HEX, DEFAULT_SYMBOL_COLOR_HEX),
             inputController.shiftEnabled, inputController.ctrlEnabled,
             showKeyPreview = true,
