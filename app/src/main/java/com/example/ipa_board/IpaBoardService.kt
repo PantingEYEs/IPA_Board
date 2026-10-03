@@ -23,17 +23,9 @@ import com.example.ipa_board.clipboard.*
 import com.example.ipa_board.calculator.*
 import com.example.ipa_board.SettingsConstants.PREFS_NAME
 import com.example.ipa_board.SettingsConstants.KEY_LAYOUT_REVISION
-import com.example.ipa_board.SettingsConstants.KEY_BG_COLOR_HEX
 import com.example.ipa_board.SettingsConstants.KEY_ACTIVE_LAYOUT_FILE
-import com.example.ipa_board.SettingsConstants.KEY_KEYBOARD_HEIGHT
-import com.example.ipa_board.SettingsConstants.KEY_SYMBOL_COLOR_HEX
 import com.example.ipa_board.SettingsConstants.KEY_SHIFT_SHORTCUTS
 import com.example.ipa_board.SettingsConstants.KEY_CTRL_SHORTCUTS
-import com.example.ipa_board.SettingsConstants.DEFAULT_KEYBOARD_HEIGHT
-import com.example.ipa_board.SettingsConstants.DEFAULT_BG_COLOR_HEX
-import com.example.ipa_board.SettingsConstants.DEFAULT_SYMBOL_COLOR_HEX
-import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT_FILENAME
-import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT
 import java.util.Locale
 
 class IpaBoardService : InputMethodService() {
@@ -108,6 +100,7 @@ class IpaBoardService : InputMethodService() {
 
     private fun clearQuickPasteStatus() {
         val view = chrome ?: return
+        if (view.panel != ImeChromeView.Panel.KEYBOARD && view.panel != ImeChromeView.Panel.CLIPBOARD) return
         view.onStatusClick = null
         when (view.panel) {
             ImeChromeView.Panel.KEYBOARD -> view.status.text = if (directOnly) "Direct Input" else engineStatus
@@ -172,13 +165,13 @@ class IpaBoardService : InputMethodService() {
     }
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key in setOf(KEY_LAYOUT_REVISION, SettingsConstants.KEY_KEYBOARD_FONT_SIZE, KEY_BG_COLOR_HEX, KEY_ACTIVE_LAYOUT_FILE, KEY_KEYBOARD_HEIGHT, KEY_SYMBOL_COLOR_HEX, KEY_SHIFT_SHORTCUTS, KEY_CTRL_SHORTCUTS,
+        if (key in setOf(SettingsConstants.KEY_PAGE_GROUP_STATE, KEY_LAYOUT_REVISION, KEY_ACTIVE_LAYOUT_FILE, KEY_SHIFT_SHORTCUTS, KEY_CTRL_SHORTCUTS,
             SettingsConstants.KEY_QUICK_PASTE_ENABLED, SettingsConstants.KEY_QUICK_PASTE_RETENTION_TYPE, SettingsConstants.KEY_QUICK_PASTE_RETENTION_SECONDS,
             SettingsConstants.KEY_QUICK_PASTE_USAGE_TYPE, SettingsConstants.KEY_QUICK_PASTE_USAGE_TIMES)) {
             if (key == KEY_ACTIVE_LAYOUT_FILE || key == KEY_LAYOUT_REVISION) inputController.reset()
             applySettings()
             updateQuickPasteStatus()
-            if (key == KEY_LAYOUT_REVISION && chrome?.panel == ImeChromeView.Panel.PAGES) showPages()
+            if (key in setOf(KEY_LAYOUT_REVISION, KEY_ACTIVE_LAYOUT_FILE, SettingsConstants.KEY_PAGE_GROUP_STATE) && chrome?.panel == ImeChromeView.Panel.PAGES) showPages()
         }
     }
     override fun onCreate() {
@@ -276,15 +269,16 @@ class IpaBoardService : InputMethodService() {
         inputController.ctrlShortcuts = SettingsConstants.parseShortcutsJson(prefs.getString(KEY_CTRL_SHORTCUTS, null))
         val density = resources.displayMetrics.density
         val availableDp = (resources.displayMetrics.heightPixels / density - 180).toInt().coerceAtLeast(100)
-        val height = (prefs.getInt(KEY_KEYBOARD_HEIGHT, DEFAULT_KEYBOARD_HEIGHT).coerceIn(100, availableDp) * density).toInt()
+        val appearance = PageGroupManager.active(this).appearance
+        val height = (appearance.heightDp.coerceIn(100, availableDp) * density).toInt()
         view.setKeyboardHeight(height)
-        fun color(key: String, fallback: String) = try { Color.parseColor(prefs.getString(key, fallback)) } catch (_: IllegalArgumentException) { Color.parseColor(fallback) }
-        view.keyboardHost.setBackgroundColor(color(KEY_BG_COLOR_HEX, DEFAULT_BG_COLOR_HEX))
+        view.keyboardHost.setBackgroundColor(Color.parseColor(appearance.backgroundColor))
         val layout = LayoutFileManager.activeLayout(this)
-        KeyboardRenderer.render(this, view.keyboardHost, layout, height, color(KEY_SYMBOL_COLOR_HEX, DEFAULT_SYMBOL_COLOR_HEX),
+        KeyboardRenderer.render(this, view.keyboardHost, layout, height, Color.parseColor(appearance.symbolColor),
             inputController.shiftEnabled, inputController.ctrlEnabled,
             showKeyPreview = true,
-            fontSizeSp = prefs.getInt(SettingsConstants.KEY_KEYBOARD_FONT_SIZE, SettingsConstants.DEFAULT_KEYBOARD_FONT_SIZE),
+            fontSizeSp = appearance.fontSizeSp,
+            showGrid = appearance.showGrid,
             onKeyQuickSwipeItemClick = { _, _, slot, item -> handleLongPressItem(slot, item) },
             onKeyLongItemClick = { _, _, slot, item -> handleLongPressItem(slot, item) },
             onKeyLongClick = { _, _, slot -> handleLongPress(slot) }) { _, _, slot -> handleKey(slot) }
@@ -754,8 +748,9 @@ class IpaBoardService : InputMethodService() {
     }
     private fun showPages() {
         val view = chrome ?: return
-        val active = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME)
-        val layouts = LayoutFileManager.getLayoutOrder(this).mapNotNull { file -> LayoutFileManager.loadLayout(this, file)?.let { file to it } }
+        val group = PageGroupManager.active(this)
+        val active = PageGroupManager.activeFilename(this)
+        val layouts = PageGroupManager.pages(this, group).mapNotNull { file -> LayoutFileManager.loadLayout(this, file)?.let { file to it } }
         val grid = GridLayout(this).apply { columnCount = 2 }
         layouts.forEach { (file, layout) ->
             val pageName = file.removeSuffix(".json")
@@ -767,16 +762,38 @@ class IpaBoardService : InputMethodService() {
                 setBackgroundColor(if (file == active) Color.rgb(55,65,88) else Color.rgb(35,38,46))
                 addView(TextView(this@IpaBoardService).apply { text = (if (file == active) "✓ " else "") + pageName; setTextColor(Color.WHITE); textSize = 15f })
                 val preview = LinearLayout(this@IpaBoardService).apply { orientation = LinearLayout.VERTICAL; importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS }
-                KeyboardRenderer.render(this@IpaBoardService, preview, layout, (80 * resources.displayMetrics.density).toInt(), Color.LTGRAY)
+                preview.setBackgroundColor(Color.parseColor(group.appearance.backgroundColor))
+                KeyboardRenderer.render(this@IpaBoardService, preview, layout, (80 * resources.displayMetrics.density).toInt(),
+                    Color.parseColor(group.appearance.symbolColor), fontSizeSp = group.appearance.fontSizeSp, showGrid = group.appearance.showGrid)
                 addView(preview)
                 setOnClickListener {
-                    prefs.edit().putString(KEY_ACTIVE_LAYOUT_FILE, file).apply()
+                    PageGroupManager.selectPage(this@IpaBoardService, file)
                     view.showPanel(ImeChromeView.Panel.KEYBOARD)
                 }
             }
             grid.addView(cell, GridLayout.LayoutParams().apply { width = 0; columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f); setMargins(4,4,4,4) })
         }
-        view.showContent("Keyboard Pages", ScrollView(this).apply { addView(grid) })
+        if (layouts.isEmpty()) grid.addView(TextView(this).apply {
+            text = getString(R.string.empty_group_ime)
+            setTextColor(Color.WHITE)
+            setPadding(16, 24, 16, 24)
+        })
+        view.showContent(PageGroupManager.label(this, group) + " ▾", ScrollView(this).apply { addView(grid) })
+        view.onStatusClick = {
+            val state = PageGroupManager.state(this)
+            PopupMenu(this, view.status).apply {
+                state.groups.forEachIndexed { index, item -> menu.add(0, index, index, "$index · ${item.name}").apply {
+                    isCheckable = true
+                    isChecked = item.id == state.activeGroupId
+                } }
+                setOnMenuItemClickListener { item ->
+                    PageGroupManager.select(this@IpaBoardService, state.groups[item.itemId].id)
+                    applySettings()
+                    showPages()
+                    true
+                }
+            }.show()
+        }
     }
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)

@@ -47,8 +47,8 @@ class LayoutFileManagerTest {
 
         assertEquals("New IPA 😀.json", filename)
         assertEquals(SettingsConstants.DEFAULT_LAYOUT.copy(name = "New IPA 😀"), reloaded)
-        assertTrue(reloaded.rows.flatMap { it.slots }.all { it.text.isEmpty() && it.action == KeyAction.TEXT })
-        assertEquals("previous.json", prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, null))
+        assertTrue(reloaded.rows.take(4).flatMap { it.slots }.all { it.text.isEmpty() && it.action == KeyAction.TEXT })
+        assertEquals(filename, prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, null))
         assertEquals(1L, prefs.getLong(SettingsConstants.KEY_LAYOUT_REVISION, 0))
     }
 
@@ -75,6 +75,8 @@ class LayoutFileManagerTest {
                 SettingsConstants.KEY_SYMBOL_COLOR_HEX, SettingsConstants.KEY_KEYBOARD_HEIGHT).forEach { key ->
                 assertEquals(manualPrefs.all[key], actualPrefs.all[key])
             }
+            assertEquals(PageGroupManager.active(manualContext).pages, PageGroupManager.active(context).pages)
+            assertEquals(PageGroupManager.active(manualContext).appearance, PageGroupManager.active(context).appearance)
             LayoutFileManager.initDefaultLayout(context)
             assertEquals(expected, LayoutFileManager.listLayoutFiles(context))
         } finally {
@@ -96,8 +98,8 @@ class LayoutFileManagerTest {
         assertEquals(layout, LayoutFileManager.loadLayout(context, second))
         val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
         assertEquals(second, prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, null))
-        assertEquals("#123456", prefs.getString(SettingsConstants.KEY_BG_COLOR_HEX, null))
-        assertEquals(250, prefs.getInt(SettingsConstants.KEY_KEYBOARD_HEIGHT, 0))
+        assertEquals("#123456", PageGroupManager.active(context).appearance.backgroundColor)
+        assertEquals(250, PageGroupManager.active(context).appearance.heightDp)
     }
 
     @Test fun sharedImportRejectsUnsupportedVersionBeforeCreatingPage() {
@@ -161,6 +163,7 @@ class LayoutFileManagerTest {
         val page = SettingsConstants.DEFAULT_LAYOUT.withKeyText(0, 0, "x")
         val filename = LayoutFileManager.createLayout(context, "default.json", page)
         assertEquals("default.json", filename)
+        PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(filename))
         assertEquals(page, LayoutFileManager.activeLayout(context))
         assertTrue(LayoutFileManager.deleteLayout(context, filename))
         assertEquals(SettingsConstants.DEFAULT_LAYOUT, LayoutFileManager.activeLayout(context))

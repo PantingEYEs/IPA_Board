@@ -22,9 +22,9 @@
     <string name="swipe_left_text_hint">Leave empty to disable quick swipe left</string>
     <string name="swipe_right_type">Quick Swipe Right action</string>
     <string name="swipe_right_text_hint">Leave empty to disable quick swipe right</string>
-    <string name="delete_layout">Delete Active Layout File</string>
+    <string name="delete_layout">Delete Keyboard Page</string>
     <string name="delete_layout_title">Delete layout?</string>
-    <string name="delete_layout_message">Delete %1$s? This cannot be undone. The default layout will become active.</string>
+    <string name="delete_layout_message">Delete %1$s from every page group? Empty groups will use the temporary default template.</string>
     <string name="delete_layout_confirm">Delete</string>
     <string name="delete_layout_failed">Unable to delete layout</string>
     <string name="delete_layout_success">Layout deleted</string>

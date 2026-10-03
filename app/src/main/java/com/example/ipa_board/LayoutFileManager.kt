@@ -3,7 +3,6 @@ package com.example.ipa_board
 import android.content.Context
 import android.util.AtomicFile
 import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT
-import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT_FILENAME
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.InputStream
@@ -83,12 +82,18 @@ object LayoutFileManager {
     fun createBlankLayout(context: Context, name: String): String {
         val layoutName = name.trim()
         require(layoutName.isNotEmpty()) { "Enter a layout name" }
-        return createLayout(context, layoutName, DEFAULT_LAYOUT.copy(name = layoutName))
+        val group = PageGroupManager.active(context)
+        val filename = createLayout(context, layoutName, DEFAULT_LAYOUT.copy(name = layoutName))
+        PageGroupManager.addPages(context, group.id, listOf(filename))
+        PageGroupManager.selectPage(context, filename)
+        return filename
     }
 
     fun renameLayout(context: Context, filename: String, name: String): String {
         val trimmed = name.trim()
         require(trimmed.isNotEmpty() && trimmed.length <= 80) { "Enter a name of 1–80 characters" }
+        PageGroupManager.initialize(context)
+        val originalOrder = getLayoutOrder(context)
         val oldFile = layoutFile(context, filename)
         require(oldFile.exists()) { "Unable to read layout" }
         val layout = requireNotNull(loadLayout(context, filename)) { "Unable to read layout" }
@@ -110,21 +115,8 @@ object LayoutFileManager {
             AtomicFile(oldFile).delete()
         }
 
-        val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
-        val active = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME)
-        if (active.equals(filename, ignoreCase = true)) {
-            prefs.edit().putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, newFilename).apply()
-        }
-
-        val order = getLayoutOrder(context).toMutableList()
-        val index = order.indexOf(filename)
-        if (index >= 0) {
-            order[index] = newFilename
-            saveLayoutOrder(context, order)
-        }
-
-        prefs.edit().putLong(SettingsConstants.KEY_LAYOUT_REVISION,
-            prefs.getLong(SettingsConstants.KEY_LAYOUT_REVISION, 0) + 1).apply()
+        PageGroupManager.renamedPage(context, filename, newFilename)
+        saveLayoutOrder(context, originalOrder.map { if (it == filename) newFilename else it })
 
         return newFilename
     }
@@ -146,25 +138,27 @@ object LayoutFileManager {
         val bg = appearance?.getString("backgroundColor")
         val symbol = appearance?.getString("symbolColor")
         val height = appearance?.getInt("heightDp")
+        val font = appearance?.takeIf { it.has("fontSizeSp") }?.getInt("fontSizeSp")
         if (appearance != null) {
             val colorPattern = Regex("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$")
             require(bg != null && colorPattern.matches(bg) && symbol != null && colorPattern.matches(symbol)) { "Invalid colors" }
             require(height != null && height in 150..450) { "Invalid keyboard height" }
+            if (font != null) require(font in SettingsConstants.MIN_KEYBOARD_FONT_SIZE..SettingsConstants.MAX_KEYBOARD_FONT_SIZE) { "Invalid font size" }
         }
+        val group = PageGroupManager.active(context)
         val filename = createLayout(context, sourceFilename ?: layout.name, layout)
-        val editor = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE).edit()
-            .putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, filename)
-        if (appearance != null) {
-            editor.putString(SettingsConstants.KEY_BG_COLOR_HEX, bg)
-                .putString(SettingsConstants.KEY_SYMBOL_COLOR_HEX, symbol)
-                .putInt(SettingsConstants.KEY_KEYBOARD_HEIGHT, requireNotNull(height))
-        }
-        editor.apply()
+        PageGroupManager.addPages(context, group.id, listOf(filename))
+        PageGroupManager.selectPage(context, filename)
+        // Legacy appearance wrappers remain importable, targeting the current group's appearance.
+        if (appearance != null) PageGroupManager.setAppearance(context, group.id, group.appearance.copy(
+            backgroundColor = requireNotNull(bg), symbolColor = requireNotNull(symbol),
+            heightDp = requireNotNull(height), fontSizeSp = font ?: group.appearance.fontSizeSp))
         return filename
     }
 
     @Synchronized
     fun initDefaultLayout(context: Context) {
+        PageGroupManager.initialize(context)
         val settings = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
         // Retain the old initialization marker so upgrades do not reseed existing installations.
         if (settings.getBoolean("default_layout_created", false)) return
@@ -206,17 +200,9 @@ object LayoutFileManager {
         }
     }
 
-    /** Resolve a saved page first, using the immutable template only when none are readable. */
-    fun activeLayout(context: Context): KeyboardLayout {
-        val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
-        val active = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME)
-        val pages = getLayoutOrder(context)
-        val filename = pages.firstOrNull { it == active && loadLayout(context, it) != null }
-            ?: pages.firstOrNull { loadLayout(context, it) != null }
-        if (filename == null) return DEFAULT_LAYOUT
-        if (filename != active) prefs.edit().putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, filename).apply()
-        return loadLayout(context, filename) ?: DEFAULT_LAYOUT
-    }
+    /** Resolve ONLY the active group's pages. Empty groups use the immutable, unsaved template. */
+    fun activeLayout(context: Context): KeyboardLayout =
+        PageGroupManager.activeFilename(context)?.let { loadLayout(context, it) } ?: DEFAULT_LAYOUT
 
     fun listLayoutFiles(context: Context): List<String> {
         return getLayoutsDir(context).listFiles { file -> file.isFile && file.name.endsWith(".json", ignoreCase = true) }
@@ -256,38 +242,19 @@ object LayoutFileManager {
         }.apply()
     }
 
-    fun switchPage(context: Context, forward: Boolean): String {
-        val pages = getLayoutOrder(context)
-        if (pages.isEmpty()) return DEFAULT_LAYOUT_FILENAME
-        val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
-        val active = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
-        val currentIndex = pages.indexOf(active).let { if (it < 0) 0 else it }
-        val newIndex = if (forward) {
-            (currentIndex + 1) % pages.size
-        } else {
-            (currentIndex - 1 + pages.size) % pages.size
-        }
-        val newPage = pages[newIndex]
-        prefs.edit().apply {
-            putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, newPage)
-            putLong(SettingsConstants.KEY_LAYOUT_REVISION, prefs.getLong(SettingsConstants.KEY_LAYOUT_REVISION, 0) + 1)
-        }.apply()
-        return newPage
-    }
-    
+    fun switchPage(context: Context, forward: Boolean): String = PageGroupManager.switchPage(context, forward)
+
     fun deleteLayout(context: Context, filename: String): Boolean {
         return try {
             val file = layoutFile(context, filename)
-            val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
-            val isActive = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) == filename
+            PageGroupManager.initialize(context)
             if (!file.delete()) return false
-            // Remove any AtomicFile recovery files so a deleted layout cannot reappear.
+            // Remove AtomicFile recovery files and references from every group.
             android.util.AtomicFile(file).delete()
-            prefs.edit().apply {
-                if (isActive) putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE,
-                    getLayoutOrder(context).firstOrNull() ?: DEFAULT_LAYOUT_FILENAME)
-                putLong(SettingsConstants.KEY_LAYOUT_REVISION, prefs.getLong(SettingsConstants.KEY_LAYOUT_REVISION, 0) + 1)
-            }.apply()
+            PageGroupManager.deletedPage(context, filename)
+            val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putLong(SettingsConstants.KEY_LAYOUT_REVISION,
+                prefs.getLong(SettingsConstants.KEY_LAYOUT_REVISION, 0) + 1).apply()
             true
         } catch (_: Exception) {
             false

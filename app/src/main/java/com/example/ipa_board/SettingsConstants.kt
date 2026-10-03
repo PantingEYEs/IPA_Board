@@ -16,6 +16,7 @@ object SettingsConstants {
     const val KEY_ACTIVE_LAYOUT_FILE = "active_layout_file"
     const val DEFAULT_LAYOUT_FILENAME = "default.json"
     const val KEY_LAYOUT_ORDER = "layout_order"
+    const val KEY_PAGE_GROUP_STATE = "page_groups_v1"
     
     const val KEY_KEYBOARD_HEIGHT = "keyboard_height_dp"
     const val DEFAULT_KEYBOARD_HEIGHT = 210

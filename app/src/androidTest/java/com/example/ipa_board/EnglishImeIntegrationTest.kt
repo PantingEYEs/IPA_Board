@@ -50,6 +50,7 @@ class EnglishImeIntegrationTest {
     @Test fun actualKeyboardMixesLanguagesAndInsertsContextualPrediction() {
         val context = instrumentation.targetContext
         val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        val groupSnapshot = PageGroupTestState(context)
         val oldPage = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, null)
         val ime = "${context.packageName}/.IpaBoardService"
         val oldIme = Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD).orEmpty()
@@ -61,7 +62,8 @@ class EnglishImeIntegrationTest {
         try {
             ui.serviceInfo = ui.serviceInfo.apply { flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS }
             page = LayoutFileManager.createLayout(context, "English integration test", BuiltinLayouts.mixed)
-            prefs.edit().putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, page).commit()
+            PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(page))
+            PageGroupManager.selectPage(context, page)
             shell("ime enable $ime"); shell("ime set $ime")
             ActivityScenario.launch(ImeTestEditorActivity::class.java).use { scenario ->
                 type("nihao"); select("你好")
@@ -85,6 +87,7 @@ class EnglishImeIntegrationTest {
             }.commit()
             page?.let { LayoutFileManager.deleteLayout(context, it) }
             ui.serviceInfo = ui.serviceInfo.apply { flags = oldFlags }
+            groupSnapshot.close()
         }
     }
 }

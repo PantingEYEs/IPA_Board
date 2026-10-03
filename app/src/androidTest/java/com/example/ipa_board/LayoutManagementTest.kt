@@ -67,13 +67,13 @@ class LayoutManagementTest {
                 onView(withText("Delete")).perform(click())
                 assertNull(LayoutFileManager.loadLayout(fixture.context, filename))
                 assertFalse(LayoutFileManager.listLayoutFiles(fixture.context).contains(filename))
-                assertEquals(LayoutFileManager.getLayoutOrder(fixture.context).first(), fixture.activeFilename())
+                assertEquals(PageGroupManager.pages(fixture.context).firstOrNull(), fixture.activeFilename())
                 onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(requireNotNull(fixture.activeFilename()).removeSuffix(".json"))))
                 scenario.onActivity { activity ->
                     assertTrue(activity.findViewById<android.widget.Button>(R.id.btn_delete_layout).isEnabled)
                 }
                 scenario.recreate()
-                assertEquals(LayoutFileManager.getLayoutOrder(fixture.context).first(), fixture.activeFilename())
+                assertEquals(PageGroupManager.pages(fixture.context).firstOrNull(), fixture.activeFilename())
             }
         }
     }
@@ -116,10 +116,10 @@ class LayoutManagementTest {
                     assertEquals(importedFilename, fixture.activeFilename())
                     assertEquals(imported, LayoutFileManager.loadLayout(fixture.context, importedFilename))
                     assertEquals(SettingsConstants.DEFAULT_LAYOUT, LayoutFileManager.loadLayout(fixture.context, originalFilename))
-                    val prefs = fixture.context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
-                    assertEquals("#123456", prefs.getString(SettingsConstants.KEY_BG_COLOR_HEX, null))
-                    assertEquals("#FEDCBA", prefs.getString(SettingsConstants.KEY_SYMBOL_COLOR_HEX, null))
-                    assertEquals(300, prefs.getInt(SettingsConstants.KEY_KEYBOARD_HEIGHT, 0))
+                    val appearance = PageGroupManager.active(fixture.context).appearance
+                    assertEquals("#123456", appearance.backgroundColor)
+                    assertEquals("#FEDCBA", appearance.symbolColor)
+                    assertEquals(300, appearance.heightDp)
                     scenario.onActivity { activity ->
                         assertEquals(150, activity.findViewById<SeekBar>(R.id.sb_height).progress)
                     }
@@ -246,6 +246,7 @@ class LayoutManagementTest {
     private class LayoutFixture : Closeable {
         val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
         private val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        private val groupSnapshot = PageGroupTestState(context)
         private val originalActive = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, null)
         private val hadRevision = prefs.contains(SettingsConstants.KEY_LAYOUT_REVISION)
         private val originalRevision = prefs.getLong(SettingsConstants.KEY_LAYOUT_REVISION, 0)
@@ -266,7 +267,8 @@ class LayoutManagementTest {
         }
 
         fun select(filename: String) {
-            prefs.edit().putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, filename).commit()
+            PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(filename))
+            PageGroupManager.selectPage(context, filename)
         }
 
         fun activeFilename(): String? = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, null)
@@ -286,6 +288,7 @@ class LayoutManagementTest {
                 }
             }.commit()
             files.forEach { LayoutFileManager.deleteLayout(context, it) }
+            groupSnapshot.close()
         }
     }
 }

@@ -13,6 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.CheckBox
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -25,15 +26,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.graphics.ColorUtils
 import org.json.JSONObject
-import com.example.ipa_board.SettingsConstants.DEFAULT_BG_COLOR_HEX
-import com.example.ipa_board.SettingsConstants.DEFAULT_KEYBOARD_HEIGHT
-import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT_FILENAME
-import com.example.ipa_board.SettingsConstants.DEFAULT_SYMBOL_COLOR_HEX
-import com.example.ipa_board.SettingsConstants.KEY_ACTIVE_LAYOUT_FILE
-import com.example.ipa_board.SettingsConstants.KEY_BG_COLOR_HEX
-import com.example.ipa_board.SettingsConstants.KEY_KEYBOARD_HEIGHT
-import com.example.ipa_board.SettingsConstants.KEY_SYMBOL_COLOR_HEX
-import com.example.ipa_board.SettingsConstants.PREFS_NAME
 
 class KeyboardPageActivity : Activity() {
 
@@ -41,6 +33,11 @@ class KeyboardPageActivity : Activity() {
     private lateinit var tvHeightValue: TextView
     private lateinit var sbHeight: SeekBar
     private lateinit var spLayouts: Spinner
+    private lateinit var spGroups: Spinner
+    private lateinit var allPages: CheckBox
+    private lateinit var showGrid: CheckBox
+    private var editingFilename: String? = null
+    private var displayedGroupId: String? = null
 
     private lateinit var rgColorTarget: RadioGroup
     private lateinit var sbHue: SeekBar
@@ -60,6 +57,7 @@ class KeyboardPageActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         pendingExport = savedInstanceState?.getString("pending_export")
+        editingFilename = savedInstanceState?.getString("editing_filename")
         clearedLayout = lastNonConfigurationInstance as? ClearedLayout
         setContentView(R.layout.activity_keyboard_page)
 
@@ -69,6 +67,14 @@ class KeyboardPageActivity : Activity() {
 
         previewContainer = findViewById(R.id.keyboard_container)
         spLayouts = findViewById(R.id.sp_layouts)
+        spGroups = findViewById(R.id.sp_page_groups)
+        spGroups.isSaveEnabled = false
+        spLayouts.isSaveEnabled = false
+        showGrid = findViewById(R.id.cb_show_grid)
+        showGrid.isSaveEnabled = false
+        allPages = findViewById(R.id.cb_all_pages)
+        allPages.isChecked = savedInstanceState?.getBoolean("all_pages") ?: false
+        allPages.setOnCheckedChangeListener { _, _ -> updateLayoutSpinner(); refreshPreview() }
         tvHeightValue = findViewById(R.id.tv_height_value)
         sbHeight = findViewById(R.id.sb_height)
 
@@ -82,15 +88,12 @@ class KeyboardPageActivity : Activity() {
 
         val btnImport = findViewById<Button>(R.id.btn_import)
         val btnExport = findViewById<Button>(R.id.btn_export)
-        val btnEdit = findViewById<Button>(R.id.btn_edit)
-
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
 
         // 1. Color Setup (HSL)
         setupColorControls()
 
         // 2. Height Setup
-        val currentHeightDp = prefs.getInt(KEY_KEYBOARD_HEIGHT, DEFAULT_KEYBOARD_HEIGHT)
+        val currentHeightDp = PageGroupManager.active(this).appearance.heightDp
         sbHeight.progress = currentHeightDp - MIN_HEIGHT_DP
         tvHeightValue.text = "${currentHeightDp}dp"
         sbHeight.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -98,7 +101,7 @@ class KeyboardPageActivity : Activity() {
                 val newHeightDp = progress + MIN_HEIGHT_DP
                 tvHeightValue.text = "${newHeightDp}dp"
                 if (fromUser) {
-                    prefs.edit().putInt(KEY_KEYBOARD_HEIGHT, newHeightDp).apply()
+                    updateAppearance { it.copy(heightDp = newHeightDp) }
                     refreshPreview()
                 }
             }
@@ -108,9 +111,7 @@ class KeyboardPageActivity : Activity() {
 
         val fontSizeSlider = findViewById<SeekBar>(R.id.sb_font_size)
         val fontSizeValue = findViewById<TextView>(R.id.tv_font_size_value)
-        val currentFontSize = prefs.getInt(SettingsConstants.KEY_KEYBOARD_FONT_SIZE,
-            SettingsConstants.DEFAULT_KEYBOARD_FONT_SIZE)
-            .coerceIn(SettingsConstants.MIN_KEYBOARD_FONT_SIZE, SettingsConstants.MAX_KEYBOARD_FONT_SIZE)
+        val currentFontSize = PageGroupManager.active(this).appearance.fontSizeSp
         fontSizeSlider.max = SettingsConstants.MAX_KEYBOARD_FONT_SIZE - SettingsConstants.MIN_KEYBOARD_FONT_SIZE
         fontSizeSlider.progress = currentFontSize - SettingsConstants.MIN_KEYBOARD_FONT_SIZE
         fontSizeValue.text = "${currentFontSize}sp"
@@ -119,7 +120,7 @@ class KeyboardPageActivity : Activity() {
                 val size = progress + SettingsConstants.MIN_KEYBOARD_FONT_SIZE
                 fontSizeValue.text = "${size}sp"
                 if (fromUser) {
-                    prefs.edit().putInt(SettingsConstants.KEY_KEYBOARD_FONT_SIZE, size).apply()
+                    updateAppearance { it.copy(fontSizeSp = size) }
                     refreshPreview()
                 }
             }
@@ -128,7 +129,7 @@ class KeyboardPageActivity : Activity() {
         })
 
         // 3. Layout Setup
-        updateLayoutSpinner()
+        refreshGroupUi()
 
         // 4. Action Buttons
         btnImport.setOnClickListener { startImport() }
@@ -139,33 +140,152 @@ class KeyboardPageActivity : Activity() {
         findViewById<Button>(R.id.btn_delete_layout).setOnClickListener { deleteCurrentLayout() }
         findViewById<Button>(R.id.btn_clear_layout).setOnClickListener { clearCurrentLayout() }
         findViewById<Button>(R.id.btn_undo_clear).setOnClickListener { undoClear() }
-        btnEdit.setOnClickListener { 
-            showKeyEditor(0, 0)
+        findViewById<Button>(R.id.btn_new_group).setOnClickListener { showGroupNameDialog(false) }
+        findViewById<Button>(R.id.btn_rename_group).setOnClickListener { showGroupNameDialog(true) }
+        findViewById<Button>(R.id.btn_delete_group).setOnClickListener {
+            val group = PageGroupManager.active(this)
+            AlertDialog.Builder(this).setTitle(R.string.delete_page_group)
+                .setMessage(getString(R.string.delete_group_message, PageGroupManager.label(this, group)))
+                .setNegativeButton("Cancel", null).setPositiveButton("Delete") { _, _ ->
+                    PageGroupManager.delete(this, group.id)
+                    editingFilename = null
+                    refreshGroupUi()
+                }.show()
         }
-
+        findViewById<Button>(R.id.btn_reorder_groups).setOnClickListener { showReorderGroupsDialog() }
+        findViewById<Button>(R.id.btn_group_pages).setOnClickListener { showGroupPagesDialog() }
         refreshPreview()
     }
 
-    private fun setupColorControls() {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        
-        fun updateSlidersFromTarget() {
-            val targetKey = if (rgColorTarget.checkedRadioButtonId == R.id.rb_target_bg) KEY_BG_COLOR_HEX else KEY_SYMBOL_COLOR_HEX
-            val defaultHex = if (targetKey == KEY_BG_COLOR_HEX) DEFAULT_BG_COLOR_HEX else DEFAULT_SYMBOL_COLOR_HEX
-            val hex = prefs.getString(targetKey, defaultHex) ?: defaultHex
-            
-            val color = try { Color.parseColor(hex) } catch (e: Exception) { Color.BLACK }
-            val hsl = FloatArray(3)
-            ColorUtils.colorToHSL(color, hsl)
-            
-            sbHue.progress = hsl[0].toInt()
-            sbSaturation.progress = (hsl[1] * 100).toInt()
-            sbLightness.progress = (hsl[2] * 100).toInt()
-            
-            updateLabels(hsl[0], hsl[1], hsl[2])
-        }
+    override fun onPostCreate(savedInstanceState: Bundle?) {
+        super.onPostCreate(savedInstanceState)
+        // Group values are authoritative after Android restores the view hierarchy.
+        refreshGroupUi()
+    }
 
-        rgColorTarget.setOnCheckedChangeListener { _, _ -> updateSlidersFromTarget() }
+    override fun onResume() {
+        super.onResume()
+        if (::spGroups.isInitialized) refreshGroupUi()
+    }
+
+    private fun updateAppearance(transform: (GroupAppearance) -> GroupAppearance) {
+        val group = PageGroupManager.active(this)
+        PageGroupManager.setAppearance(this, group.id, transform(group.appearance))
+    }
+
+    private fun refreshColorSliders() {
+        val appearance = PageGroupManager.active(this).appearance
+        val hex = if (rgColorTarget.checkedRadioButtonId == R.id.rb_target_bg) appearance.backgroundColor else appearance.symbolColor
+        val hsl = FloatArray(3)
+        ColorUtils.colorToHSL(Color.parseColor(hex), hsl)
+        sbHue.progress = hsl[0].toInt()
+        sbSaturation.progress = (hsl[1] * 100).toInt()
+        sbLightness.progress = (hsl[2] * 100).toInt()
+        updateLabels(hsl[0], hsl[1], hsl[2])
+    }
+
+    private fun refreshGroupUi() {
+        val state = PageGroupManager.state(this)
+        if (displayedGroupId != null && displayedGroupId != state.activeGroupId) editingFilename = null
+        displayedGroupId = state.activeGroupId
+        spGroups.onItemSelectedListener = null
+        spGroups.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item,
+            state.groups.mapIndexed { index, group -> "$index · ${group.name}" })
+        spGroups.setSelection(state.groups.indexOfFirst { it.id == state.activeGroupId })
+        spGroups.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val selected = state.groups.getOrNull(position) ?: return
+                if (selected.id == PageGroupManager.active(this@KeyboardPageActivity).id) return
+                PageGroupManager.select(this@KeyboardPageActivity, selected.id)
+                editingFilename = null
+                refreshGroupUi()
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+        findViewById<Button>(R.id.btn_delete_group).isEnabled = state.groups.size > 1
+        findViewById<Button>(R.id.btn_reorder_groups).isEnabled = state.groups.size > 1
+        val members = PageGroupManager.pages(this, state.active)
+        findViewById<TextView>(R.id.tv_group_summary).text = getString(R.string.group_page_count, members.size)
+        findViewById<TextView>(R.id.tv_group_appearance).text = getString(R.string.group_appearance, PageGroupManager.label(this, state.active))
+        sbHeight.progress = state.active.appearance.heightDp - MIN_HEIGHT_DP
+        tvHeightValue.text = "${state.active.appearance.heightDp}dp"
+        findViewById<SeekBar>(R.id.sb_font_size).progress = state.active.appearance.fontSizeSp - SettingsConstants.MIN_KEYBOARD_FONT_SIZE
+        findViewById<TextView>(R.id.tv_font_size_value).text = "${state.active.appearance.fontSizeSp}sp"
+        showGrid.setOnCheckedChangeListener(null)
+        showGrid.isChecked = state.active.appearance.showGrid
+        showGrid.setOnCheckedChangeListener { _, checked ->
+            updateAppearance { it.copy(showGrid = checked) }
+            refreshPreview()
+        }
+        refreshColorSliders()
+        updateLayoutSpinner()
+        refreshPreview()
+    }
+
+    private fun showGroupNameDialog(rename: Boolean) {
+        val group = PageGroupManager.active(this)
+        val input = EditText(this).apply {
+            hint = getString(R.string.page_group_name)
+            if (rename) { setText(group.name); selectAll() }
+        }
+        val dialog = AlertDialog.Builder(this).setTitle(if (rename) R.string.rename_page_group else R.string.new_page_group)
+            .setView(input).setNegativeButton("Cancel", null).setPositiveButton("Save", null).create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                try {
+                    if (rename) PageGroupManager.rename(this, group.id, input.text.toString())
+                    else { PageGroupManager.create(this, input.text.toString()); editingFilename = null }
+                    refreshGroupUi()
+                    dialog.dismiss()
+                } catch (e: IllegalArgumentException) { input.error = e.message }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun showGroupPagesDialog() {
+        val group = PageGroupManager.active(this)
+        val files = LayoutFileManager.getLayoutOrder(this)
+        val selected = files.map { it in group.pages }.toBooleanArray()
+        AlertDialog.Builder(this).setTitle(R.string.page_group_members)
+            .setMultiChoiceItems(files.map { it.removeSuffix(".json") }.toTypedArray(), selected) { _, index, checked -> selected[index] = checked }
+            .setNegativeButton("Cancel", null).setPositiveButton("Save") { _, _ ->
+                val checked = files.filterIndexed { index, _ -> selected[index] }
+                PageGroupManager.setPages(this, group.id, group.pages.filter { it in checked } + checked.filter { it !in group.pages })
+                refreshGroupUi()
+            }.show()
+    }
+
+    private fun showReorderGroupsDialog() {
+        val groups = PageGroupManager.state(this).groups.toMutableList()
+        val container = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        fun refresh() {
+            container.removeAllViews()
+            groups.forEachIndexed { index, group ->
+                val row = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+                row.addView(TextView(this).apply { text = "$index · ${group.name}"; setTextColor(Color.WHITE) },
+                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                listOf(-1 to "▲", 1 to "▼").forEach { (delta, label) ->
+                    row.addView(Button(this).apply {
+                        text = label
+                        isEnabled = index + delta in groups.indices
+                        setOnClickListener { java.util.Collections.swap(groups, index, index + delta); refresh() }
+                    })
+                }
+                container.addView(row)
+            }
+        }
+        refresh()
+        AlertDialog.Builder(this).setTitle(R.string.reorder_page_groups)
+            .setView(ScrollView(this).apply { addView(container) })
+            .setNegativeButton("Cancel", null).setPositiveButton("Save") { _, _ ->
+                PageGroupManager.reorder(this, groups.map { it.id })
+                refreshGroupUi()
+            }.show()
+    }
+
+    private fun setupColorControls() {
+        rgColorTarget.setOnCheckedChangeListener { _, _ -> refreshColorSliders() }
 
         val hslListener = object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -177,8 +297,8 @@ class KeyboardPageActivity : Activity() {
                     val color = ColorUtils.HSLToColor(floatArrayOf(h, s, l))
                     val hex = String.format("#%06X", 0xFFFFFF and color)
                     
-                    val targetKey = if (rgColorTarget.checkedRadioButtonId == R.id.rb_target_bg) KEY_BG_COLOR_HEX else KEY_SYMBOL_COLOR_HEX
-                    prefs.edit().putString(targetKey, hex).apply()
+                    updateAppearance { if (rgColorTarget.checkedRadioButtonId == R.id.rb_target_bg)
+                        it.copy(backgroundColor = hex) else it.copy(symbolColor = hex) }
                     
                     updateLabels(h, s, l)
                     refreshPreview()
@@ -192,7 +312,7 @@ class KeyboardPageActivity : Activity() {
         sbSaturation.setOnSeekBarChangeListener(hslListener)
         sbLightness.setOnSeekBarChangeListener(hslListener)
         
-        updateSlidersFromTarget()
+        refreshColorSliders()
     }
 
     private fun updateLabels(h: Float, s: Float, l: Float) {
@@ -202,22 +322,24 @@ class KeyboardPageActivity : Activity() {
     }
 
     private fun updateLayoutSpinner() {
-        val files = LayoutFileManager.getLayoutOrder(this)
+        val files = if (allPages.isChecked) LayoutFileManager.getLayoutOrder(this) else PageGroupManager.pages(this)
         val displayNames = files.map { it.removeSuffix(".json") }
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, displayNames)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spLayouts.onItemSelectedListener = null
         spLayouts.adapter = adapter
 
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val activeFile = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
-        val index = files.indexOf(activeFile)
+        editingFilename = editingFilename?.takeIf { it in files } ?: PageGroupManager.activeFilename(this)?.takeIf { it in files } ?: files.firstOrNull()
+        val index = files.indexOf(editingFilename)
         if (index >= 0) spLayouts.setSelection(index)
         spLayouts.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 if (position in files.indices) {
                     val selectedFile = files[position]
-                    prefs.edit().putString(KEY_ACTIVE_LAYOUT_FILE, selectedFile).apply()
+                    editingFilename = selectedFile
+                    if (selectedFile in PageGroupManager.pages(this@KeyboardPageActivity) &&
+                        selectedFile != PageGroupManager.activeFilename(this@KeyboardPageActivity))
+                        PageGroupManager.selectPage(this@KeyboardPageActivity, selectedFile)
                     refreshPreview()
                 }
             }
@@ -226,7 +348,9 @@ class KeyboardPageActivity : Activity() {
     }
 
     private fun showReorderPagesDialog() {
-        val currentOrder = LayoutFileManager.getLayoutOrder(this).toMutableList()
+        val group = PageGroupManager.active(this)
+        val showAll = allPages.isChecked
+        val currentOrder = (if (showAll) LayoutFileManager.getLayoutOrder(this) else PageGroupManager.pages(this, group)).toMutableList()
         val scroll = ScrollView(this)
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -284,7 +408,8 @@ class KeyboardPageActivity : Activity() {
             .setTitle(R.string.reorder_pages_title)
             .setView(scroll)
             .setPositiveButton("Save") { _, _ ->
-                LayoutFileManager.saveLayoutOrder(this, currentOrder)
+                if (showAll) LayoutFileManager.saveLayoutOrder(this, currentOrder)
+                else PageGroupManager.setPages(this, group.id, currentOrder)
                 updateLayoutSpinner()
                 refreshPreview()
             }
@@ -293,18 +418,15 @@ class KeyboardPageActivity : Activity() {
     }
 
     private fun refreshPreview() {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val bgColorHex = prefs.getString(KEY_BG_COLOR_HEX, DEFAULT_BG_COLOR_HEX) ?: DEFAULT_BG_COLOR_HEX
-        val symbolColorHex = prefs.getString(KEY_SYMBOL_COLOR_HEX, DEFAULT_SYMBOL_COLOR_HEX) ?: DEFAULT_SYMBOL_COLOR_HEX
-        val heightDp = prefs.getInt(KEY_KEYBOARD_HEIGHT, DEFAULT_KEYBOARD_HEIGHT)
-        LayoutFileManager.activeLayout(this)
-        val layoutFile = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
-        val hasPage = layoutFile in LayoutFileManager.listLayoutFiles(this)
+        val appearance = PageGroupManager.active(this).appearance
+        val bgColorHex = appearance.backgroundColor
+        val symbolColorHex = appearance.symbolColor
+        val heightDp = appearance.heightDp
+        val layoutFile = editingFilename
+        val hasPage = layoutFile != null && LayoutFileManager.loadLayout(this, layoutFile) != null
         previewContainer.visibility = if (hasPage) View.VISIBLE else View.GONE
-
-        findViewById<Button>(R.id.btn_delete_layout).apply {
-            isEnabled = hasPage
-            setText(R.string.delete_layout)
+        listOf(R.id.btn_delete_layout, R.id.btn_rename_layout, R.id.btn_clear_layout, R.id.btn_export).forEach {
+            findViewById<Button>(it).isEnabled = hasPage
         }
         val density = resources.displayMetrics.density
         val heightPx = (heightDp * density).toInt()
@@ -317,21 +439,25 @@ class KeyboardPageActivity : Activity() {
         
         previewContainer.setBackgroundColor(bgColor)
 
-        val layout = LayoutFileManager.loadLayout(this, layoutFile) ?: SettingsConstants.DEFAULT_LAYOUT
-        val displayName = if (hasPage) layoutFile.removeSuffix(".json") else ""
-        findViewById<TextView>(R.id.tv_layout_name).text = getString(R.string.current_page_name, displayName)
+        val layout = layoutFile?.let { LayoutFileManager.loadLayout(this, it) } ?: SettingsConstants.DEFAULT_LAYOUT
+        val displayName = if (hasPage) layoutFile!!.removeSuffix(".json") else ""
+        findViewById<TextView>(R.id.tv_layout_name).text = when {
+            !hasPage -> getString(R.string.empty_group_hint)
+            layoutFile !in PageGroupManager.pages(this) -> getString(R.string.ungrouped_preview, displayName)
+            else -> getString(R.string.current_page_name, displayName)
+        }
         if (clearedLayout?.filename != layoutFile) clearedLayout = null
         findViewById<Button>(R.id.btn_undo_clear).visibility = if (clearedLayout != null) View.VISIBLE else View.GONE
         KeyboardRenderer.render(this, previewContainer, layout, heightPx, symbolColor,
-            fontSizeSp = prefs.getInt(SettingsConstants.KEY_KEYBOARD_FONT_SIZE, SettingsConstants.DEFAULT_KEYBOARD_FONT_SIZE),
+            fontSizeSp = appearance.fontSizeSp,
+            showGrid = appearance.showGrid,
             showUnassignedPlaceholders = true) { row, column, _ ->
             showKeyEditor(row, column)
         }
     }
 
     private fun showKeyEditor(row: Int, column: Int) {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val filename = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
+        val filename = editingFilename ?: return
         val layout = LayoutFileManager.loadLayout(this, filename) ?: return
         val slot = layout.rows[row].slots[column]
         val editorView = layoutInflater.inflate(R.layout.dialog_key_editor, null)
@@ -468,11 +594,6 @@ class KeyboardPageActivity : Activity() {
                     dialog.dismiss()
                 } catch (e: Exception) {
                     error.text = "Failed to save: ${e.message}"
-                    clearedLayout = null
-                    refreshPreview()
-                    dialog.dismiss()
-                } catch (e: Exception) {
-                    error.text = "Failed to save: ${e.message}"
                     error.visibility = View.VISIBLE
                 }
             }
@@ -494,11 +615,9 @@ class KeyboardPageActivity : Activity() {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 try {
                     val filename = LayoutFileManager.createBlankLayout(this, nameInput.text.toString())
-                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                        .putString(KEY_ACTIVE_LAYOUT_FILE, filename).apply()
+                    editingFilename = filename
                     clearedLayout = null
-                    updateLayoutSpinner()
-                    refreshPreview()
+                    refreshGroupUi()
                     dialog.dismiss()
                     Toast.makeText(this, "Created $filename", Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
@@ -510,8 +629,7 @@ class KeyboardPageActivity : Activity() {
     }
 
     private fun showRenameLayoutDialog() {
-        val filename = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
+        val filename = editingFilename ?: return
         val currentDisplayName = filename.removeSuffix(".json")
         val content = layoutInflater.inflate(R.layout.dialog_new_layout, null)
         val nameInput = content.findViewById<EditText>(R.id.et_layout_name)
@@ -528,11 +646,9 @@ class KeyboardPageActivity : Activity() {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 try {
                     val newFilename = LayoutFileManager.renameLayout(this, filename, nameInput.text.toString())
-                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                        .putString(KEY_ACTIVE_LAYOUT_FILE, newFilename).apply()
+                    editingFilename = newFilename
                     clearedLayout = null
-                    updateLayoutSpinner()
-                    refreshPreview()
+                    refreshGroupUi()
                     dialog.dismiss()
                 } catch (e: Exception) {
                     nameInput.error = e.message
@@ -543,8 +659,7 @@ class KeyboardPageActivity : Activity() {
     }
 
     private fun deleteCurrentLayout() {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val filename = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
+        val filename = editingFilename ?: return
         AlertDialog.Builder(this)
             .setTitle(R.string.delete_layout_title)
             .setMessage(getString(R.string.delete_layout_message, filename))
@@ -552,8 +667,7 @@ class KeyboardPageActivity : Activity() {
             .setPositiveButton(R.string.delete_layout_confirm) { _, _ ->
                 if (LayoutFileManager.deleteLayout(this, filename)) {
                     clearedLayout = null
-                    updateLayoutSpinner()
-                    refreshPreview()
+                    refreshGroupUi()
                     Toast.makeText(this, R.string.delete_layout_success, Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this, R.string.delete_layout_failed, Toast.LENGTH_LONG).show()
@@ -562,8 +676,7 @@ class KeyboardPageActivity : Activity() {
     }
 
     private fun clearCurrentLayout() {
-        val filename = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
+        val filename = editingFilename ?: return
         try {
             val original = requireNotNull(LayoutFileManager.loadLayout(this, filename)) { "Unable to read layout" }
             val blank = original.cleared()
@@ -582,8 +695,7 @@ class KeyboardPageActivity : Activity() {
 
     private fun undoClear() {
         val snapshot = clearedLayout ?: return
-        val activeFile = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME)
+        val activeFile = editingFilename
         if (activeFile != snapshot.filename) {
             clearedLayout = null
             refreshPreview()
@@ -610,6 +722,8 @@ class KeyboardPageActivity : Activity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString("pending_export", pendingExport)
+        outState.putString("editing_filename", editingFilename)
+        outState.putBoolean("all_pages", allPages.isChecked)
         super.onSaveInstanceState(outState)
     }
 
@@ -659,13 +773,8 @@ class KeyboardPageActivity : Activity() {
         }
         if (imported > 0) {
             clearedLayout = null
-            setupColorControls()
-            val heightDp = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .getInt(KEY_KEYBOARD_HEIGHT, DEFAULT_KEYBOARD_HEIGHT)
-            sbHeight.progress = heightDp - MIN_HEIGHT_DP
-            tvHeightValue.text = "${heightDp}dp"
-            updateLayoutSpinner()
-            refreshPreview()
+            editingFilename = lastFilename
+            refreshGroupUi()
         }
         val summary = "Imported $imported/${uris.size} keyboard pages" +
             (lastFilename?.let { "; active: $it" } ?: "")
@@ -688,18 +797,12 @@ class KeyboardPageActivity : Activity() {
     }
 
     private fun startExport() {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val filename = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
+        val filename = editingFilename ?: return
         val layout = LayoutFileManager.loadLayout(this, filename)
         if (layout != null) {
             pendingExport = JSONObject().apply {
                 put("version", 4)
                 put("layout", JSONObject(layout.toJson()))
-                put("appearance", JSONObject().apply {
-                    put("backgroundColor", prefs.getString(KEY_BG_COLOR_HEX, DEFAULT_BG_COLOR_HEX))
-                    put("symbolColor", prefs.getString(KEY_SYMBOL_COLOR_HEX, DEFAULT_SYMBOL_COLOR_HEX))
-                    put("heightDp", prefs.getInt(KEY_KEYBOARD_HEIGHT, DEFAULT_KEYBOARD_HEIGHT))
-                })
             }.toString(2)
             startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                 type = "application/json"

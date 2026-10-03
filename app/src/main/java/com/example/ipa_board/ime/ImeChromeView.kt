@@ -108,6 +108,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     }
 
     fun showPanel(next: Panel) {
+        onStatusClick = null
         panel = next
         if (next != Panel.KAOMOJI) {
             setStatusCustomView(null)
@@ -209,7 +210,11 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     private fun toggle(next: Panel) = showPanel(if (panel == next) Panel.KEYBOARD else next)
     private fun candidateButton(candidate: Candidate): View {
         val generation = revision
-        return button("${candidate.text} ", candidate.text) { onCandidate(candidate, generation) }
+        return button("${candidate.text} ", candidate.text) { onCandidate(candidate, generation) }.apply {
+            minWidth = dp(24)
+            minimumWidth = dp(24)
+            setPadding(paddingLeft / 2, paddingTop, paddingRight / 2, paddingBottom)
+        }
     }
     private fun button(label: String, description: String, click: () -> Unit) = Button(context).apply {
         text = label; contentDescription = description; isAllCaps = false; textSize = 10f

@@ -10,6 +10,7 @@ import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.ipa_board.emoji.*
 import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.startsWith
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -17,13 +18,15 @@ class EmojiFeatureTest {
     @Test fun emojiActionCanBeAssignedAndRoundTripsWithoutLosingLongPress() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        val groupSnapshot = PageGroupTestState(context)
         val previous = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, null)
         val layout = KeyboardLayout("Emoji test", listOf(RowLayout(1f, listOf(KeySlot(1f, "a", longPressText = "ɑ")))))
         val filename = LayoutFileManager.createLayout(context, "Emoji test", layout)
         try {
-            prefs.edit().putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, filename).commit()
+            PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(filename))
+            PageGroupManager.selectPage(context, filename)
             ActivityScenario.launch(KeyboardPageActivity::class.java).use {
-                onView(withId(R.id.btn_edit)).perform(scrollTo(), click())
+                onView(withContentDescription(startsWith("Row 1, key 1:"))).perform(scrollTo(), click())
                 onView(withId(R.id.sp_key_type)).perform(click())
                 onData(equalTo("Emoji")).inRoot(isPlatformPopup()).perform(click())
                 onView(withText("Save")).perform(click())
@@ -35,6 +38,7 @@ class EmojiFeatureTest {
         } finally {
             prefs.edit().apply { if (previous == null) remove(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE) else putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, previous) }.commit()
             LayoutFileManager.deleteLayout(context, filename)
+            groupSnapshot.close()
         }
     }
 

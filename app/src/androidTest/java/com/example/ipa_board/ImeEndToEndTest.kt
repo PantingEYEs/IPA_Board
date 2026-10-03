@@ -34,6 +34,7 @@ class ImeEndToEndTest {
     @Test fun emojiKeyOpensPanelAndInsertsWithoutClosingIt() {
         val context = instrumentation.targetContext
         val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        val groupSnapshot = PageGroupTestState(context)
         val oldPage = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, null)
         val oldIme = Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD).orEmpty()
         require(oldIme.matches(Regex("[A-Za-z0-9_.$/]+")))
@@ -46,7 +47,8 @@ class ImeEndToEndTest {
             page = LayoutFileManager.createLayout(context, "Emoji E2E", KeyboardLayout("Emoji E2E", listOf(
                 RowLayout(1f, listOf(KeySlot(1f, action = KeyAction.EMOJI), KeySlot(1f, "n", textBehavior = TextBehavior.AUTO)))
             )))
-            prefs.edit().putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, page).commit()
+            PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(page))
+            PageGroupManager.selectPage(context, page)
             shell("ime enable $ime"); shell("ime set $ime")
             ActivityScenario.launch(ImeTestEditorActivity::class.java).use { scenario ->
                 android.os.SystemClock.sleep(700)
@@ -88,12 +90,14 @@ class ImeEndToEndTest {
             prefs.edit().apply { if (oldPage == null) remove(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE) else putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, oldPage) }.commit()
             page?.let { LayoutFileManager.deleteLayout(context, it) }
             ui.serviceInfo = ui.serviceInfo.apply { flags = oldFlags }
+            groupSnapshot.close()
         }
     }
 
     @Test fun actualTouchHoldCommitsOnlyOnRelease() {
         val context = instrumentation.targetContext
         val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        val groupSnapshot = PageGroupTestState(context)
         val oldPage = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, null)
         val oldIme = Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD).orEmpty()
         require(oldIme.matches(Regex("[A-Za-z0-9_.$/]+")))
@@ -106,7 +110,8 @@ class ImeEndToEndTest {
             page = LayoutFileManager.createLayout(context, "Preview E2E", KeyboardLayout("Preview", listOf(
                 RowLayout(1f, listOf(KeySlot(1f, "a", longPressText = "ɑ😀"), KeySlot(1f, "b")))
             )))
-            prefs.edit().putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, page).commit()
+            PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(page))
+            PageGroupManager.selectPage(context, page)
             shell("ime enable $ime"); shell("ime set $ime")
             ActivityScenario.launch(ImeTestEditorActivity::class.java).use { scenario ->
                 awaitNode { it.contentDescription?.toString() == "Row 1, key 1: a, long press: ɑ😀" }
@@ -146,12 +151,14 @@ class ImeEndToEndTest {
             prefs.edit().apply { if (oldPage == null) remove(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE) else putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, oldPage) }.commit()
             page?.let { LayoutFileManager.deleteLayout(context, it) }
             ui.serviceInfo = ui.serviceInfo.apply { flags = oldFlags }
+            groupSnapshot.close()
         }
     }
 
     @Test fun actualKeyboardConvertsAndExpandedPanelReturnsToKeys() {
         val context = instrumentation.targetContext
         val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        val groupSnapshot = PageGroupTestState(context)
         val oldPage = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, null)
         val ime = "${context.packageName}/.IpaBoardService"
         val oldIme = Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD).orEmpty()
@@ -166,7 +173,9 @@ class ImeEndToEndTest {
             alternatePage = LayoutFileManager.createLayout(context, "IME E2E 2", BuiltinLayouts.mixed.copy(name = "IME E2E 2")
                 .withKeyMapping(0, 0, "q", KeyAction.TEXT, longPressText = "ni")
                 .withKeyMapping(2, 8, "", KeyAction.BACKSPACE, longPressText = "ɑ😀"))
-            prefs.edit().putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, page).commit()
+            PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(page))
+            PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(alternatePage))
+            PageGroupManager.selectPage(context, page)
             shell("ime enable $ime"); shell("ime set $ime")
             ActivityScenario.launch(ImeTestEditorActivity::class.java).use { scenario ->
                 awaitNode { it.contentDescription?.toString() == "打开键盘页总览" }
@@ -221,6 +230,7 @@ class ImeEndToEndTest {
             page?.let { LayoutFileManager.deleteLayout(context, it) }
             alternatePage?.let { LayoutFileManager.deleteLayout(context, it) }
             ui.serviceInfo = ui.serviceInfo.apply { flags = oldFlags }
+            groupSnapshot.close()
         }
     }
 }
