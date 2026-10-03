@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#121212"
+    android:background="@color/management_background"
     android:padding="16dp">
 
     <!-- Header with Back Button and Title -->
@@ -27,8 +27,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Emoji Management"
-            android:textSize="20sp"
-            android:textColor="#FFFFFF"
+            android:textSize="@dimen/management_title_size"
+            android:textColor="@color/management_text"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -36,16 +36,16 @@
         android:id="@+id/tv_emoji_status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#FFFFFF"
-        android:textSize="15sp"
+        android:textColor="@color/management_text"
+        android:textSize="@dimen/management_body_size"
         android:layout_marginBottom="16dp"/>
 
-    <Button
+    <Button style="@style/ManagementButton"
         android:id="@+id/btn_update_emoji"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/emoji_update_button"
-        android:textSize="14sp"
+        android:textSize="@dimen/management_caption_size"
         android:layout_marginBottom="16dp" />
 
 </LinearLayout>

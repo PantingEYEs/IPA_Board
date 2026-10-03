@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#000000">
+    android:background="@color/management_background">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -28,8 +28,8 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/engine_management_title"
-            android:textSize="20sp"
-            android:textColor="#FFFFFF"
+            android:textSize="@dimen/management_title_size"
+            android:textColor="@color/management_text"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -59,8 +59,8 @@
                     android:layout_height="wrap_content"
                     android:minHeight="48dp"
                     android:text="@string/engine_semantic_context"
-                    android:textColor="#FFFFFF"
-                    android:textSize="18sp" />
+                    android:textColor="@color/management_text"
+                    android:textSize="@dimen/management_section_size" />
 
                 <TextView
                     android:id="@+id/semantic_context_notice"
@@ -68,8 +68,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="@string/engine_semantic_latency_notice"
-                    android:textColor="#BBBBBB"
-                    android:textSize="14sp" />
+                    android:textColor="@color/management_text_secondary"
+                    android:textSize="@dimen/management_caption_size" />
 
                 <TextView
                     android:id="@+id/semantic_context_status"
@@ -77,8 +77,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="@string/engine_semantic_pending"
-                    android:textColor="#BBBBBB"
-                    android:textSize="14sp" />
+                    android:textColor="@color/management_text_secondary"
+                    android:textSize="@dimen/management_caption_size" />
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

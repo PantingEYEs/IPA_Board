@@ -64,7 +64,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Keyboard Page"
+                android:text="Keyboard"
                 android:textColor="#FFFFFF"
                 android:textSize="18sp"
                 android:textStyle="bold" />

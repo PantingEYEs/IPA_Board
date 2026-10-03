@@ -140,6 +140,13 @@ class KaomojiManagerActivity : AppCompatActivity() {
         btnBatchAddTag = findViewById(R.id.btn_batch_add_tag)
         btnBatchDelete = findViewById(R.id.btn_batch_delete)
 
+        val actionButtonTint = ColorStateList.valueOf(getColor(R.color.management_control))
+        listOf(btnSortZa, btnAddKaomoji, btnBatchManage, btnImportConfig, btnExportConfig,
+            btnSelectAll, btnBatchAddTag, btnBatchDelete).forEach { button ->
+            button.backgroundTintList = actionButtonTint
+            button.setTextColor(getColorStateList(R.color.management_button_text))
+        }
+
         rvKaomojis = findViewById(R.id.rv_kaomojis)
         tvEmpty = findViewById(R.id.tv_empty)
 
@@ -171,11 +178,6 @@ class KaomojiManagerActivity : AppCompatActivity() {
 
         btnSortZa.setOnClickListener {
             isReversedSort = !isReversedSort
-            if (isReversedSort) {
-                btnSortZa.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#5A5A5E"))
-            } else {
-                btnSortZa.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#38383A"))
-            }
             refreshData()
         }
 
@@ -476,11 +478,11 @@ class KaomojiManagerActivity : AppCompatActivity() {
     private fun applyDarkGrayThemeToDialog(dialog: AlertDialog) {
         dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.apply {
             setTextColor(Color.WHITE)
-            backgroundTintList = ColorStateList.valueOf(Color.parseColor("#38383A"))
+            backgroundTintList = ColorStateList.valueOf(getColor(R.color.management_control))
         }
         dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.apply {
             setTextColor(Color.WHITE)
-            backgroundTintList = ColorStateList.valueOf(Color.parseColor("#38383A"))
+            backgroundTintList = ColorStateList.valueOf(getColor(R.color.management_control))
         }
     }
 }

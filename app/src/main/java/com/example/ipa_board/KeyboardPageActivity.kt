@@ -375,7 +375,7 @@ class KeyboardPageActivity : Activity() {
                 }
                 val btnUp = Button(this).apply {
                     text = "▲"
-                    textSize = 12f
+                    textSize = 14f
                     isEnabled = index > 0
                     setOnClickListener {
                         val temp = currentOrder[index]
@@ -386,7 +386,7 @@ class KeyboardPageActivity : Activity() {
                 }
                 val btnDown = Button(this).apply {
                     text = "▼"
-                    textSize = 12f
+                    textSize = 14f
                     isEnabled = index < currentOrder.size - 1
                     setOnClickListener {
                         val temp = currentOrder[index]

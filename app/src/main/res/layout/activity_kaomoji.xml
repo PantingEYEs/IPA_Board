@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
-    android:background="#121212">
+    android:background="@color/management_background">
 
     <!-- Main Content Layout -->
     <LinearLayout
@@ -20,7 +20,7 @@
             android:paddingHorizontal="8dp"
             android:paddingVertical="8dp"
             android:gravity="center_vertical"
-            android:background="#1E1E1E">
+            android:background="@color/management_background">
 
             <ImageButton
                 android:id="@+id/btn_back"
@@ -29,15 +29,15 @@
                 android:src="@drawable/ic_arrow_back"
                 android:background="?android:attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Back"
-                app:tint="#FFFFFF" />
+                app:tint="@color/management_text" />
 
             <TextView
                 android:id="@+id/tv_count_stats"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
+                android:textColor="@color/management_text"
+                android:textSize="@dimen/management_title_size"
                 android:textStyle="bold"
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
@@ -53,7 +53,7 @@
             android:paddingHorizontal="12dp"
             android:paddingVertical="8dp"
             android:gravity="center_vertical"
-            android:background="#181818">
+            android:background="@color/management_background">
 
             <EditText
                 android:id="@+id/et_search"
@@ -61,24 +61,25 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:hint="Search 顔文字, tags, or colors..."
-                android:textColorHint="#888888"
-                android:textColor="#FFFFFF"
-                android:background="#2A2A2A"
+                android:textColorHint="@color/management_text_secondary"
+                android:textColor="@color/management_text"
+                android:background="@color/management_control"
                 android:padding="10dp"
-                android:textSize="14sp"
+                android:textSize="@dimen/management_caption_size"
                 android:singleLine="true"
                 android:imeOptions="actionSearch"
                 android:autofillHints=""
                 android:inputType="text" />
 
-            <Button
+            <Button style="@style/ManagementButton"
                 android:id="@+id/btn_sort_za"
                 android:layout_width="48dp"
                 android:layout_height="38dp"
                 android:text="za"
-                android:textSize="13sp"
-                android:textColor="#FFFFFF"
-                android:backgroundTint="#38383A"
+                android:textSize="@dimen/management_caption_size"
+                android:textColor="@color/management_text"
+                android:backgroundTint="@color/management_control"
+                app:backgroundTint="@color/management_control"
                 android:layout_marginStart="8dp"
                 android:padding="0dp" />
 
@@ -92,7 +93,7 @@
             android:orientation="horizontal"
             android:padding="8dp"
             android:gravity="center_vertical"
-            android:background="#242426"
+            android:background="@color/management_surface"
             android:visibility="gone">
 
             <TextView
@@ -101,39 +102,42 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="0 selected"
-                android:textColor="#80D8FF"
-                android:textSize="14sp"
+                android:textColor="@color/management_text"
+                android:textSize="@dimen/management_caption_size"
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp" />
 
-            <Button
+            <Button style="@style/ManagementButton"
                 android:id="@+id/btn_select_all"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Select All"
-                android:textSize="12sp"
-                android:textColor="#FFFFFF"
-                android:backgroundTint="#38383A"
+                android:textSize="@dimen/management_caption_size"
+                android:textColor="@color/management_text"
+                android:backgroundTint="@color/management_control"
+                app:backgroundTint="@color/management_control"
                 android:layout_marginEnd="4dp" />
 
-            <Button
+            <Button style="@style/ManagementButton"
                 android:id="@+id/btn_batch_add_tag"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Add Tags"
-                android:textSize="12sp"
-                android:textColor="#FFFFFF"
-                android:backgroundTint="#38383A"
+                android:textSize="@dimen/management_caption_size"
+                android:textColor="@color/management_text"
+                android:backgroundTint="@color/management_control"
+                app:backgroundTint="@color/management_control"
                 android:layout_marginEnd="4dp" />
 
-            <Button
+            <Button style="@style/ManagementButton"
                 android:id="@+id/btn_batch_delete"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Delete"
-                android:textSize="12sp"
-                android:textColor="#FFFFFF"
-                android:backgroundTint="#4A2C2C" />
+                android:textSize="@dimen/management_caption_size"
+                android:textColor="@color/management_text"
+                android:backgroundTint="@color/management_control"
+                app:backgroundTint="@color/management_control" />
         </LinearLayout>
 
         <!-- Empty view -->
@@ -143,8 +147,8 @@
             android:layout_height="match_parent"
             android:gravity="center"
             android:text="No 顔文字 found\nTap '+' at bottom right to add"
-            android:textColor="#777777"
-            android:textSize="16sp"
+            android:textColor="@color/management_text_secondary"
+            android:textSize="@dimen/management_body_size"
             android:visibility="gone" />
 
         <!-- 2D Compact Table Grid for Kaomojis -->
@@ -179,44 +183,48 @@
         android:gravity="end"
         android:visibility="gone">
 
-        <Button
+        <Button style="@style/ManagementButton"
             android:id="@+id/btn_add_kaomoji"
             android:layout_width="120dp"
             android:layout_height="wrap_content"
             android:text="Add"
-            android:textSize="14sp"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#38383A"
+            android:textSize="@dimen/management_caption_size"
+            android:textColor="@color/management_text"
+            android:backgroundTint="@color/management_control"
+                app:backgroundTint="@color/management_control"
             android:layout_marginBottom="8dp" />
 
-        <Button
+        <Button style="@style/ManagementButton"
             android:id="@+id/btn_batch_manage"
             android:layout_width="120dp"
             android:layout_height="wrap_content"
             android:text="Manage"
-            android:textSize="14sp"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#38383A"
+            android:textSize="@dimen/management_caption_size"
+            android:textColor="@color/management_text"
+            android:backgroundTint="@color/management_control"
+                app:backgroundTint="@color/management_control"
             android:layout_marginBottom="8dp" />
 
-        <Button
+        <Button style="@style/ManagementButton"
             android:id="@+id/btn_import_config"
             android:layout_width="120dp"
             android:layout_height="wrap_content"
             android:text="Import"
-            android:textSize="14sp"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#38383A"
+            android:textSize="@dimen/management_caption_size"
+            android:textColor="@color/management_text"
+            android:backgroundTint="@color/management_control"
+                app:backgroundTint="@color/management_control"
             android:layout_marginBottom="8dp" />
 
-        <Button
+        <Button style="@style/ManagementButton"
             android:id="@+id/btn_export_config"
             android:layout_width="120dp"
             android:layout_height="wrap_content"
             android:text="Export"
-            android:textSize="14sp"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#38383A" />
+            android:textSize="@dimen/management_caption_size"
+            android:textColor="@color/management_text"
+            android:backgroundTint="@color/management_control"
+                app:backgroundTint="@color/management_control" />
 
     </LinearLayout>
 
@@ -228,9 +236,9 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
         app:fabSize="normal"
-        app:backgroundTint="#38383A"
+        app:backgroundTint="@color/management_control"
         app:srcCompat="@drawable/ic_add"
-        app:tint="#FFFFFF"
+        app:tint="@color/management_text"
         android:contentDescription="Action Menu" />
 
 </FrameLayout>

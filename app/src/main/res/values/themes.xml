@@ -15,7 +15,14 @@
     </style>
 
     <style name="Theme.IPA_Board.NoActionBar" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="android:statusBarColor">#181818</item>
+        <item name="android:statusBarColor">@color/management_background</item>
+        <item name="android:navigationBarColor">@color/management_background</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowBackground">@color/management_background</item>
+        <item name="android:textColorPrimary">@color/management_text</item>
+        <item name="android:textColorSecondary">@color/management_text_secondary</item>
+        <item name="android:colorBackground">@color/management_background</item>
+        <item name="android:buttonStyle">@style/ManagementButton</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

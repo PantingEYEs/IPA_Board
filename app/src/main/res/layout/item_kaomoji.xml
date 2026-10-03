@@ -10,7 +10,7 @@
         android:layout_height="76dp"
         android:orientation="vertical"
         android:gravity="center"
-        android:background="#222222"
+        android:background="@color/management_surface"
         android:padding="6dp">
 
         <TextView
@@ -18,8 +18,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
+            android:textColor="@color/management_text"
+            android:textSize="@dimen/management_body_size"
             android:maxLines="3"
             android:ellipsize="end"
             android:text="(^_^)v" />

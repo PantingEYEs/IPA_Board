@@ -68,7 +68,7 @@
 
         <activity
             android:name=".KeyboardPageActivity"
-            android:label="Keyboard Page Management"
+            android:label="Keyboard Management"
             android:theme="@style/Theme.IPA_Board.NoActionBar"
             android:exported="false" />
 

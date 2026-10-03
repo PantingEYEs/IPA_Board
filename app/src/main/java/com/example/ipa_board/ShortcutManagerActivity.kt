@@ -69,13 +69,13 @@ class ShortcutManagerActivity : Activity() {
 
                 val keyLabelView = TextView(this).apply {
                     text = "${if (isShift) "Shift" else "Ctrl"}+$key ➔ ${action.title} (${action.keyLabel.ifEmpty { action.wireValue }})"
-                    textSize = 15f
+                    textSize = 16f
                     layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                 }
 
                 val btnDelete = Button(this).apply {
                     text = "Delete"
-                    textSize = 12f
+                    textSize = 14f
                     setOnClickListener {
                         val newMap = loadMap()
                         newMap.remove(key)

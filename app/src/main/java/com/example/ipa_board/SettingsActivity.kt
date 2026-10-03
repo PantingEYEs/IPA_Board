@@ -11,7 +11,7 @@ import com.example.ipa_board.kaomoji.KaomojiManagerActivity
 /**
  * Main Activity screen titled "IPA Board Settings".
  * Serves as the primary launcher screen with 6 entries:
- * 1. Keyboard Page
+ * 1. Keyboard
  * 2. Shortcut
  * 3. Emoji
  * 4. 顔文字
