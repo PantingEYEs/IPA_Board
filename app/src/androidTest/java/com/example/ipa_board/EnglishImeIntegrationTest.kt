@@ -16,23 +16,8 @@ class EnglishImeIntegrationTest {
     private val ui = instrumentation.uiAutomation
     private fun shell(command: String) = ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand(command))
         .bufferedReader().use { it.readText() }
-    private fun awaitNode(predicate: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo {
-        fun visit(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-            if (predicate(node)) return node
-            for (i in 0 until node.childCount) visit(node.getChild(i) ?: continue)?.let { return it }
-            return null
-        }
-        val deadline = android.os.SystemClock.uptimeMillis() + 30_000
-        while (android.os.SystemClock.uptimeMillis() < deadline) {
-            ui.windows.forEach { window ->
-                val root = window.root ?: return@forEach
-                if (root.packageName?.toString() == instrumentation.targetContext.packageName)
-                    visit(root)?.let { return it }
-            }
-            Thread.sleep(80)
-        }
-        error("Timed out waiting for test editor/IME")
-    }
+    private val driver = ImeTestDriver()
+    private fun awaitNode(predicate: (AccessibilityNodeInfo) -> Boolean) = driver.awaitNode(predicate)
     private fun type(raw: String) {
         raw.forEach { letter ->
             assertTrue(awaitNode {
@@ -41,11 +26,8 @@ class EnglishImeIntegrationTest {
             }.performAction(AccessibilityNodeInfo.ACTION_CLICK))
         }
     }
-    private fun select(word: String) {
-        assertTrue(awaitNode { it.contentDescription?.toString() == word && it.text?.toString() == "$word " }
-            .performAction(AccessibilityNodeInfo.ACTION_CLICK))
-        instrumentation.waitForIdleSync()
-    }
+    private fun select(scenario: ActivityScenario<ImeTestEditorActivity>, word: String, expectedText: String) =
+        driver.select(scenario, word, expectedText)
 
     @Test fun actualKeyboardMixesLanguagesAndInsertsContextualPrediction() {
         val context = instrumentation.targetContext
@@ -66,16 +48,17 @@ class EnglishImeIntegrationTest {
             PageGroupManager.selectPage(context, page)
             shell("ime enable $ime"); shell("ime set $ime")
             ActivityScenario.launch(ImeTestEditorActivity::class.java).use { scenario ->
-                type("nihao"); select("你好")
-                type("helo"); select("hello")
-                type("nihongo"); select("日本語")
-                type("thank"); select("thank")
-                select("you")
+                driver.awaitKeyboard(scenario) { it.contentDescription?.toString() == "Keyboard Overview" }
+                type("nihao"); select(scenario, "你好", "你好")
+                type("helo"); select(scenario, "hello", "你好hello")
+                type("nihongo"); select(scenario, "日本語", "你好hello日本語")
+                type("thank"); select(scenario, "thank", "你好hello日本語thank")
+                select(scenario, "you", "你好hello日本語thank you ")
                 scenario.onActivity { assertEquals("你好hello日本語thank you ", it.editor.text.toString()) }
                 // A space with no composition must stay a committed delimiter for the next word.
                 assertTrue(awaitNode { it.contentDescription?.toString()?.startsWith("Row 4, key 3:") == true }
                     .performAction(AccessibilityNodeInfo.ACTION_CLICK))
-                type("hel"); select("hello")
+                type("hel"); select(scenario, "hello", "你好hello日本語thank you  hello")
                 scenario.onActivity { assertEquals("你好hello日本語thank you  hello", it.editor.text.toString()) }
             }
         } finally {

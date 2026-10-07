@@ -16,8 +16,12 @@
     <string name="layout_restored">Key mappings restored.</string>
     <string name="text_behavior">Text input behavior</string>
     <string name="long_press_type">Long-press action</string>
+    <string name="keyboard_gestures">Keyboard Gestures</string>
+    <string name="keyboard_long_press_time">Long-press time</string>
+    <string name="keyboard_long_press_time_value">%1$d ms</string>
+    <string name="keyboard_long_press_time_help">Sets how long to hold a key before selecting its long-press action. Applies to all keyboard pages (200–2000 ms, in 50 ms steps).</string>
     <string name="long_press_text_label">Long-press symbols / text (separate multiple with commas ,)</string>
-    <string name="long_press_text_hint">e.g. ɑ, æ, ɒ (separated by commas for swipe selection)</string>
+    <string name="long_press_text_hint">e.g. ɑ, æ, \\, — use \\, for a literal comma; \\\\ for a backslash</string>
     <string name="swipe_left_type">Quick Swipe Left action</string>
     <string name="swipe_left_text_hint">Leave empty to disable quick swipe left</string>
     <string name="swipe_right_type">Quick Swipe Right action</string>

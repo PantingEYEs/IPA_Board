@@ -34,6 +34,7 @@ internal class MozcEngine(context: Context) : QueryEngine {
         val id = send(n(1, 1)).value(1)
         check(id != 0L) { "Mozc session creation failed" }
         try {
+            if (raw.isEmpty()) return predict(id, beforeCursor, surrounding)
             // Turn on Hiragana mode. Each query uses a fresh session, so no stale conversion state.
             send(n(1, 5) + n(2, id) + m(4, n(1, 5) + n(3, 1)))
             var output = emptyList<ProtoWire.Field>()
@@ -51,10 +52,36 @@ internal class MozcEngine(context: Context) : QueryEngine {
             return results.distinctBy { it.text }
         } finally { send(n(1, 2) + n(2, id)) }
     }
+
+    private fun predict(id: Long, beforeCursor: String, surrounding: ByteArray): List<Candidate> {
+        val previous = PredictionContext.japanese(beforeCursor)
+        if (previous.isEmpty()) return emptyList()
+        // The pinned mobile protocol exposes zero-query suggestions after a commit. Reconstruct
+        // only transient session context by reverse-converting the nearby Japanese phrase.
+        // Incognito remains enabled; this commit is internal and never sent to the editor.
+        send(n(1, 17) + n(2, id) + m(9, n(1, 1))) // SET_REQUEST: zero_query_suggestion=true
+        send(n(1, 5) + n(2, id) + m(4, n(1, 22) + n(3, 1))) // TURN_ON_IME: Hiragana
+        val reverse = send(n(1, 5) + n(2, id) + m(4, n(1, 8) + m(4, previous.toByteArray(Charsets.UTF_8))) + surrounding)
+        if (reverse.blob(5).isEmpty()) return emptyList()
+        val output = send(n(1, 5) + n(2, id) + m(4, n(1, 2)) + surrounding) // SUBMIT
+        return ProtoWire.read(output.blob(14)).filter { it.tag == 2 }.take(60)
+            .mapIndexedNotNull { rank, item ->
+                ProtoWire.read(item.bytes).text(4).takeIf { it.isNotBlank() }
+                    ?.let { Candidate(it, "日", rank, CandidateKind.PREDICTION) }
+            }.distinctBy { it.text }
+    }
 }
 
 internal interface QueryEngine {
+    /** Input syntax belongs to the engine; non-roman scripts may be native composition too. */
+    val segmentPattern: Regex get() = ROMAN_SEGMENTS
+    fun acceptsInput(raw: String): Boolean = raw.all { it in 'a'..'z' || it in 'A'..'Z' || it == '\'' }
+    fun configure(policy: EngineQueryPolicy) {}
     fun query(raw: String): List<Candidate>
     fun query(raw: String, beforeCursor: String): List<Candidate> = query(raw)
     fun query(raw: String, beforeCursor: String, afterCursor: String): List<Candidate> = query(raw, beforeCursor)
+
+    companion object {
+        val ROMAN_SEGMENTS = Regex("[A-Za-z]+(?:'[A-Za-z]+)*")
+    }
 }

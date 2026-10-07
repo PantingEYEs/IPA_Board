@@ -11,6 +11,94 @@ import org.junit.Test
 
 class CompositionControllerTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    @Test fun widthToggleRepaintsCompositionButKeepsEngineEncodingAndRejectsOldCandidates() {
+        instrumentation.runOnMainSync {
+            val editor = EditText(instrumentation.targetContext)
+            val ic = requireNotNull(editor.onCreateInputConnection(EditorInfo()))
+            ic.commitText("已有上下文 ", 1)
+            var enabled = false
+            val queries = mutableListOf<String>()
+            val controller = CompositionController({ ic }, { _, raw -> queries += raw }, {},
+                transformOutput = { if (enabled) CharacterWidthConverter.swap(it) else it })
+            val raw = "nihao123,Ａ"
+            controller.input(raw)
+            assertEquals("已有上下文 $raw", editor.text.toString())
+            val old = controller.revision
+            val word = Candidate("你好123,Ａ", "简/EN")
+            controller.acceptResults(old, listOf(word))
+            enabled = true
+            controller.refreshOutput()
+            assertEquals(raw, controller.raw)
+            assertEquals(raw, queries.last())
+            assertEquals("已有上下文 ｎｉｈａｏ１２３，A", editor.text.toString())
+            assertEquals("已有上下文 ", controller.beforeCursor)
+            assertFalse("A toggle must invalidate the previous candidate snapshot", controller.select(word, old))
+            controller.acceptResults(old, listOf(word))
+            assertTrue(controller.candidates.isEmpty())
+            controller.acceptResults(controller.revision, listOf(word))
+            assertTrue(controller.select(word))
+            assertEquals("已有上下文 你好１２３，A", editor.text.toString())
+            assertEquals(-1, BaseInputConnection.getComposingSpanStart(editor.text))
+            enabled = false
+            controller.input("b")
+            assertTrue(controller.literal())
+            assertEquals("已有上下文 你好１２３，Ab", editor.text.toString())
+        }
+    }
+
+    @Test fun widthConversionKeepsContextWhenKanaLengthChangesAndConvertsOverflowTextOnce() {
+        instrumentation.runOnMainSync {
+            val editor = EditText(instrumentation.targetContext)
+            val ic = requireNotNull(editor.onCreateInputConnection(EditorInfo()))
+            ic.commitText("前文後文", 1)
+            editor.setSelection(2)
+            val controller = CompositionController({ ic }, { _, _ -> }, {},
+                transformOutput = CharacterWidthConverter::swap)
+            controller.input("ｶﾞ")
+            assertEquals("前文ガ後文", editor.text.toString())
+            assertEquals("前文", controller.beforeCursor)
+            assertEquals("後文", controller.afterCursor)
+            val word = Candidate("パ", "日")
+            controller.acceptResults(controller.revision, listOf(word))
+            assertTrue(controller.select(word))
+            assertEquals("前文ﾊﾟ後文", editor.text.toString())
+            assertEquals("前文ﾊﾟ", controller.beforeCursor)
+            assertEquals("後文", controller.afterCursor)
+            controller.input("a")
+            controller.input("Ａ".repeat(65))
+            assertEquals("前文ﾊﾟａ" + "A".repeat(65) + "後文", editor.text.toString())
+            assertEquals("", controller.raw)
+            assertEquals(-1, BaseInputConnection.getComposingSpanStart(editor.text))
+            controller.input("1１")
+            controller.finish()
+            assertEquals("前文ﾊﾟａ" + "A".repeat(65) + "１1後文", editor.text.toString())
+            assertEquals(-1, BaseInputConnection.getComposingSpanStart(editor.text))
+        }
+    }
+
+    @Test fun rejectedWidthCommitRetainsOriginalRawForAnUnambiguousRetry() {
+        instrumentation.runOnMainSync {
+            val committed = mutableListOf<String>()
+            var accept = false
+            val ic = object : BaseInputConnection(View(instrumentation.targetContext), false) {
+                override fun setComposingText(text: CharSequence?, newCursorPosition: Int) = false
+                override fun commitText(text: CharSequence?, newCursorPosition: Int): Boolean {
+                    committed += text.toString()
+                    return accept
+                }
+            }
+            val controller = CompositionController({ ic }, { _, _ -> }, {},
+                transformOutput = CharacterWidthConverter::swap)
+            controller.input("aＡ😀")
+            assertFalse(controller.literal())
+            assertEquals("aＡ😀", controller.raw)
+            accept = true
+            assertTrue(controller.literal())
+            assertEquals(listOf("ａA😀", "ａA😀"), committed)
+            assertEquals("", controller.raw)
+        }
+    }
+
     @Test fun selectedCandidateReplacesComposingTextExactlyOnceAndOldResultsCannotCommit() {
         instrumentation.runOnMainSync {
             val editor = EditText(instrumentation.targetContext)
@@ -98,6 +186,35 @@ class CompositionControllerTest {
             editor.setSelection(0, 2)
             assertFalse(controller.select(prediction))
             assertEquals("你好 thank you hel", editor.text.toString())
+        }
+    }
+    @Test fun chineseAndJapanesePredictionsInsertWithoutEnglishSpaces() {
+        instrumentation.runOnMainSync {
+            val editor = EditText(instrumentation.targetContext)
+            val ic = editor.onCreateInputConnection(EditorInfo())!!
+            val controller = CompositionController({ ic }, { _, _ -> }, {})
+            ic.commitText("今天", 1)
+            controller.start()
+            val chinese = Candidate("天气", "简", kind = CandidateKind.PREDICTION)
+            controller.acceptResults(controller.revision, listOf(chinese))
+            assertTrue(controller.select(chinese))
+            assertEquals("今天天气", editor.text.toString())
+            val japanese = Candidate("です", "日", kind = CandidateKind.PREDICTION)
+            controller.acceptResults(controller.revision, listOf(japanese))
+            assertTrue(controller.select(japanese))
+            assertEquals("今天天气です", editor.text.toString())
+        }
+    }
+    @Test fun mixedCandidatePreservesNumbersAndPunctuationOnCommit() {
+        instrumentation.runOnMainSync {
+            val editor = EditText(instrumentation.targetContext)
+            val ic = editor.onCreateInputConnection(EditorInfo())!!
+            val controller = CompositionController({ ic }, { _, _ -> }, {})
+            controller.input("nihao123,hel!")
+            val converted = Candidate("你好123,hello!", "简/EN", kind = CandidateKind.COMPLETION)
+            controller.acceptResults(controller.revision, listOf(converted))
+            assertTrue(controller.select(converted))
+            assertEquals("你好123,hello!", editor.text.toString())
         }
     }
     @Test fun sameWordInNewRevisionCannotBeCommittedFromOldCandidateSnapshot() {

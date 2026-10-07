@@ -23,6 +23,31 @@ class KeyboardInputControllerTest {
     private fun key(action: KeyAction) = KeySlot(1f, action = action)
     private fun text(value: String) = KeySlot(1f, value)
 
+    @Test fun widthConversionFollowsShiftButLeavesCtrlCommandsAndPasteActionsIntact() {
+        instrumentation.runOnMainSync {
+            val connection = RecordingConnection(instrumentation.targetContext)
+            var enabled = false
+            val controller = KeyboardInputController { if (enabled) CharacterWidthConverter.swap(it) else it }
+            controller.handle(text("aＡ😀"), connection, null)
+            assertEquals("aＡ😀", connection.committed.last())
+            enabled = true
+            controller.handle(key(KeyAction.SHIFT), connection, null)
+            assertTrue(controller.handle(text("aＡ😀"), connection, null))
+            assertEquals("ＡA😀", connection.committed.last())
+            assertEquals(ShiftState.OFF, controller.shiftState)
+            val before = connection.committed.toList()
+            controller.handle(key(KeyAction.CTRL), connection, null)
+            assertTrue(controller.handle(text("z"), connection, null))
+            assertKeyPair(connection.events, KeyEvent.KEYCODE_Z, KeyEvent.META_CTRL_ON)
+            assertFalse(controller.ctrlEnabled)
+            assertTrue(controller.handle(key(KeyAction.PASTE), connection, null))
+            assertEquals(R.id.paste, connection.contextActions.last())
+            assertEquals("Commands must not be replaced by converted typed text", before, connection.committed)
+            controller.handle(text("aＡ😀"), connection, null)
+            assertEquals("ａA😀", connection.committed.last())
+        }
+    }
+
     private fun withRecordingConnection(test: (KeyboardInputController, RecordingConnection) -> Unit) {
         instrumentation.runOnMainSync {
             test(KeyboardInputController(), RecordingConnection(instrumentation.targetContext))
@@ -220,12 +245,41 @@ class KeyboardInputControllerTest {
         assertKeyPair(connection.events, KeyEvent.KEYCODE_DEL, 0)
     }
 
-    @Test fun ctrlBackspaceDelegatesWordDeletionToTheEditor() = withRecordingConnection { controller, connection ->
+    @Test fun ctrlBackspaceUsesUnmodifiedDeleteAtTheCursorBoundaryAndConsumesTheLatch() = withRecordingConnection { controller, connection ->
+        connection.beforeCursor = ""
         controller.handle(key(KeyAction.CTRL), connection, null)
-        controller.handle(key(KeyAction.BACKSPACE), connection, null)
-        assertKeyPair(connection.events, KeyEvent.KEYCODE_DEL, KeyEvent.META_CTRL_ON)
+        assertTrue(controller.handle(key(KeyAction.BACKSPACE), connection, null))
+        assertFalse(controller.ctrlEnabled)
+        assertKeyPair(connection.events, KeyEvent.KEYCODE_DEL, 0)
         assertTrue(connection.codePointDeletions.isEmpty())
         assertTrue(connection.surroundingDeletions.isEmpty())
+    }
+
+    @Test fun ctrlContinuousBackspaceDeletesOneUnicodeCodePointAndConsumesTheLatch() = withRecordingConnection { controller, connection ->
+        connection.beforeCursor = "previous😀"
+        controller.handle(key(KeyAction.CTRL), connection, null)
+        assertTrue(controller.handle(key(KeyAction.REPEAT_BACKSPACE), connection, null))
+        assertFalse(controller.ctrlEnabled)
+        assertEquals(listOf(1 to 0), connection.codePointDeletions)
+        assertTrue(connection.events.isEmpty())
+        assertTrue(connection.surroundingDeletions.isEmpty())
+    }
+
+    @Test fun ctrlBindingsToBackspaceActionsUseOrdinaryUnicodeDeletionAndConsumeTheLatch() = withRecordingConnection { controller, connection ->
+        connection.beforeCursor = "previous😀"
+        controller.ctrlShortcuts = mapOf("b" to KeyAction.BACKSPACE, "r" to KeyAction.REPEAT_BACKSPACE)
+        for (character in listOf("b", "r")) {
+            connection.events.clear()
+            connection.codePointDeletions.clear()
+            connection.surroundingDeletions.clear()
+            controller.handle(key(KeyAction.CTRL), connection, null)
+            assertTrue(controller.handle(text(character), connection, null))
+            assertFalse(controller.ctrlEnabled)
+            assertEquals(listOf(1 to 0), connection.codePointDeletions)
+            assertTrue(connection.events.isEmpty())
+            assertTrue(connection.surroundingDeletions.isEmpty())
+            assertTrue(connection.committed.isEmpty())
+        }
     }
 
     @Test fun repeatBackspaceDeletesCharactersLikeBackspace() {

@@ -194,8 +194,22 @@
             "text": "q",
             "action": "text",
             "textBehavior": "auto",
-            "longPressText": "%",
+            "longPressText": "%, ‰, ‱",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "%",
+                "action": "text"
+              },
+              {
+                "text": "‰",
+                "action": "text"
+              },
+              {
+                "text": "‱",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -481,6 +495,12 @@
             "textBehavior": "auto",
             "longPressText": "-",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "-",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -491,8 +511,18 @@
             "text": "h",
             "action": "text",
             "textBehavior": "auto",
-            "longPressText": "+",
+            "longPressText": "+, ±",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "+",
+                "action": "text"
+              },
+              {
+                "text": "±",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -556,22 +586,32 @@
           },
           {
             "widthWeight": 1,
-            "text": ":",
+            "text": "；",
             "action": "text",
             "textBehavior": "auto",
-            "longPressText": "：",
+            "longPressText": ";, :",
             "longPressAction": "text",
-            "swipeLeftText": "",
+            "longPressItems": [
+              {
+                "text": ";",
+                "action": "text"
+              },
+              {
+                "text": ":",
+                "action": "text"
+              }
+            ],
+            "swipeLeftText": "：",
             "swipeLeftAction": "text",
-            "swipeRightText": "",
+            "swipeRightText": "；",
             "swipeRightAction": "text"
           },
           {
             "widthWeight": 1,
-            "text": ";",
+            "text": "",
             "action": "text",
             "textBehavior": "literal",
-            "longPressText": "；",
+            "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
@@ -707,41 +747,49 @@
           },
           {
             "widthWeight": 1,
-            "text": "!",
+            "text": "？",
             "action": "text",
             "textBehavior": "auto",
-            "longPressText": "！",
-            "longPressAction": "text",
-            "swipeLeftText": "",
-            "swipeLeftAction": "text",
-            "swipeRightText": "",
-            "swipeRightAction": "text"
-          },
-          {
-            "widthWeight": 1,
-            "text": "?",
-            "action": "text",
-            "textBehavior": "literal",
-            "longPressText": "？",
-            "longPressAction": "text",
-            "swipeLeftText": "",
-            "swipeLeftAction": "text",
-            "swipeRightText": "",
-            "swipeRightAction": "text"
-          },
-          {
-            "widthWeight": 1,
-            "text": "、",
-            "action": "text",
-            "textBehavior": "literal",
-            "longPressText": "§",
+            "longPressText": "‽, ?, !",
             "longPressAction": "text",
             "longPressItems": [
               {
-                "text": "§",
+                "text": "‽",
+                "action": "text"
+              },
+              {
+                "text": "?",
+                "action": "text"
+              },
+              {
+                "text": "!",
                 "action": "text"
               }
             ],
+            "swipeLeftText": "！",
+            "swipeLeftAction": "text",
+            "swipeRightText": "？",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "",
+            "action": "text",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "",
+            "action": "enter",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -755,10 +803,16 @@
           {
             "widthWeight": 1,
             "text": "",
-            "action": "ctrl",
+            "action": "emoji",
             "textBehavior": "literal",
             "longPressText": "",
-            "longPressAction": "emoji",
+            "longPressAction": "ctrl",
+            "longPressItems": [
+              {
+                "text": "",
+                "action": "ctrl"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -778,10 +832,10 @@
           },
           {
             "widthWeight": 1,
-            "text": ",",
+            "text": "，",
             "action": "text",
             "textBehavior": "auto",
-            "longPressText": "，",
+            "longPressText": ",",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
@@ -802,11 +856,17 @@
           },
           {
             "widthWeight": 1,
-            "text": ".",
+            "text": "。",
             "action": "text",
             "textBehavior": "auto",
-            "longPressText": "。",
+            "longPressText": ".",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": ".",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -814,11 +874,17 @@
           },
           {
             "widthWeight": 1,
-            "text": "",
-            "action": "enter",
+            "text": "、",
+            "action": "text",
             "textBehavior": "literal",
-            "longPressText": "",
+            "longPressText": "§",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "§",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -880,10 +946,5 @@
         ]
       }
     ]
-  },
-  "appearance": {
-    "backgroundColor": "#000000",
-    "symbolColor": "#666666",
-    "heightDp": 150
   }
 }

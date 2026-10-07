@@ -19,9 +19,10 @@ class SemanticContextIntegrationTest {
 
     @Test fun optOutDoesNotDeployOrBindSemanticModel() {
         val prefs = ContextRankingSettings.preferences(context)
+        val hadPreference = prefs.contains(ContextRankingSettings.KEY_ENABLED)
         val old = ContextRankingSettings.isEnabled(context)
         val existing = context.noBackupFilesDir.listFiles().orEmpty().filter { it.name.startsWith("e5-small-") }.map { it.name }.toSet()
-        lateinit var coordinator: EngineCoordinator
+        var coordinator: EngineCoordinator? = null
         val ready = CountDownLatch(1)
         try {
             instrumentation.runOnMainSync {
@@ -29,14 +30,20 @@ class SemanticContextIntegrationTest {
                 coordinator = EngineCoordinator(context) { _, items, state ->
                     if (state.isEmpty() && items.any { it.language.contains("EN") }) ready.countDown()
                 }
-                coordinator.start(); coordinator.query(1, "co", "我想喝咖啡", "提提神")
+                coordinator?.apply { start(); query(1, "co", "我想喝咖啡", "提提神") }
             }
             assertTrue("Native candidates timed out", ready.await(30, TimeUnit.SECONDS))
             assertEquals(existing, context.noBackupFilesDir.listFiles().orEmpty().filter { it.name.startsWith("e5-small-") }.map { it.name }.toSet())
             assertFalse(context.getSystemService(android.app.ActivityManager::class.java).getRunningServices(100)
                 .any { it.service.className.endsWith("SemanticService") })
         } finally {
-            instrumentation.runOnMainSync { coordinator.close(); ContextRankingSettings.setEnabled(context, old) }
+            instrumentation.runOnMainSync {
+                coordinator?.close()
+                prefs.edit().apply {
+                    if (hadPreference) putBoolean(ContextRankingSettings.KEY_ENABLED, old)
+                    else remove(ContextRankingSettings.KEY_ENABLED)
+                }.commit()
+            }
         }
     }
 
@@ -90,8 +97,10 @@ class SemanticContextIntegrationTest {
     }
 
     @Test fun liveOptOutRestoresBaseOrderAndRejectsPendingSemanticUpdates() {
+        val prefs = ContextRankingSettings.preferences(context)
+        val hadPreference = prefs.contains(ContextRankingSettings.KEY_ENABLED)
         val old = ContextRankingSettings.isEnabled(context)
-        lateinit var coordinator: EngineCoordinator
+        var coordinator: EngineCoordinator? = null
         val ranked = CountDownLatch(1)
         val disabled = CountDownLatch(1)
         var base: List<Candidate>? = null
@@ -105,22 +114,34 @@ class SemanticContextIntegrationTest {
                             if (base == null) base = items
                             if (items.first().text == "whale") ranked.countDown()
                         }
-                    } else if (items.isNotEmpty()) { afterDisable = items; disabled.countDown() }
+                    } else if (items.isNotEmpty()) {
+                        afterDisable = items
+                        // Opt-out re-queries all native engines. An early partial reply is valid,
+                        // but only the complete original base order fulfils this contract.
+                        if (items == base) disabled.countDown()
+                    }
                 }
-                coordinator.start(); coordinator.query(10, "wha", "", "whale")
+                coordinator?.apply { start(); query(10, "wha", "", "whale") }
             }
             val completed = ranked.await(20, TimeUnit.SECONDS)
             assertTrue("Coordinator semantic ranking timed out; base: ${base?.map { it.text }}", completed)
             assertNotNull(base)
             assertEquals("what", base!!.first().text)
             instrumentation.runOnMainSync { ContextRankingSettings.setEnabled(context, false) }
-            assertTrue("Live opt-out timed out", disabled.await(5, TimeUnit.SECONDS))
+            assertTrue("Live opt-out did not restore base; latest: ${afterDisable?.map { it.text }}",
+                disabled.await(5, TimeUnit.SECONDS))
             assertEquals(base, afterDisable)
             // Drain any reply already in flight; preference change must not let it replace base.
             instrumentation.waitForIdleSync()
             assertEquals(base, afterDisable)
         } finally {
-            instrumentation.runOnMainSync { coordinator.close(); ContextRankingSettings.setEnabled(context, old) }
+            instrumentation.runOnMainSync {
+                coordinator?.close()
+                prefs.edit().apply {
+                    if (hadPreference) putBoolean(ContextRankingSettings.KEY_ENABLED, old)
+                    else remove(ContextRankingSettings.KEY_ENABLED)
+                }.commit()
+            }
         }
     }
 

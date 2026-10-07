@@ -31,7 +31,8 @@ import java.util.Locale
 class IpaBoardService : InputMethodService() {
     private var chrome: ImeChromeView? = null
     private lateinit var prefs: SharedPreferences
-    private val inputController = KeyboardInputController()
+    private var widthSwapEnabled = false
+    private val inputController = KeyboardInputController(::transformOutput)
     private lateinit var engines: EngineCoordinator
     private lateinit var composition: CompositionController
     private val emojiRepository by lazy { EmojiCatalogRepository.getInstance(this) }
@@ -41,7 +42,7 @@ class IpaBoardService : InputMethodService() {
     private var emojiRequest = 0L
     private var emojiClosed = false
     private var engineStatus = "Loading Dictionary"
-    private var isCalcEngineEnabled = true
+    private var isCalcEngineEnabled = false
     private var directOnly = false
     private var consumedPanelBack = false
     private var panelBackRegistered = false
@@ -115,6 +116,7 @@ class IpaBoardService : InputMethodService() {
         val enabled = prefs.getBoolean(SettingsConstants.KEY_QUICK_PASTE_ENABLED, true)
 
         if (!enabled || state == null) {
+            if (!enabled) quickPasteState = null
             clearQuickPasteStatus()
             return
         }
@@ -165,6 +167,11 @@ class IpaBoardService : InputMethodService() {
     }
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == EngineFeature.CALCULATOR.key) {
+            chrome?.setCalculatorEnabled(calculatorEnabled())
+            composition.updateCandidates(composition.candidates.filter { it.language != "∑" })
+            refreshCandidates()
+        }
         if (key in setOf(SettingsConstants.KEY_PAGE_GROUP_STATE, KEY_LAYOUT_REVISION, KEY_ACTIVE_LAYOUT_FILE, KEY_SHIFT_SHORTCUTS, KEY_CTRL_SHORTCUTS,
             SettingsConstants.KEY_QUICK_PASTE_ENABLED, SettingsConstants.KEY_QUICK_PASTE_RETENTION_TYPE, SettingsConstants.KEY_QUICK_PASTE_RETENTION_SECONDS,
             SettingsConstants.KEY_QUICK_PASTE_USAGE_TYPE, SettingsConstants.KEY_QUICK_PASTE_USAGE_TIMES)) {
@@ -182,7 +189,7 @@ class IpaBoardService : InputMethodService() {
         composition = CompositionController({ currentInputConnection }, { id, raw ->
             engines.query(id, if (directOnly) "" else raw, if (directOnly) "" else composition.beforeCursor,
                 if (directOnly) "" else composition.afterCursor)
-        }, { refreshCandidates() }, contextAllowed = { !directOnly })
+        }, { refreshCandidates() }, contextAllowed = { !directOnly }, transformOutput = ::transformOutput)
         engines = EngineCoordinator(this) { id, candidates, state ->
             engineStatus = state
             composition.acceptResults(id, candidates)
@@ -193,10 +200,9 @@ class IpaBoardService : InputMethodService() {
         return ImeChromeView(this).also { view ->
             chrome = view
             view.onCalculatorToggle = {
-                isCalcEngineEnabled = !isCalcEngineEnabled
-                chrome?.setCalculatorEnabled(isCalcEngineEnabled)
-                refreshCandidates()
+                toggleCalculator()
             }
+            view.onWidthSwapToggle = { toggleWidthSwap() }
             view.onCandidate = { candidate, generation -> if (composition.select(candidate, generation)) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
             view.onLiteral = { if (composition.literal()) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
             view.onPanel = { panel ->
@@ -217,8 +223,26 @@ class IpaBoardService : InputMethodService() {
             engines.start()
         }
     }
+    private fun calculatorEnabled() = isCalcEngineEnabled && EngineSettings.enabled(this, EngineFeature.CALCULATOR)
+    private fun transformOutput(text: String): String = if (widthSwapEnabled) CharacterWidthConverter.swap(text) else text
+
+    private fun toggleWidthSwap() {
+        widthSwapEnabled = !widthSwapEnabled
+        chrome?.setWidthSwapEnabled(widthSwapEnabled)
+        composition.refreshOutput()
+    }
+    private fun toggleCalculator() {
+        if (!EngineSettings.enabled(this, EngineFeature.CALCULATOR)) {
+            Toast.makeText(this, "Calculator is disabled in Engine Management", Toast.LENGTH_SHORT).show()
+            return
+        }
+        isCalcEngineEnabled = !isCalcEngineEnabled
+        chrome?.setCalculatorEnabled(calculatorEnabled())
+        composition.updateCandidates(composition.candidates.filter { it.language != "∑" })
+        refreshCandidates()
+    }
     private fun getMathCandidate(raw: String): Candidate? {
-        if (!isCalcEngineEnabled) return null
+        if (!calculatorEnabled()) return null
         val trimmed = raw.trim()
         if (trimmed.isEmpty()) return null
 
@@ -272,6 +296,8 @@ class IpaBoardService : InputMethodService() {
         val appearance = PageGroupManager.active(this).appearance
         val height = (appearance.heightDp.coerceIn(100, availableDp) * density).toInt()
         view.setKeyboardHeight(height)
+        view.setCalculatorEnabled(calculatorEnabled())
+        view.setWidthSwapEnabled(widthSwapEnabled)
         view.keyboardHost.setBackgroundColor(Color.parseColor(appearance.backgroundColor))
         val layout = LayoutFileManager.activeLayout(this)
         KeyboardRenderer.render(this, view.keyboardHost, layout, height, Color.parseColor(appearance.symbolColor),
@@ -291,7 +317,7 @@ class IpaBoardService : InputMethodService() {
                 if (inputController.consumeSingleShift()) applySettings()
             } else {
                 val ic = currentInputConnection ?: return
-                if (ic.commitText(item.text, 1)) {
+                if (ic.commitText(transformOutput(item.text), 1)) {
                     if (inputController.consumeSingleShift()) applySettings()
                 }
             }
@@ -322,10 +348,12 @@ class IpaBoardService : InputMethodService() {
                 chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.KAOMOJI) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.KAOMOJI)
                 return
             }
+            KeyAction.WIDTH_SWAP -> {
+                toggleWidthSwap()
+                return
+            }
             KeyAction.CALCULATOR -> {
-                isCalcEngineEnabled = !isCalcEngineEnabled
-                chrome?.setCalculatorEnabled(isCalcEngineEnabled)
-                refreshCandidates()
+                toggleCalculator()
                 return
             }
             KeyAction.CANDIDATES -> {
@@ -374,11 +402,10 @@ class IpaBoardService : InputMethodService() {
             when (activeShortcut) {
                 KeyAction.EMOJI -> { consumeModifiers(); chrome?.showPanel(ImeChromeView.Panel.EMOJI); return }
                 KeyAction.KAOMOJI -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.KAOMOJI) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.KAOMOJI); return }
+                KeyAction.WIDTH_SWAP -> { consumeModifiers(); toggleWidthSwap(); return }
                 KeyAction.CALCULATOR -> {
                     consumeModifiers()
-                    isCalcEngineEnabled = !isCalcEngineEnabled
-                    chrome?.setCalculatorEnabled(isCalcEngineEnabled)
-                    refreshCandidates()
+                    toggleCalculator()
                     return
                 }
                 KeyAction.CANDIDATES -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.CANDIDATES) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.CANDIDATES); return }
@@ -449,7 +476,7 @@ class IpaBoardService : InputMethodService() {
                 result.fold(onSuccess = { catalog ->
                     val picker = EmojiPickerView(this, catalog) { entry ->
                         // Commit any pending composition first. Emoji bypass Shift/Ctrl and language conversion.
-                        if (composition.literal()) currentInputConnection?.commitText(entry.text, 1)
+                        if (composition.literal()) currentInputConnection?.commitText(transformOutput(entry.text), 1)
                     }
                     fun updateStatus() {
                         view.showContent("Emoji · ${picker.currentCategoryName} ▾", picker)
@@ -485,7 +512,7 @@ class IpaBoardService : InputMethodService() {
     private fun showKaomojiPanel() {
         val view = chrome ?: return
         val panelView = KaomojiPanelView(this, kaomojiRepository) { item ->
-            if (composition.literal() && currentInputConnection?.commitText(item.text, 1) == true) {
+            if (composition.literal() && currentInputConnection?.commitText(transformOutput(item.text), 1) == true) {
                 // Keep panel open so user can input multiple kaomojis
             }
         }

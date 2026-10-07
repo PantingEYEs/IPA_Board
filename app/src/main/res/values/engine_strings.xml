@@ -6,7 +6,7 @@
     <string name="engine_category_collapsed">Collapsed</string>
     <string name="engine_arrow_expanded" translatable="false">▴</string>
     <string name="engine_arrow_collapsed" translatable="false">▾</string>
-    <string name="engine_version">Version: %1$s</string>
+    <string name="engine_version">Current: %1$s</string>
     <string name="engine_version_unknown">Unknown</string>
     <string name="engine_entry_description">%1$s, version %2$s</string>
     <string name="engine_status_integrated">Integrated</string>
@@ -16,4 +16,9 @@
     <string name="engine_semantic_context">Semantic Context Ranking</string>
     <string name="engine_semantic_latency_notice">Experimental: use surrounding text to help rank multilingual candidates by meaning. May increase candidate latency and memory use. Off by default.</string>
     <string name="engine_semantic_pending">Offline processing. Native candidates appear immediately; semantic ranking follows when there is useful context.</string>
+    <string name="engine_latest_version">Latest: %1$s</string>
+    <string name="engine_latest_checking">Latest: checking…</string>
+    <string name="engine_latest_on_expand">Latest: expand to check</string>
+    <string name="engine_latest_bundled">Latest: bundled with this app; no independent release</string>
+    <string name="engine_latest_not_integrated">Latest: not integrated</string>
 </resources>

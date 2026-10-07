@@ -26,12 +26,12 @@ E5 原始相似度带有明显共同语言偏差，不能直接作为输入概�
 
 ## 验证
 
-按当前开发偏好不自动运行单元测试。构建与设备检查分别执行，可按需运行指定类：
+先完成离线主机检查，再通过保护入口运行真实模型套件。备份、回滚、失败处理及发布范围见 [测试流程](testing.md)：
 
 ```sh
 python3 tools/verify_engine_assets.py
-./gradlew assembleDebug assembleDebugAndroidTest --offline
-adb shell am instrument -w -e class com.example.ipa_board.SemanticContextIntegrationTest com.example.ipa_board.test/androidx.test.runner.AndroidJUnitRunner
+./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug --offline --console=plain
+python3 tools/regression.py run --suite semantic --serial DEVICE_SERIAL --no-build
 ```
 
 ARM64 API 35 只读模拟器上，默认关闭不绑定语义服务、真实模型的光标前/后文查询、候选外部编辑后的失效检查已通过。固定示例 `I would like to drink` 更关联 `coffee`，后文 `coffee` 使较低基础排名的 `coffee` 居首，同时保留中日候选。首次部署、加载及两次五词查询合计约 1.36 秒；这个单次记录不是性能 P95，也不代表所有设备或所有输入的语义质量。

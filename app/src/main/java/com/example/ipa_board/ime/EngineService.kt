@@ -13,6 +13,7 @@ abstract class EngineService : Service() {
         var engine: QueryEngine? = null
         var failure: String? = null
     }
+    internal abstract val language: String
     internal abstract fun createEngine(): QueryEngine
     internal open val supportsPrediction = false
     private val requests = Messenger(Handler(Looper.getMainLooper()) { message ->
@@ -21,15 +22,24 @@ abstract class EngineService : Service() {
         // Coalesce pending requests. A running native call may finish, but its result is versioned.
         work.removeCallbacksAndMessages(null)
         work.post {
-            val result = Bundle().apply { putLong("revision", data.getLong("revision")) }
+            val result = Bundle().apply { putLong("revision", data.getLong("revision")); putLong("requestId", data.getLong("requestId")) }
             try {
-                if (engine == null && failure == null) engine = createEngine()
-                check(failure == null) { failure.orEmpty() }
                 val raw = data.getString("raw").orEmpty()
-                val isPinyinRomaji = raw.length <= 64 && raw.all { it in 'a'..'z' || it in 'A'..'Z' || it == '\'' }
-                val candidates = if (isPinyinRomaji && (raw.isNotEmpty() || supportsPrediction) && engine != null)
-                    engine!!.query(raw, data.getString("beforeCursor").orEmpty().takeLast(256),
-                        data.getString("afterCursor").orEmpty().take(256)) else emptyList()
+                val policy = EngineQueryPolicy.from(data)
+                val candidates = if (!policy.wantsQuery(language, raw.isEmpty())) emptyList() else {
+                    if (engine == null && failure == null) engine = createEngine()
+                    check(failure == null) { failure.orEmpty() }
+                    engine?.let {
+                        it.configure(policy)
+                        val before = data.getString("beforeCursor").orEmpty().takeLast(256)
+                        val after = data.getString("afterCursor").orEmpty().take(256)
+                        if (policy.enabled(EngineFeature.SEGMENTATION))
+                            MixedCompositionCandidates.query(it, raw, before, after, supportsPrediction)
+                        else if (raw.length <= 64 && it.acceptsInput(raw))
+                            it.query(raw, before, after)
+                        else emptyList()
+                    } ?: emptyList()
+                }
                 result.putStringArrayList("text", ArrayList(candidates.map { it.text }))
                 result.putStringArrayList("language", ArrayList(candidates.map { it.language }))
                 result.putIntArray("rank", candidates.map { it.rank }.toIntArray())
@@ -52,9 +62,18 @@ abstract class EngineService : Service() {
     override fun onBind(intent: Intent): IBinder = requests.binder
     override fun onDestroy() { work.removeCallbacksAndMessages(null); super.onDestroy() }
 }
-class RimeService : EngineService() { override fun createEngine(): QueryEngine = RimeEngine(this) }
-class MozcService : EngineService() { override fun createEngine(): QueryEngine = MozcEngine(this) }
+class RimeService : EngineService() {
+    override val language = "ZH"
+    override val supportsPrediction = true
+    override fun createEngine(): QueryEngine = RimeEngine(this)
+}
+class MozcService : EngineService() {
+    override val language = "JA"
+    override val supportsPrediction = true
+    override fun createEngine(): QueryEngine = MozcEngine(this)
+}
 class EnglishService : EngineService() {
+    override val language = "EN"
     override val supportsPrediction = true
     override fun createEngine(): QueryEngine = EnglishEngine(this)
 }

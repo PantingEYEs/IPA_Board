@@ -9,6 +9,8 @@ import java.util.Locale
 
 /** HeliBoard 4.1 LatinIME core, read-only en_US v54 dictionary. Worker-thread confined. */
 internal class EnglishEngine(context: Context) : QueryEngine {
+    private var policy = EngineQueryPolicy()
+    override fun configure(policy: EngineQueryPolicy) { this.policy = policy }
     private val dictionary: Long
     private val proximity: Long
 
@@ -41,9 +43,10 @@ internal class EnglishEngine(context: Context) : QueryEngine {
     override fun query(raw: String, beforeCursor: String, afterCursor: String): List<Candidate> {
         if (raw.length >= 48 || raw.any { it !in 'a'..'z' && it !in 'A'..'Z' && it != '\'' }) return emptyList()
         val words = EnglishContext.previousWords(beforeCursor)
-        if (raw.isEmpty() && words.isEmpty()) return emptyList()
+        if (raw.isEmpty() && beforeCursor.isBlank()) return emptyList()
         val input = IntArray(48) { -1 }
         raw.lowercase(Locale.ROOT).forEachIndexed { i, c -> input[i] = c.code }
+        val beginningOfSentence = words.isEmpty()
         val previous = Array(3) { i -> words.getOrNull(i)?.codePoints()?.toArray() ?: intArrayOf() }
         val output = IntArray(48 * 18)
         val scores = IntArray(18)
@@ -57,12 +60,13 @@ internal class EnglishEngine(context: Context) : QueryEngine {
             BinaryDictionary.getSuggestionsNative(dictionary, proximity, session,
                 IntArray(raw.length) { -1 }, IntArray(raw.length) { -1 }, IntArray(raw.length),
                 IntArray(raw.length), input, raw.length, intArrayOf(0, 1, 0, 0, 1000),
-                previous, BooleanArray(3), words.size, count, output, scores, IntArray(18),
+                previous, BooleanArray(3) { it == 0 && beginningOfSentence },
+                if (beginningOfSentence) 1 else words.size, count, output, scores, IntArray(18),
                 types, IntArray(1), floatArrayOf(-1f))
         } finally {
             DicTraverseSession.releaseDicTraverseSessionNative(session)
         }
-        return (0 until count[0].coerceIn(0, 18)).mapNotNull { index ->
+        val suggestions = (0 until count[0].coerceIn(0, 18)).mapNotNull { index ->
             val start = index * 48
             val length = (0 until 48).firstOrNull { output[start + it] == 0 } ?: 48
             if (length == 0) return@mapNotNull null
@@ -90,7 +94,23 @@ internal class EnglishEngine(context: Context) : QueryEngine {
             .thenBy { it.text })
             .distinctBy { it.id }
             .mapIndexed { rank, candidate -> candidate.copy(rank = rank) }
+        return (if (raw.isEmpty() && suggestions.isEmpty()) commonPredictions() else suggestions)
+            .filter { policy.permitsEnglish(it.kind) }
     }
+
+    // A non-English/unknown context cannot supply English bigrams. Keep offering real,
+    // dictionary-validated common words instead of pretending to translate that context.
+    private fun commonPredictions(): List<Candidate> =
+        listOf("the", "I", "you", "a", "and", "to", "is", "it", "in", "we", "this", "that",
+            "for", "of", "with", "on", "have", "can", "will", "hello", "thanks", "yes", "no")
+            .mapNotNull { word ->
+                val probability = BinaryDictionary.getNgramProbabilityNative(dictionary, emptyArray(),
+                    booleanArrayOf(), word.codePoints().toArray())
+                if (probability < 0) null else Candidate(word, "EN", kind = CandidateKind.PREDICTION,
+                    nativeScore = probability)
+            }
+            .sortedWith(compareByDescending<Candidate> { it.nativeScore }.thenBy { it.text })
+            .take(18).mapIndexed { rank, candidate -> candidate.copy(rank = rank) }
 
     private fun association(previous: String, word: String): Float {
         val codePoints = word.codePoints().toArray()

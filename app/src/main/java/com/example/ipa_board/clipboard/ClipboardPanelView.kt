@@ -13,7 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.recyclerview.widget.ItemTouchHelper
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -54,8 +54,9 @@ class ClipboardPanelView(
 
         // RecyclerView setup
         recyclerView.apply {
-            layoutManager = LinearLayoutManager(context)
+            layoutManager = GridLayoutManager(context, 2)
             adapter = this@ClipboardPanelView.adapter
+            setPadding(dp(6), 0, dp(6), 0)
         }
         addView(recyclerView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
 
@@ -102,6 +103,13 @@ class ClipboardPanelView(
                 viewHolder: RecyclerView.ViewHolder,
                 target: RecyclerView.ViewHolder
             ): Boolean = false
+
+            override fun getSwipeThreshold(viewHolder: RecyclerView.ViewHolder): Float {
+                // ItemTouchHelper uses the list width; require half of one card instead.
+                return if (recyclerView.width > 0 && viewHolder.itemView.width > 0) {
+                    0.5f * viewHolder.itemView.width / recyclerView.width
+                } else super.getSwipeThreshold(viewHolder)
+            }
 
             override fun getSwipeDirs(
                 recyclerView: RecyclerView,
@@ -213,9 +221,9 @@ class ClipboardPanelView(
                 setPadding(dp(16), dp(10), dp(16), dp(10))
                 isClickable = true
                 isFocusable = true
-                layoutParams = RecyclerView.LayoutParams(
-                    RecyclerView.LayoutParams.MATCH_PARENT,
-                    RecyclerView.LayoutParams.WRAP_CONTENT
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
                 )
 
                 background = GradientDrawable().apply {
@@ -234,8 +242,9 @@ class ClipboardPanelView(
                 textSize = 14f
                 maxLines = 3
                 ellipsize = TextUtils.TruncateAt.END
+                gravity = Gravity.TOP or Gravity.START
             }
-            textLayout.addView(contentTextView, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            textLayout.addView(contentTextView, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
 
             val metaLayout = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -247,6 +256,7 @@ class ClipboardPanelView(
                 text = "Pinned"
                 setTextColor(Color.parseColor("#FFD700"))
                 textSize = 11f
+                setSingleLine(true)
                 setPadding(0, 0, dp(12), 0)
             }
             metaLayout.addView(pinTextView)
@@ -254,18 +264,24 @@ class ClipboardPanelView(
             val timeTextView = TextView(context).apply {
                 setTextColor(Color.GRAY)
                 textSize = 11f
+                setSingleLine(true)
+                ellipsize = TextUtils.TruncateAt.END
             }
-            metaLayout.addView(timeTextView)
+            metaLayout.addView(timeTextView, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
 
-            container.addView(textLayout)
+            container.addView(textLayout, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
             container.addView(metaLayout)
 
+            // Same viewport for every item, with room for three preview lines and Unicode fallback fonts.
+            val cardHeight = container.paddingTop + container.paddingBottom +
+                contentTextView.lineHeight * 4 + timeTextView.lineHeight +
+                metaLayout.paddingTop + metaLayout.paddingBottom
             val wrapper = FrameLayout(context).apply {
                 layoutParams = RecyclerView.LayoutParams(
                     RecyclerView.LayoutParams.MATCH_PARENT,
-                    RecyclerView.LayoutParams.WRAP_CONTENT
+                    cardHeight
                 ).apply {
-                    setMargins(dp(8), dp(4), dp(8), dp(4))
+                    setMargins(dp(2), dp(4), dp(2), dp(4))
                 }
                 addView(container)
             }

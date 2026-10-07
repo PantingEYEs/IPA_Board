@@ -7,7 +7,8 @@ class CompositionController(
     private val connection: () -> InputConnection?,
     private val query: (Long, String) -> Unit,
     private val changed: () -> Unit,
-    private val contextAllowed: () -> Boolean = { true }
+    private val contextAllowed: () -> Boolean = { true },
+    private val transformOutput: (String) -> String = { it }
 ) {
     var raw = ""; private set
     var revision = 0L; private set
@@ -15,13 +16,14 @@ class CompositionController(
     var beforeCursor = ""; private set
     var afterCursor = ""; private set
     private var inEditor = false
+    private var composingText = ""
     private var active = true
 
     fun start() { active = true; reset() }
     fun input(text: String) {
         if (raw.length + text.length > 64) {
             if (!literal()) return
-            if (text.length > 64) { connection()?.commitText(text, 1); return }
+            if (text.length > 64) { connection()?.commitText(transformOutput(text), 1); return }
         }
         if (raw.isEmpty()) connection()?.finishComposingText()
         raw += text
@@ -36,9 +38,14 @@ class CompositionController(
     }
     private fun refreshComposition() {
         val ic = connection() ?: return reset()
-        inEditor = ic.setComposingText(raw, 1)
+        composingText = transformOutput(raw)
+        inEditor = ic.setComposingText(composingText, 1)
         revision++; candidates = emptyList()
         request(); changed()
+    }
+    /** Repaint pending output while keeping native engine queries in their original encoding. */
+    fun refreshOutput() {
+        if (active && raw.isNotEmpty()) refreshComposition()
     }
     fun acceptResults(id: Long, result: List<Candidate>) {
         if (active && id == revision) {
@@ -58,7 +65,10 @@ class CompositionController(
             if (!contextAllowed() || candidate.kind != CandidateKind.PREDICTION) return false
             val ic = connection() ?: return false
             if (!ic.getSelectedText(0).isNullOrEmpty() || readBeforeCursor() != beforeCursor) return false
-            return commit(EnglishContext.insertionPrefix(beforeCursor) + candidate.text + " ")
+            val english = candidate.language.split('/').contains("EN") &&
+                candidate.text.all { it.code < 128 }
+            val prefix = if (english) EnglishContext.insertionPrefix(beforeCursor) else ""
+            return commit(prefix + candidate.text + if (english) " " else "")
         }
         if (candidate.language == "∑") {
             val cleanResult = candidate.text.removeSuffix("…")
@@ -70,7 +80,8 @@ class CompositionController(
     fun replaceRaw(newRaw: String) {
         val ic = connection() ?: return reset()
         raw = newRaw
-        inEditor = ic.setComposingText(raw, 1)
+        composingText = transformOutput(raw)
+        inEditor = ic.setComposingText(composingText, 1)
         revision++
         candidates = emptyList()
         request()
@@ -85,7 +96,7 @@ class CompositionController(
     }
     private fun commit(text: String): Boolean {
         val ic = connection() ?: return false
-        if (!ic.commitText(text, 1)) return false
+        if (!ic.commitText(transformOutput(text), 1)) return false
         ic.finishComposingText(); reset(); return true
     }
     fun externalSelection(start: Int, end: Int, composingEnd: Int) {
@@ -110,8 +121,8 @@ class CompositionController(
         revision++; candidates = emptyList(); request(); changed()
     }
     private fun readBeforeCursor(): String {
-        val text = connection()?.getTextBeforeCursor(256 + raw.length, 0)?.toString().orEmpty()
-        return (if (inEditor && raw.isNotEmpty() && text.endsWith(raw)) text.dropLast(raw.length) else text).takeLast(256)
+        val text = connection()?.getTextBeforeCursor(256 + composingText.length, 0)?.toString().orEmpty()
+        return (if (inEditor && composingText.isNotEmpty() && text.endsWith(composingText)) text.dropLast(composingText.length) else text).takeLast(256)
     }
     private fun request() {
         val context = readContext()
@@ -123,7 +134,7 @@ class CompositionController(
         if (active && contextAllowed() && connection()?.getSelectedText(0).isNullOrEmpty())
             readBeforeCursor() to readAfterCursor() else "" to ""
     private fun reset() {
-        raw = ""; candidates = emptyList(); inEditor = false
+        raw = ""; candidates = emptyList(); inEditor = false; composingText = ""
         revision++; request(); changed()
     }
 }

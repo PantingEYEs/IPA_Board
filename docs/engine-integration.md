@@ -28,7 +28,7 @@ Rime 的原生候选可能只覆盖原串前缀。本版本在禁用用户学习
 
 英文查询最多接收游标前 256 字符，去掉当前组合文本后提取连续英文后缀（最多三个前词，遇到其他文字或句末标点停止）。en_US 词库头声明 `version=54`、`date=1414726260`、格式 202，实际预测使用词库 bigram 数据；这是静态词库预测，不是长上下文神经模型。词表来源见打包的 `English-dictionary-source.txt`，指向 OpenBoard v1.4.5 原始词表。原生每次最多返回 18 个候选，当前英文词最长 47 个字母；保留原生分数、来源顺序与候选类型，跨语言采用有界启发式排序。没有实际触点坐标，英文纠错使用完整编辑距离，不假设用户的自定义键盘是 QWERTY。
 
-英文词库只读打开，不创建或更新用户词典；JNI 中未使用的学习方法声明仅用于上游注册完整性。预测查询允许空编码，选择预测时重新检查上下文与选区，只向当前游标插入词语，已有文本不参与替换。密码和其他直接输入框的查询编码与上下文为空。Rime 部署目录已升级到 v3，取消 easy_en session 与初始化方案，旧部署文件不会重新启用 easy_en。
+英文词库只读打开，不创建或更新用户词典；JNI 中未使用的学习方法声明仅用于上游注册完整性。预测查询允许空编码，选择预测时重新检查上下文与选区，只向当前游标插入词语，已有文本不参与替换。密码和其他直接输入框的查询编码与上下文为空。Rime 部署目录已升级到 v4，部署朙月拼音与注音两个隔离 session；继续排除 easy_en，旧部署文件不会重新启用它。
 
 LatinIME JNI 从优先队列按低分到高分输出数组；数组下标不能直接作为来源排名。适配器先按原生分数降序排序，同分时按码点长度与文字排序，去重后重新生成 rank，再交给跨语言混排。这与上游前端的排序方向一致，同时适用于补全、纠错和预测。
 
@@ -38,12 +38,12 @@ LatinIME JNI 从优先队列按低分到高分输出数组；数组下标不能�
 
 ```sh
 python3 tools/verify_engine_assets.py
-./gradlew testDebugUnitTest assembleDebug lintDebug assembleDebugAndroidTest
-# Gradle 的设备测试依赖可用时：
-./gradlew connectedDebugAndroidTest
-# 也可直接安装两个 APK 后执行：
-adb shell am instrument -w com.example.ipa_board.test/androidx.test.runner.AndroidJUnitRunner
+./gradlew testDebugUnitTest assembleDebug lintDebug assembleDebugAndroidTest --offline --console=plain
+python3 tools/regression.py run --suite engines --serial DEVICE_SERIAL --no-build
+python3 tools/regression.py run --suite full --serial DEVICE_SERIAL --no-build
 ```
+
+设备运行由脚本先备份软件状态/配置，测试结束后恢复校验并删除备份。不得直接安装/调用 instrumentation。详见 [测试流程](testing.md)；下列旧日期记录为历史结果，不代替当前完整回归。
 
 - 首次 Rime 部署需编译词典，界面保持可用并显示加载状态；后续复用部署结果。
 - 候选当前为有界列表：Rime 检查前 40 个原生候选，Mozc 最多 60 个，LatinIME 最多 18 个。展开显示这一批结果，尚无滚动到末尾继续向引擎分页。
@@ -70,3 +70,43 @@ adb shell am instrument -w com.example.ipa_board.test/androidx.test.runner.Andro
 - 实际 IME 窗口验证：同一键盘页连续输入 `你好hello汉语漢語日本語`；切页保留 `nihao` 编码；候选展开屏蔽底层键盘；返回先关面板再隐藏键盘；剪贴板面板正常打开/关闭。测试使用空白测试编辑器，并在 finally 恢复原输入法与布局。
 - 仅测试自身视图的折叠/展开 PNG 已检查，顶部与按键区保持独立、窗口高度一致。
 - 原生资源 SHA-256 检查通过。未验证 x86_64 运行、16KB 页设备、跨应用大规模兼容性、概率校准或性能 P95 指标。
+
+## 混合预输入与中日联想（2026-10-03）
+
+候选服务先保留普通字母编码的原生查询，再对数字、标点、Emoji 或中日文字之间的字母片段分别查询。每个引擎最多查询最后 8 个片段，候选组合最多 60 项；未查询或未识别的片段原样保留，简繁体分别组合。连续字母内部的跨语言边界仍不自动识别。
+
+英文继续使用上下文 bigram；没有英文上下文时尝试词库句首候选，无结果时提供经词库概率验证的常用词。中文利用已打包的 Rime essay 词频表，按最长中文末尾词组提供后缀，未匹配时回退到高频词。这是词组续写，而非通用下一词语言模型。词库按需加载一次，以语料文本和行偏移构建紧凑索引。
+
+日文使用固定 Mozc 协议的 `Request.zero_query_suggestion`，在独立隐身会话中逆转换上下文并内部提交，读取下一词候选；该提交不会写入编辑框，不保存历史。协议行为对应 [固定源码中的 Session](https://github.com/google/mozc/blob/ddd9730b068387631e3b4d212314ef0ed93befe0/src/session/session.cc)。中日文预测只插入候选，不追加英文空格；空上下文仍不显示预测，旧版本和旧游标候选仍会被拒绝。
+
+验证：79 项单元测试及 16 项定向设备测试通过（组合输入 8 项、原生候选 8 项）。设备示例包括 `nihao123, → 你好123,`、`中文123hel! → 中文123hello!`、`nihongo123! → 日本語123!`、`天气123， → 预报/預報` 和 `ありがとう, → ございます`。81 个固定引擎资源哈希校验通过。
+
+## 引擎开关及版本查询（2026-10-03）
+
+Engine Management 保存 13 个功能开关，除语义排序仍默认关闭外，其他现有功能默认开启。主进程读取配置，将不可变策略随每次 Messenger 请求传入独立的引擎进程，避免跨进程 SharedPreferences 缓存问题。设置改变时立即清除旧候选并重新查询；另以请求序号拒绝相同组合版本下的旧策略回复。某语言的转换、补全/纠错及预测都关闭后，不再绑定或查询该语言服务；已加载的进程级原生库允许缓存，不尝试不安全的 dlclose。
+
+关闭英文补全保留纠错，反之亦然；过滤发生在片段候选组合之前。关闭简化不生成简体候选，但中文词组查询仍可进行内部简转繁上下文归一化。关闭评分采用稳定来源顺序和去重；关闭分段不查询含数字、标点的组合，仍保留原样提交路径。所有候选关闭不会丢弃预输入。计算和本地短信解析均有独立门控，拼音纠错是 Rime 方案规则的一部分，当前未实现独立切换。
+
+版本查询仅在展开类目时读取固定官方 GitHub Releases/Hugging Face 模型元数据。每个条目显示当前版本及最新来源版本/模型修订，不提供资产下载或引擎替换路径。内置/尚未集成条目明确显示无独立发行版或未集成。连接、读取均设 5 秒超时，响应限制 1 MiB，并在后台解析；成功缓存 5 分钟，失败缓存 30 秒。关闭页面时丢弃回调，限时 HTTPS 请求自行在后台结束，避免中断套接字拖慢主线程重建。
+
+
+### 拼音纠错的归属与选型
+
+`luna_pinyin.schema.yaml` 的 `speller/algebra` 引用 `pinyin:/spelling_correction` 和 `pinyin:/key_correction`；规则定义在 `pinyin.yaml`，与简拼一起参与 Rime 的拼音解码。它们不是独立库、服务或模型。规则可通过修改方案并重新部署调整，“固化在 Rime 中”不表示 Rime 无法配置它们。当前应用未实现规则切换及重新部署。
+
+Engine Management 删除重复的拼音纠错条目及 `Pinyin Correction Engines` 类目，在中文 Rime 条目中说明内置能力；保留现有纠错规则与输入行为。
+
+开源方案中，[ibus-libpinyin](https://github.com/libpinyin/ibus-libpinyin/wiki/ibus-libpinyin-features) 提供常见拼音错拼、模糊音和分段支持；[libime](https://github.com/fcitx/libime/blob/master/src/libime/pinyin/pinyincorrectionprofile.h) 提供独立的纠错配置模块，但属于完整拼音引擎的一部分，并不是开箱即用、可替换任意引擎的纠错服务。[KNPTC](https://arxiv.org/abs/1805.00741) 等研究探索神经拼音纠错，但论文不能直接等同于成熟的 Android 离线可接入引擎。
+
+本项目现阶段优先补充 Rime 规则并以真实错拼样例评估召回率、正确拼音的误纠率及延迟。另造纠错引擎需要处理音节歧义、汉字词频和上下文，还会增加与中英混合输入的意图冲突；没有明确测试收益时不值得承担重复维护与运行成本。若以后需要跨中文引擎共享纠错、适配触摸邻键，或现有规则无法覆盖大量漏字/多字/换位错误，可先评估可选的纠错候选生成模块，再决定是否恢复独立类目。
+
+
+### 注音转换
+
+中文进程按原始输入字符选择 `luna_pinyin` 或 `bopomofo` session。`ZhuyinInput` 把 Unicode 基础注音符号和五声映射到官方大千式按键；输入框和预输入区仍显示原始符号。轻声可使用前置点，编码时转成 Rime 的音节后置键。不是先将注音转换成无调拼音：注音方案使用带声调的 Terra Pinyin 字典，保留声调筛选，允许省略声调及声母简写。
+
+方案与拼写规则来自 [rime-bopomofo revision 6085c9a38a4a728047862b33d67eee18aa86f3b9](https://github.com/rime/rime-bopomofo/tree/6085c9a38a4a728047862b33d67eee18aa86f3b9)，字典来自 [rime-terra-pinyin revision 723e51bc266cf9464530c1ddedb856aa18e3da34](https://github.com/rime/rime-terra-pinyin/tree/723e51bc266cf9464530c1ddedb856aa18e3da34)。官方文件不改写，通过 `bopomofo.custom.yaml` 禁用学习与补全，并使用共享 OpenCC 设置控制简体候选。查询 session 开启 Rime 的 `_auto_commit`，使完整选词产生内部 commit；应用仍只在用户点击候选后上屏，部分选择不提交。查询后检查原生保留的编码与原始映射一致，防止忽略非法前置声调后误替换整个输入。许可证与 CC-CEDICT 原始归属随资源保存。
+
+混输分段由各引擎声明输入语法，中文引擎可处理拼音和注音片段，英文/日文引擎只查询各自支持的字母片段。数字、汉字、表情及标点仍原样保留。关闭混输分段后，完整注音串仍可转换；含其他文字的组合只允许原样提交。中文转换关闭同时停用拼音与注音候选，不影响单独开启的中文联想。布局初始化保留用户既有配置，已有注音页面会直接获得汉字候选。
+
+验证（2026-10-03）：87 项单元测试、9 项注音设备测试、11 项原有多语引擎设备测试通过；Android 15 ARM64 真机确认带调/无调转换、轻声、简繁、混输保留、独立开关、删除重输与汉字提交，非法前置声调不被静默删除。Debug 构建与 lint 检查通过（0 error），87 项引擎资源 SHA-256 检查通过。

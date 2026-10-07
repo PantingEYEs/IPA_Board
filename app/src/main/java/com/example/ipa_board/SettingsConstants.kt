@@ -25,6 +25,11 @@ object SettingsConstants {
     const val MIN_KEYBOARD_FONT_SIZE = 10
     const val MAX_KEYBOARD_FONT_SIZE = 40
 
+    const val KEY_LONG_PRESS_TIMEOUT_MS = "long_press_timeout_ms"
+    const val MIN_LONG_PRESS_TIMEOUT_MS = 200
+    const val MAX_LONG_PRESS_TIMEOUT_MS = 2000
+    const val LONG_PRESS_TIMEOUT_STEP_MS = 50
+
     const val KEY_SHIFT_SHORTCUTS = "shift_shortcuts_json"
     const val KEY_CTRL_SHORTCUTS = "ctrl_shortcuts_json"
     const val KEY_SEMANTIC_CONTEXT_ENABLED = "semantic_context_enabled"

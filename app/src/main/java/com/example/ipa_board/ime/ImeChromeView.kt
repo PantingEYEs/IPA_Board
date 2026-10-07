@@ -16,6 +16,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     private val body = FrameLayout(context)
     private val overlay = LinearLayout(context).apply { orientation = VERTICAL }
     private val candidateRow = LinearLayout(context)
+    private var candidateMinimumWidth = dp(48)
     private val expand = button("⋯", "Expand") { showPanel(if (panel == Panel.KEYBOARD) Panel.CANDIDATES else Panel.KEYBOARD) }
     val statusContainer = FrameLayout(context)
     val status = TextView(context)
@@ -36,6 +37,8 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     var onLiteral: () -> Unit = {}
     var onPanel: (Panel) -> Unit = {}
     var onCalculatorToggle: () -> Unit = {}
+    var onWidthSwapToggle: (() -> Unit)? = null
+    private val widthSwapBtn = toolbarButton("◩", "全角 / 半角转换") { onWidthSwapToggle?.invoke() }
     private val calcBtn = toolbarButton("∑", "Calculator") { onCalculatorToggle() }
 
     init {
@@ -45,7 +48,6 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
             addView(toolbarButton("⧉", "Clipboard") { toggle(Panel.CLIPBOARD) })
             addView(toolbarButton("⊞", "Keyboard Overview") { toggle(Panel.PAGES) })
             addView(toolbarButton("顔", "顔文字") { toggle(Panel.KAOMOJI) })
-            addView(calcBtn)
             status.setTextColor(Color.LTGRAY)
             status.textSize = 10f
             status.gravity = Gravity.CENTER_VERTICAL
@@ -54,6 +56,8 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
                 setMargins(dp(6), 0, dp(6), 0)
             })
             addView(statusContainer, LayoutParams(0, dp(28), 1f))
+            addView(widthSwapBtn)
+            addView(calcBtn)
         }
         addView(toolbar, LayoutParams(-1, dp(28)))
         val strip = LinearLayout(context)
@@ -66,6 +70,8 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         overlay.isClickable = true
         body.addView(overlay, FrameLayout.LayoutParams(-1, -1))
         addView(body, LayoutParams(-1, dp(210)))
+        setWidthSwapEnabled(false)
+        setCalculatorEnabled(false)
         showPanel(Panel.KEYBOARD)
     }
 
@@ -73,8 +79,32 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         body.layoutParams = LayoutParams(-1, px)
     }
 
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        super.onLayout(changed, left, top, right, bottom)
+        // Use the actual key geometry so custom layouts, page switches and rotation all follow.
+        val keyWidth = (0 until keyboardHost.childCount).flatMap { rowIndex ->
+            val row = keyboardHost.getChildAt(rowIndex) as? ViewGroup
+            if (row == null) emptyList() else (0 until row.childCount).map { row.getChildAt(it).width }
+        }.filter { it > 0 }.minOrNull() ?: dp(48)
+        val minimum = maxOf(dp(48), keyWidth)
+        if (minimum == candidateMinimumWidth) return
+        candidateMinimumWidth = minimum
+        for (index in 0 until candidateRow.childCount) {
+            (candidateRow.getChildAt(index) as? Button)?.apply {
+                minWidth = minimum
+                minimumWidth = minimum
+            }
+        }
+    }
+
     fun setCalculatorEnabled(enabled: Boolean) {
         calcBtn.alpha = if (enabled) 1.0f else 0.5f
+    }
+
+    fun setWidthSwapEnabled(enabled: Boolean) {
+        widthSwapBtn.isSelected = enabled
+        widthSwapBtn.stateDescription = if (enabled) "开启" else "关闭"
+        widthSwapBtn.alpha = if (enabled) 1.0f else 0.5f
     }
 
 
@@ -211,8 +241,8 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     private fun candidateButton(candidate: Candidate): View {
         val generation = revision
         return button("${candidate.text} ", candidate.text) { onCandidate(candidate, generation) }.apply {
-            minWidth = dp(24)
-            minimumWidth = dp(24)
+            minWidth = candidateMinimumWidth
+            minimumWidth = candidateMinimumWidth
             setPadding(paddingLeft / 2, paddingTop, paddingRight / 2, paddingBottom)
         }
     }

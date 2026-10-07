@@ -56,18 +56,6 @@
           },
           {
             "widthWeight": 1,
-            "text": "",
-            "action": "text",
-            "textBehavior": "literal",
-            "longPressText": "",
-            "longPressAction": "text",
-            "swipeLeftText": "",
-            "swipeLeftAction": "text",
-            "swipeRightText": "",
-            "swipeRightAction": "text"
-          },
-          {
-            "widthWeight": 1,
             "text": "٤",
             "action": "text",
             "textBehavior": "literal",
@@ -131,8 +119,32 @@
             "text": "٩",
             "action": "text",
             "textBehavior": "literal",
-            "longPressText": "",
+            "longPressText": "﷼",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "﷼",
+                "action": "text"
+              }
+            ],
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "",
+            "action": "backspace",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "repeat_backspace",
+            "longPressItems": [
+              {
+                "text": "",
+                "action": "repeat_backspace"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -172,8 +184,14 @@
             "text": "ث",
             "action": "text",
             "textBehavior": "literal",
-            "longPressText": "",
+            "longPressText": "پ",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "پ",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -184,8 +202,14 @@
             "text": "ق",
             "action": "text",
             "textBehavior": "literal",
-            "longPressText": "",
+            "longPressText": "ڨ",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "ڨ",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -256,8 +280,14 @@
             "text": "ح",
             "action": "text",
             "textBehavior": "literal",
-            "longPressText": "",
+            "longPressText": "چ",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "چ",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -309,8 +339,14 @@
             "text": "ي",
             "action": "text",
             "textBehavior": "literal",
-            "longPressText": "",
+            "longPressText": "ى",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "ى",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -345,8 +381,22 @@
             "text": "ا",
             "action": "text",
             "textBehavior": "literal",
-            "longPressText": "",
+            "longPressText": "أ, إ, آ",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "أ",
+                "action": "text"
+              },
+              {
+                "text": "إ",
+                "action": "text"
+              },
+              {
+                "text": "آ",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -422,8 +472,14 @@
             "text": "؛ ",
             "action": "text",
             "textBehavior": "literal",
-            "longPressText": "",
+            "longPressText": ":",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": ":",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -446,8 +502,14 @@
             "text": "ط",
             "action": "text",
             "textBehavior": "literal",
-            "longPressText": "",
+            "longPressText": "گ",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "گ",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -458,8 +520,14 @@
             "text": "ذ",
             "action": "text",
             "textBehavior": "literal",
-            "longPressText": "",
+            "longPressText": "ئ",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "ئ",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -470,8 +538,14 @@
             "text": "د",
             "action": "text",
             "textBehavior": "literal",
-            "longPressText": "",
+            "longPressText": "ء",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "ء",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -482,8 +556,14 @@
             "text": "ز",
             "action": "text",
             "textBehavior": "literal",
-            "longPressText": "",
+            "longPressText": "إ",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "إ",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -494,8 +574,14 @@
             "text": "ر",
             "action": "text",
             "textBehavior": "literal",
-            "longPressText": "",
+            "longPressText": "آ",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "آ",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -506,8 +592,14 @@
             "text": "و",
             "action": "text",
             "textBehavior": "literal",
-            "longPressText": "",
+            "longPressText": "ؤ",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "ؤ",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -518,8 +610,54 @@
             "text": "َ",
             "action": "text",
             "textBehavior": "literal",
-            "longPressText": "",
+            "longPressText": "ً, ِ, ُ, َ, ٌ, ٍ, ّ, ْ, ٰ, ٓ, ـ",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "ً",
+                "action": "text"
+              },
+              {
+                "text": "ِ",
+                "action": "text"
+              },
+              {
+                "text": "ُ",
+                "action": "text"
+              },
+              {
+                "text": "َ",
+                "action": "text"
+              },
+              {
+                "text": "ٌ",
+                "action": "text"
+              },
+              {
+                "text": "ٍ",
+                "action": "text"
+              },
+              {
+                "text": "ّ",
+                "action": "text"
+              },
+              {
+                "text": "ْ",
+                "action": "text"
+              },
+              {
+                "text": "ٰ",
+                "action": "text"
+              },
+              {
+                "text": "ٓ",
+                "action": "text"
+              },
+              {
+                "text": "ـ",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -540,7 +678,7 @@
           {
             "widthWeight": 1,
             "text": "",
-            "action": "backspace",
+            "action": "text",
             "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
@@ -607,8 +745,26 @@
             "text": ".",
             "action": "text",
             "textBehavior": "literal",
-            "longPressText": "",
+            "longPressText": "؟, !, ، , ؛",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "؟",
+                "action": "text"
+              },
+              {
+                "text": "!",
+                "action": "text"
+              },
+              {
+                "text": "،",
+                "action": "text"
+              },
+              {
+                "text": "؛",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -682,10 +838,5 @@
         ]
       }
     ]
-  },
-  "appearance": {
-    "backgroundColor": "#000000",
-    "symbolColor": "#4D4D4D",
-    "heightDp": 150
   }
 }

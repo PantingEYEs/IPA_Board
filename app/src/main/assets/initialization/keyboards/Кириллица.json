@@ -56,18 +56,6 @@
           },
           {
             "widthWeight": 1,
-            "text": "π",
-            "action": "text",
-            "textBehavior": "literal",
-            "longPressText": "",
-            "longPressAction": "text",
-            "swipeLeftText": "",
-            "swipeLeftAction": "text",
-            "swipeRightText": "",
-            "swipeRightAction": "text"
-          },
-          {
-            "widthWeight": 1,
             "text": "4",
             "action": "text",
             "textBehavior": "literal",
@@ -133,6 +121,24 @@
             "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
+            "swipeLeftText": "",
+            "swipeLeftAction": "text",
+            "swipeRightText": "",
+            "swipeRightAction": "text"
+          },
+          {
+            "widthWeight": 1,
+            "text": "",
+            "action": "backspace",
+            "textBehavior": "literal",
+            "longPressText": "",
+            "longPressAction": "repeat_backspace",
+            "longPressItems": [
+              {
+                "text": "",
+                "action": "repeat_backspace"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -506,8 +512,14 @@
             "text": "ь",
             "action": "text",
             "textBehavior": "literal",
-            "longPressText": "",
+            "longPressText": "ъ",
             "longPressAction": "text",
+            "longPressItems": [
+              {
+                "text": "ъ",
+                "action": "text"
+              }
+            ],
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
@@ -540,7 +552,7 @@
           {
             "widthWeight": 1,
             "text": "",
-            "action": "backspace",
+            "action": "text",
             "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
@@ -682,10 +694,5 @@
         ]
       }
     ]
-  },
-  "appearance": {
-    "backgroundColor": "#000000",
-    "symbolColor": "#4D4D4D",
-    "heightDp": 150
   }
 }

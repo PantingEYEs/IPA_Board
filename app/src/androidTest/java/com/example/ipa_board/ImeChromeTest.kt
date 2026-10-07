@@ -1,9 +1,11 @@
 package com.example.ipa_board
 
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.Button
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.ipa_board.ime.*
 import org.junit.Assert.*
@@ -61,6 +63,73 @@ class ImeChromeTest {
             assertNull(customView.parent)
             assertSame(chrome.status.parent, chrome.statusContainer)
         }
+    }
+
+    @Test fun widthSwapToolbarToggleExposesStateAndPreservesTheOpenPanel() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val context = InstrumentationRegistry.getInstrumentation().targetContext
+            val chrome = ImeChromeView(context)
+            val toolbar = chrome.getChildAt(0) as ViewGroup
+            val buttons = (0 until toolbar.childCount).mapNotNull { toolbar.getChildAt(it) as? Button }
+            assertEquals(listOf("⧉", "⊞", "顔", "◩", "∑"), buttons.map { it.text.toString() })
+            assertSame(chrome.statusContainer, toolbar.getChildAt(3))
+            assertSame(buttons[2], toolbar.getChildAt(2))
+            assertSame(buttons[3], toolbar.getChildAt(4))
+            val widthSwap = buttons[3]
+            val calculator = buttons[4]
+            val calculatorBackgroundColor = (calculator.background as ColorDrawable).color
+            val widthSwapBackground = widthSwap.background
+            fun assertMatchesCalculator(enabled: Boolean) {
+                chrome.setCalculatorEnabled(enabled)
+                assertEquals(calculator.alpha, widthSwap.alpha, 0f)
+                assertEquals(calculatorBackgroundColor, (widthSwap.background as ColorDrawable).color)
+                assertSame(widthSwapBackground, widthSwap.background)
+            }
+            assertEquals("全角 / 半角转换", widthSwap.contentDescription)
+            assertFalse(widthSwap.isSelected)
+            assertEquals("关闭", widthSwap.stateDescription)
+            assertMatchesCalculator(false)
+            var enabled = false
+            var toggles = 0
+            chrome.onWidthSwapToggle = {
+                enabled = !enabled
+                toggles++
+                chrome.setWidthSwapEnabled(enabled)
+            }
+            chrome.showPanel(ImeChromeView.Panel.KAOMOJI)
+            val customStatus = EditText(context)
+            chrome.setStatusCustomView(customStatus)
+            widthSwap.performClick()
+            assertEquals(1, toggles)
+            assertTrue(widthSwap.isSelected)
+            assertEquals("开启", widthSwap.stateDescription)
+            assertMatchesCalculator(true)
+            assertEquals(ImeChromeView.Panel.KAOMOJI, chrome.panel)
+            assertSame(chrome.statusContainer, customStatus.parent)
+            widthSwap.performClick()
+            assertEquals(2, toggles)
+            assertFalse(widthSwap.isSelected)
+            assertEquals("关闭", widthSwap.stateDescription)
+            assertMatchesCalculator(false)
+            assertEquals(ImeChromeView.Panel.KAOMOJI, chrome.panel)
+            assertSame(chrome.statusContainer, customStatus.parent)
+        }
+    }
+
+    @Test fun widthSwapBindingsRoundTripAndRenderOnTapAndHoldKeys() {
+        val layout = SettingsConstants.DEFAULT_LAYOUT.withKeyMapping(
+            0, 0, "", KeyAction.WIDTH_SWAP,
+            longPressAction = KeyAction.WIDTH_SWAP,
+            longPressItems = listOf(LongPressItem(action = KeyAction.WIDTH_SWAP))
+        )
+        val restored = KeyboardLayout.fromJson(layout.toJson())
+        assertEquals(layout, restored)
+        val slot = restored.rows[0].slots[0]
+        assertEquals(KeyAction.WIDTH_SWAP, slot.action)
+        assertEquals(KeyAction.WIDTH_SWAP, slot.longPressAction)
+        assertEquals(KeyAction.WIDTH_SWAP, slot.effectiveLongPressItems.single().action)
+        assertEquals("◩", slot.displayText())
+        assertEquals("◩", slot.effectiveLongPressItems.single().previewText())
     }
 
     @Test fun oldLayoutsRemainLiteralAndRoutingRoundTrips() {

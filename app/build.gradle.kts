@@ -18,7 +18,7 @@ android {
         versionName = "0.0.2-dev"
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.example.ipa_board.RegressionTestRunner"
     }
 
     packaging { jniLibs { useLegacyPackaging = true } }
@@ -33,6 +33,20 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+}
+
+// Device runs must snapshot and restore the original installation and configuration.
+// The protected host runner builds these APKs, then installs/instruments them itself.
+tasks.configureEach {
+    val deviceTask = javaClass.name.contains("AndroidTestTask") ||
+        javaClass.name.contains("ManagedDeviceInstrumentationTestTask") ||
+        javaClass.name.contains("ManagedDeviceInstrumentationTestSetupTask")
+    if (deviceTask || ((name.startsWith("connected") || name.startsWith("managedDevice")) &&
+        name.endsWith("AndroidTest"))) {
+        doFirst {
+            throw GradleException("Device regression requires backup and rollback. Use python3 tools/regression.py run --suite full --serial <device> instead.")
+        }
     }
 }
 

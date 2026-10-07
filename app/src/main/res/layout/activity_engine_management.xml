@@ -47,39 +47,6 @@
             android:orientation="vertical"
             android:paddingBottom="16dp">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <androidx.appcompat.widget.SwitchCompat
-                    android:id="@+id/switch_semantic_context"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:minHeight="48dp"
-                    android:text="@string/engine_semantic_context"
-                    android:textColor="@color/management_text"
-                    android:textSize="@dimen/management_section_size" />
-
-                <TextView
-                    android:id="@+id/semantic_context_notice"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/engine_semantic_latency_notice"
-                    android:textColor="@color/management_text_secondary"
-                    android:textSize="@dimen/management_caption_size" />
-
-                <TextView
-                    android:id="@+id/semantic_context_status"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/engine_semantic_pending"
-                    android:textColor="@color/management_text_secondary"
-                    android:textSize="@dimen/management_caption_size" />
-            </LinearLayout>
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

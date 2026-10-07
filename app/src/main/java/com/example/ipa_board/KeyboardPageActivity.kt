@@ -32,6 +32,8 @@ class KeyboardPageActivity : Activity() {
     private lateinit var previewContainer: ViewGroup
     private lateinit var tvHeightValue: TextView
     private lateinit var sbHeight: SeekBar
+    private lateinit var sbLongPressTime: SeekBar
+    private lateinit var tvLongPressTimeValue: TextView
     private lateinit var spLayouts: Spinner
     private lateinit var spGroups: Spinner
     private lateinit var allPages: CheckBox
@@ -128,6 +130,8 @@ class KeyboardPageActivity : Activity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
+        setupLongPressControls()
+
         // 3. Layout Setup
         refreshGroupUi()
 
@@ -161,11 +165,40 @@ class KeyboardPageActivity : Activity() {
         super.onPostCreate(savedInstanceState)
         // Group values are authoritative after Android restores the view hierarchy.
         refreshGroupUi()
+        refreshLongPressControls()
     }
 
     override fun onResume() {
         super.onResume()
         if (::spGroups.isInitialized) refreshGroupUi()
+        if (::sbLongPressTime.isInitialized) refreshLongPressControls()
+    }
+
+    private fun setupLongPressControls() {
+        sbLongPressTime = findViewById(R.id.sb_long_press_time)
+        tvLongPressTimeValue = findViewById(R.id.tv_long_press_time_value)
+        sbLongPressTime.isSaveEnabled = false
+        sbLongPressTime.max = (SettingsConstants.MAX_LONG_PRESS_TIMEOUT_MS - SettingsConstants.MIN_LONG_PRESS_TIMEOUT_MS) /
+            SettingsConstants.LONG_PRESS_TIMEOUT_STEP_MS
+        sbLongPressTime.keyProgressIncrement = 1
+        refreshLongPressControls()
+        sbLongPressTime.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (!fromUser) return
+                val timeout = SettingsConstants.MIN_LONG_PRESS_TIMEOUT_MS + progress * SettingsConstants.LONG_PRESS_TIMEOUT_STEP_MS
+                KeyboardGestureSettings.setLongPressTimeoutMs(this@KeyboardPageActivity, timeout)
+                tvLongPressTimeValue.text = getString(R.string.keyboard_long_press_time_value, timeout)
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+        })
+    }
+
+    private fun refreshLongPressControls() {
+        val timeout = KeyboardGestureSettings.longPressTimeoutMs(this)
+        sbLongPressTime.progress = Math.round((timeout - SettingsConstants.MIN_LONG_PRESS_TIMEOUT_MS).toFloat() /
+            SettingsConstants.LONG_PRESS_TIMEOUT_STEP_MS)
+        tvLongPressTimeValue.text = getString(R.string.keyboard_long_press_time_value, timeout)
     }
 
     private fun updateAppearance(transform: (GroupAppearance) -> GroupAppearance) {
@@ -466,7 +499,7 @@ class KeyboardPageActivity : Activity() {
         val longPressTextLabel = editorView.findViewById<TextView>(R.id.tv_long_press_text_label)
         val longPressInput = editorView.findViewById<EditText>(R.id.et_long_press_text)
         val currentLpText = if (slot.longPressItems.isNotEmpty()) {
-            slot.longPressItems.joinToString(", ") { if (it.action != KeyAction.TEXT) it.action.keyLabel else it.text }
+            LongPressTextCodec.format(slot.longPressItems.map { if (it.action != KeyAction.TEXT) it.action.keyLabel else it.text })
         } else {
             slot.longPressText
         }
@@ -563,11 +596,7 @@ class KeyboardPageActivity : Activity() {
                     val lpAction = actions[longPressTypes.selectedItemPosition]
                     val lpText = if (lpAction == KeyAction.TEXT) longPressInput.text.toString() else ""
                     val items = if (lpAction == KeyAction.TEXT && lpText.isNotEmpty()) {
-                        if (lpText.contains(",")) {
-                            lpText.split(",").map { it.trim() }.filter { it.isNotEmpty() }.map { LongPressItem(text = it) }
-                        } else {
-                            listOf(LongPressItem(text = lpText))
-                        }
+                        LongPressTextCodec.parse(lpText).map { LongPressItem(text = it) }
                     } else if (lpAction != KeyAction.TEXT) {
                         listOf(LongPressItem(action = lpAction))
                     } else {
@@ -685,7 +714,7 @@ class KeyboardPageActivity : Activity() {
                 return
             }
             LayoutFileManager.saveLayout(this, filename, blank)
-            clearedLayout = null
+            clearedLayout = ClearedLayout(filename, original)
             refreshPreview()
             Toast.makeText(this, R.string.layout_cleared, Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {

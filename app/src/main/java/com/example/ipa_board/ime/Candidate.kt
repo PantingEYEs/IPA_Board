@@ -10,6 +10,13 @@ data class Candidate(val text: String, val language: String, val rank: Int = 0,
 }
 
 object CandidateRanker {
+    /** Stable source order when scoring is disabled; deduplication remains mandatory. */
+    fun unranked(candidates: List<Candidate>): List<Candidate> = candidates
+        .filter { it.text.isNotBlank() && it.text.length <= 1000 && it.rank >= 0 }
+        .groupBy { it.id }.map { (_, variants) ->
+            variants.first().copy(language = variants.map { it.language }.distinct().joinToString("/"))
+        }.take(180)
+
     // Kept for source compatibility; surrounding scripts themselves never earn a language bonus.
     @Suppress("UNUSED_PARAMETER")
     fun merge(raw: String, candidates: List<Candidate>, beforeCursor: String = ""): List<Candidate> = candidates

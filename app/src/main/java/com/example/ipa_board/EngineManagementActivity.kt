@@ -10,16 +10,23 @@ import android.view.WindowInsets
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.example.ipa_board.ime.EngineCatalog
-import com.example.ipa_board.ime.EngineCategory
-import com.example.ipa_board.ime.EngineInfo
-import com.example.ipa_board.ime.EngineStatus
-import com.example.ipa_board.ime.ContextRankingSettings
 import androidx.appcompat.widget.SwitchCompat
+import com.example.ipa_board.ime.*
+import android.content.SharedPreferences
+import android.content.res.ColorStateList
 
-/** Engine inventory and an explicit opt-in to semantic context ranking. */
+/** Independent engine controls and read-only upstream version checks on expansion. */
 class EngineManagementActivity : Activity() {
     private val expandedCategoryIds = mutableSetOf<String>()
+    private val switches = mutableMapOf<EngineFeature, MutableList<SwitchCompat>>()
+    private val latestViews = mutableMapOf<EngineInfo, TextView>()
+    private val versions = EngineVersionLookup()
+    private val preferences by lazy { EngineSettings.preferences(this) }
+    private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        switches.filterKeys { it.key == key }.forEach { (feature, views) ->
+            views.forEach { it.isChecked = EngineSettings.enabled(preferences, feature) }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,10 +36,7 @@ class EngineManagementActivity : Activity() {
             expandedCategoryIds.addAll(it)
         }
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener { finish() }
-        findViewById<SwitchCompat>(R.id.switch_semantic_context).apply {
-            isChecked = ContextRankingSettings.isEnabled(this@EngineManagementActivity)
-            setOnCheckedChangeListener { _, checked -> ContextRankingSettings.setEnabled(this@EngineManagementActivity, checked) }
-        }
+        preferences.registerOnSharedPreferenceChangeListener(preferenceListener)
 
         val root = findViewById<View>(R.id.engine_management_root)
         root.setOnApplyWindowInsetsListener { view, windowInsets ->
@@ -48,6 +52,35 @@ class EngineManagementActivity : Activity() {
         expandedCategoryIds.retainAll(categories.map { it.id }.toSet())
         val list = findViewById<LinearLayout>(R.id.engine_category_list)
         categories.forEach { category -> addCategory(list, category) }
+    }
+
+    override fun onDestroy() {
+        versions.close()
+        preferences.unregisterOnSharedPreferenceChangeListener(preferenceListener)
+        super.onDestroy()
+    }
+
+    private fun configureSwitch(toggle: SwitchCompat, feature: EngineFeature) {
+        toggle.isChecked = EngineSettings.enabled(preferences, feature)
+        toggle.thumbTintList = ColorStateList.valueOf(Color.WHITE)
+        toggle.trackTintList = ColorStateList.valueOf(Color.DKGRAY)
+        switches.getOrPut(feature) { mutableListOf() }.add(toggle)
+        toggle.setOnCheckedChangeListener { _, checked ->
+            if (EngineSettings.enabled(preferences, feature) != checked)
+                EngineSettings.setEnabled(this, feature, checked)
+        }
+    }
+
+    private fun checkVersions(category: EngineCategory) {
+        category.engines.forEach { engine ->
+            val target = latestViews[engine] ?: return@forEach
+            if (engine.versionSources.isNotEmpty()) {
+                target.text = getString(R.string.engine_latest_checking)
+                versions.query(engine.versionSources) { result ->
+                    target.text = getString(R.string.engine_latest_version, result.joinToString(" · "))
+                }
+            }
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -113,8 +146,10 @@ class EngineManagementActivity : Activity() {
         heading.setOnClickListener {
             if (!expandedCategoryIds.add(category.id)) expandedCategoryIds.remove(category.id)
             updateExpandedState()
+            if (category.id in expandedCategoryIds) checkVersions(category)
         }
         updateExpandedState()
+        if (category.id in expandedCategoryIds) checkVersions(category)
 
         list.addView(heading, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         list.addView(engines, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
@@ -128,37 +163,56 @@ class EngineManagementActivity : Activity() {
             EngineStatus.REPLACEMENT_PLANNED -> R.string.engine_status_replacement_planned
             EngineStatus.PLANNED -> R.string.engine_status_planned
         })
-        val versionText = if (engine.status == EngineStatus.PLANNED) {
-            getString(R.string.engine_planned_version)
-        } else getString(R.string.engine_version, engine.version)
+        val versionText = if (engine.status == EngineStatus.PLANNED) getString(R.string.engine_planned_version)
+            else getString(R.string.engine_version, engine.version)
         val entry = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(32), dp(8), dp(16), dp(8))
             isClickable = false
             isFocusable = false
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-            contentDescription = "${engine.name}, $statusText, $versionText" +
-                if (engine.detail.isNotEmpty()) ", ${engine.detail}" else ""
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            contentDescription = "${engine.name}, $statusText, $versionText"
         }
-        entry.addView(TextView(this).apply {
+        val heading = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+        heading.addView(TextView(this).apply {
             text = "${engine.name} · $statusText"
             textSize = 16f
             setTextColor(Color.WHITE)
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
-        entry.addView(TextView(this).apply {
-            text = versionText
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        engine.feature?.let { feature ->
+            val toggle = SwitchCompat(this).apply {
+                tag = "engine-switch:${feature.key}"
+                contentDescription = engine.name
+                minimumHeight = dp(48)
+            }
+            configureSwitch(toggle, feature)
+            heading.addView(toggle, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        }
+        entry.addView(heading)
+        val versionRow = LinearLayout(this)
+        fun caption(value: String) = TextView(this).apply {
+            text = value
             textSize = 14f
             setTextColor(Color.rgb(187, 187, 187))
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
-        if (engine.detail.isNotEmpty()) {
-            entry.addView(TextView(this).apply {
-                text = engine.detail
-                textSize = 14f
-                setTextColor(Color.rgb(187, 187, 187))
-                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        }
+        versionRow.addView(caption(versionText).apply { setPadding(0, 0, dp(8), 0) },
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        val latest = caption(getString(when {
+            engine.status == EngineStatus.PLANNED -> R.string.engine_latest_not_integrated
+            engine.versionSources.isEmpty() -> R.string.engine_latest_bundled
+            else -> R.string.engine_latest_on_expand
+        })).apply { tag = "engine-latest:${engine.name}" }
+        latestViews[engine] = latest
+        versionRow.addView(latest, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        entry.addView(versionRow)
+        listOf(engine.detail, engine.offBehavior, engine.fixedReason).filter { it.isNotEmpty() }.forEach {
+            entry.addView(caption(it), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        }
+        if (engine.feature == EngineFeature.SEMANTIC) {
+            entry.addView(caption(getString(R.string.engine_semantic_latency_notice)).apply {
+                tag = "semantic-context-notice"
+            })
+            entry.addView(caption(getString(R.string.engine_semantic_pending)))
         }
         container.addView(entry, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
     }

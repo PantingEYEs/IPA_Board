@@ -334,5 +334,55 @@
             android:contentDescription="Keyboard Font Size"
             android:layout_marginBottom="24dp" />
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/management_control"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/keyboard_gestures"
+            android:textColor="@color/management_text"
+            android:textSize="@dimen/management_section_size"
+            android:layout_marginBottom="12dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:labelFor="@id/sb_long_press_time"
+                android:text="@string/keyboard_long_press_time"
+                android:textColor="@color/management_text_secondary"
+                android:textSize="@dimen/management_caption_size" />
+            <TextView
+                android:id="@+id/tv_long_press_time_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/management_text"
+                android:textSize="@dimen/management_caption_size" />
+        </LinearLayout>
+
+        <SeekBar
+            android:id="@+id/sb_long_press_time"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/keyboard_long_press_time"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/keyboard_long_press_time_help"
+            android:textColor="@color/management_text_secondary"
+            android:textSize="@dimen/management_caption_size"
+            android:layout_marginBottom="24dp" />
+
     </LinearLayout>
 </ScrollView>

@@ -39,7 +39,7 @@ class LayoutFileManagerTest {
         assertEquals(listOf(duplicate, filename).sorted(), LayoutFileManager.listLayoutFiles(context))
     }
 
-    @Test fun blankLayoutHasDefaultGeometryAndOnlyUnassignedTextKeys() {
+    @Test fun blankLayoutHasDefaultGeometryAndKeepsTheSpaceBar() {
         val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, "previous.json").commit()
         val filename = LayoutFileManager.createBlankLayout(context, "  New IPA 😀  ")
@@ -47,7 +47,12 @@ class LayoutFileManagerTest {
 
         assertEquals("New IPA 😀.json", filename)
         assertEquals(SettingsConstants.DEFAULT_LAYOUT.copy(name = "New IPA 😀"), reloaded)
-        assertTrue(reloaded.rows.take(4).flatMap { it.slots }.all { it.text.isEmpty() && it.action == KeyAction.TEXT })
+        val keys = reloaded.rows.flatMap { it.slots }
+        val space = keys.single { it.text == " " }
+        assertEquals(TextBehavior.AUTO, space.textBehavior)
+        assertEquals(KeyAction.PREV_PAGE, space.swipeLeftAction)
+        assertEquals(KeyAction.NEXT_PAGE, space.swipeRightAction)
+        assertTrue(keys.all { (it.text.isEmpty() || it === space) && it.action == KeyAction.TEXT })
         assertEquals(filename, prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, null))
         assertEquals(1L, prefs.getLong(SettingsConstants.KEY_LAYOUT_REVISION, 0))
     }
