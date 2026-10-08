@@ -19,13 +19,40 @@ class KaomojiRepositoryTest {
     fun setUp() {
         val storageDir = tempFolder.newFolder("kaomoji_test")
         repository = KaomojiRepository(storageDirOverride = storageDir)
+        // Explicit fixtures for editing/search/import tests, independent of app initialization.
+        repository.addKaomoji("(^_^)v", listOf("Happy", "Red"))
+        repository.addKaomoji("(*^▽^*)", listOf("Happy", "Yellow"))
+        repository.addKaomoji("(;﹏;)", listOf("Sad", "Blue"))
+        repository.addKaomoji("(>_<)", listOf("Sad", "Purple"))
+        repository.addKaomoji("(╯°□°)╯︵ ┻━┻", listOf("Angry", "Orange"))
     }
 
     @Test
-    fun testDefaultKaomojisLoadedOnFirstRun() {
-        val list = repository.getAllKaomojis()
-        assertTrue(list.isNotEmpty())
-        assertTrue(list.any { it.text == "(^_^)v" })
+    fun testFirstRunStartsEmptyAndPreservesSavedConfiguration() {
+        val storageDir = tempFolder.newFolder("fresh")
+        val fresh = KaomojiRepository(storageDirOverride = storageDir)
+        assertTrue(fresh.getAllKaomojis().isEmpty())
+        fresh.addKaomoji("Custom", listOf("Local"))
+        val reloaded = KaomojiRepository(storageDirOverride = storageDir)
+        assertEquals(listOf("Custom"), reloaded.getAllKaomojis().map { it.text })
+        assertEquals(listOf("Local"), reloaded.getAllKaomojis().single().tags)
+    }
+
+    @Test
+    fun testVariableConfigurationCountUsesNormalUnionMerge() {
+        val directory = tempFolder.newFolder("variable-configurations")
+        val fresh = KaomojiRepository(storageDirOverride = directory)
+        assertTrue(fresh.getAllKaomojis().isEmpty())
+        val configurations = listOf(
+            """{"version":1,"items":[]}""",
+            """{"version":1,"items":[{"text":"A","tags":["first"],"usageCount":2}]}""",
+            """{"version":1,"items":[{"text":"A","tags":["second"],"usageCount":7},{"text":"B","tags":[],"usageCount":0}]}"""
+        )
+        configurations.forEach { content -> content.byteInputStream().use { fresh.importJson(it) } }
+        val reloaded = KaomojiRepository(storageDirOverride = directory).getAllKaomojis()
+        assertEquals(listOf("A", "B"), reloaded.map { it.text })
+        assertEquals(listOf("first", "second"), reloaded.first().tags)
+        assertEquals(7, reloaded.first().usageCount)
     }
 
     @Test
@@ -145,6 +172,7 @@ class KaomojiRepositoryTest {
         // Create a new repository in another folder
         val newStorageDir = tempFolder.newFolder("kaomoji_test_2")
         val newRepo = KaomojiRepository(storageDirOverride = newStorageDir)
+        newRepo.addKaomoji("(^_^)v", listOf("Happy", "Red"))
 
         // Modify tags for (^_^)v in newRepo to have a unique local tag
         val existingItem = newRepo.getAllKaomojis().first { it.text == "(^_^)v" }

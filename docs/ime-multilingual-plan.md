@@ -1,6 +1,6 @@
 # IPA Board：候选词栏、多功能栏与多语言混输方案
 
-日期：2026-09-27。更新：2026-09-28。状态：已实现逐词混输首版；当前交付范围与限制见 `engine-integration.md`。
+日期：2026-09-27。更新：2026-10-02。状态：已实现逐词混输及 LatinIME 英文补全、纠错、词库上下文预测，以及默认关闭的 E5 前后文语义重排；当前交付范围与限制见 `engine-integration.md`。
 
 补充约束：候选词栏和多功能栏属于 IME 固定外壳，位于用户键盘布局上方，不进入应用内布局预览、编辑、导入导出和外观配置。
 
@@ -8,7 +8,7 @@
 
 在现有 Kotlin / Android 原生 View IME 上增加可展开候选词栏、剪贴板面板、键盘页总览，以及简体中文、繁体中文、英文、日文的离线混合输入。
 
-建议采用 **Rime + Mozc + 应用侧统一组合输入与排序**。同一串拉丁字母同时参与中文拼音、英文单词、日文罗马字解释；不同语言的有效候选进入同一个列表，用户不必切换语言或键盘页。
+采用 **Rime + Mozc + LatinIME + 应用侧统一组合输入与排序**。同一串拉丁字母同时参与中文拼音、英文单词、日文罗马字解释；不同语言的有效候选进入同一个列表，用户不必切换语言或键盘页。
 
 本方案默认中文使用全拼，日文使用罗马字；以后可增加注音、双拼、假名键位。简体、繁体是同一中文候选通道的不同书写形式，不作为两个独立语言概率重复计权。
 
@@ -58,7 +58,7 @@
 - 折叠时横向滚动，右侧展开按钮固定；每个候选可带轻量的“简 / 繁 / EN / 日”标记，标签不参与上屏。
 - 展开时用可回收列表展示候选，支持变宽词块换行、长词换行及分页；收起按钮始终可见。
 - 点击候选后提交对应文本；首版完整候选提交后收起面板；将来部分候选提交后保留剩余组合输入。
-- 空输入显示空闲提示；没有候选时保留原样提交入口。组合文本可在候选栏内查看，不能只依赖宿主编辑器展示。
+- 空输入可显示英文下一词预测；没有候选时显示空闲提示。组合词候选替换当前组合文本，预测只向游标插入文字。仍保留原样提交入口。
 
 **面板状态**
 
@@ -77,17 +77,17 @@
 | --- | --- | --- |
 | 中文 | librime + 全拼方案，原型可使用朙月拼音 | 拼音解析、词语/句子候选、用户词学习 |
 | 简繁变体 | Rime 原生繁体候选 + OpenCC | 为中文候选生成简体形式，同时保留繁体；不转换英文、日文或整段已提交文本 |
-| 英文 | 独立 Rime session + easy_en 方案/词库 | 单词候选及前缀补全；原串另作保底候选；首版不承诺成熟的英文上下文纠错 |
+| 英文 | LatinIME 核心，固定 HeliBoard 4.1 来源与 en_US v54 词库 | 单词补全、编辑距离纠错、词库 bigram 下一词预测；个人学习后续实现 |
 | 日文 | Mozc 核心 + JNI 适配 | 罗马字到假名、日文转换、日文候选 |
 | 融合 | Kotlin `CandidateRanker` | 跨通道排序、去重、偏好与交互稳定性 |
 
-这是两个原生引擎、三个逻辑候选通道，避免为简繁各启动完整引擎。Rime 的中文和英文使用独立 session，以便区分来源与分别排名。首版禁用 easy_en 的连续分词增强，由应用统一决定空格与提交行为。
+这是三个原生引擎、三个逻辑候选通道，避免为简繁各启动完整引擎。Rime 只处理中文，英文的 easy_en session 和资源已移除；由应用统一决定空格与提交行为。
 
 Rime 明确支持繁体及通过 OpenCC 转换简体；OpenCC 是转换库，不能替代输入法引擎。繁体首版使用一种明确的标准形式，台湾、香港地区词汇可后续作为偏好配置，不能把机械简繁转换等同于地区词汇预测。[Rime](https://github.com/rime/librime)、[OpenCC](https://github.com/BYVoid/OpenCC)、[朙月拼音](https://github.com/rime/rime-luna-pinyin)。
 
 Mozc 项目面向多平台，包括 Android，但不能据此假设当前主线可直接作为 Android SDK 接入；必须先完成固定版本的 NDK 构建、数据打包、会话调用验证。也不等同于获得 Google 日语输入法的全部词库与产品能力。[Mozc](https://github.com/google/mozc)。
 
-依赖应锁定 commit、补丁与词库版本。librime 主体为 BSD-3-Clause，OpenCC 为 Apache-2.0；Mozc 需保留其许可及第三方声明。easy_en 和 rime-essay 仓库标示 LGPL-3.0，词库、方案、插件与引擎许可须分项记录，不能统一按 librime 许可处理。构建验证阶段输出依赖清单、来源和实际分发材料，不直接搬入其他完整输入法前端。[easy_en](https://github.com/BlindingDark/rime-easy-en)、[rime-essay](https://github.com/rime/rime-essay)、[Mozc LICENSE](https://github.com/google/mozc/blob/master/LICENSE)。
+依赖锁定 commit、补丁与词库版本。实际打包的 Trime 与 HeliBoard 发布库包含 GPL 声明，不能只按其基础库许可证理解；Mozc、词库和第三方声明分别保存。具体来源、许可材料和限制见 `engine-integration.md` 与资源锁文件。
 
 ## 5. 统一输入管线
 
@@ -97,7 +97,7 @@ KeySlot
     → 直输 / 快捷键 → 现有 KeyboardInputController
     → 组合字符 → CompositionController
                     ├─ Rime 中文 session → 简繁候选生成
-                    ├─ Rime 英文 session
+                    ├─ LatinIME 英文（附游标前短上下文，允许空编码预测）
                     └─ Mozc session
                   → CandidateRanker → CandidateStore → 候选 UI
 候选点击 → CompositionController → InputConnection → 引擎同步/学习

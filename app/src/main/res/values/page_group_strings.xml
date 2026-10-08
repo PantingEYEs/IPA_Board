@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="page_group">Page Group</string>
+    <string name="page_group_name">Group name</string>
+    <string name="new_page_group">New Group</string>
+    <string name="rename_page_group">Rename Group</string>
+    <string name="delete_page_group">Delete Group</string>
+    <string name="reorder_page_groups">Reorder Groups</string>
+    <string name="delete_group_message">Delete %1$s? Keyboard page files will remain available in Show all keyboard pages.</string>
+    <string name="page_group_members">Choose Group Pages</string>
+    <string name="show_all_keyboard_pages">Show all keyboard pages</string>
+    <string name="group_page_count">%1$d pages in this group · pages can belong to multiple groups</string>
+    <string name="group_appearance">Appearance · %1$s</string>
+    <string name="empty_group_hint">No page selected. Empty groups use a temporary default template in the IME.</string>
+    <string name="ungrouped_preview">%1$s · outside this group; preview uses this group’s appearance</string>
+    <string name="empty_group_ime">No pages · temporary default template</string>
+    <string name="show_keyboard_grid">Show Keyboard Grid</string>
+</resources>

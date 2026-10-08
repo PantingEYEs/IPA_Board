@@ -17,7 +17,7 @@ enum class ShiftState {
 }
 
 /** Executes mappings without keeping modifier state in the receiving application. */
-class KeyboardInputController {
+class KeyboardInputController(private val transformOutput: (String) -> String = { it }) {
     var shiftState: ShiftState = ShiftState.OFF
         private set
     val shiftEnabled: Boolean
@@ -91,7 +91,7 @@ class KeyboardInputController {
 
         val handled = when (slot.action) {
             KeyAction.TEXT -> slot.text.isEmpty() || connection.commitText(
-                if (shiftEnabled) slot.text.uppercase(Locale.ROOT) else slot.text, 1
+                transformOutput(if (shiftEnabled) slot.text.uppercase(Locale.ROOT) else slot.text), 1
             )
             KeyAction.BACKSPACE, KeyAction.REPEAT_BACKSPACE -> backspace(connection)
             KeyAction.LEFT -> sendKey(connection, KeyEvent.KEYCODE_DPAD_LEFT, metaState)
@@ -106,7 +106,7 @@ class KeyboardInputController {
             KeyAction.COPY -> connection.performContextMenuAction(R.id.copy)
             KeyAction.CUT -> connection.performContextMenuAction(R.id.cut)
             KeyAction.PASTE -> connection.performContextMenuAction(R.id.paste)
-            KeyAction.EMOJI, KeyAction.KAOMOJI, KeyAction.CALCULATOR, KeyAction.CANDIDATES, KeyAction.CLIPBOARD, KeyAction.PAGES, KeyAction.PREV_PAGE, KeyAction.NEXT_PAGE -> false // Panel actions are handled by IpaBoardService.
+            KeyAction.EMOJI, KeyAction.KAOMOJI, KeyAction.WIDTH_SWAP, KeyAction.CALCULATOR, KeyAction.CANDIDATES, KeyAction.CLIPBOARD, KeyAction.PAGES, KeyAction.PREV_PAGE, KeyAction.NEXT_PAGE -> false // IME actions are handled by IpaBoardService.
             else -> true
         }
         if (handled && (slot.action == KeyAction.TEXT) && slot.text.isNotEmpty()) {

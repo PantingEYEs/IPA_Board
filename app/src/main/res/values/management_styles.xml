@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="management_background">#000000</color>
+    <color name="management_surface">#1E1E1E</color>
+    <color name="management_control">#333333</color>
+    <color name="management_text">#FFFFFF</color>
+    <color name="management_text_secondary">#BBBBBB</color>
+    <dimen name="management_title_size">20sp</dimen>
+    <dimen name="management_section_size">18sp</dimen>
+    <dimen name="management_body_size">16sp</dimen>
+    <dimen name="management_caption_size">14sp</dimen>
+    <style name="ManagementButton" parent="android:Widget.Material.Button">
+        <item name="android:textSize">@dimen/management_caption_size</item>
+        <item name="android:textColor">@color/management_button_text</item>
+        <item name="android:backgroundTint">@color/management_control</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+</resources>

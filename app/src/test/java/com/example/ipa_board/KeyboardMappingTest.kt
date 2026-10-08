@@ -47,7 +47,7 @@ class KeyboardMappingTest {
         assertEquals("⋯", candidatesSlot.displayText())
         assertEquals("⧉", clipboardSlot.displayText())
         assertEquals("⊞", pagesSlot.displayText())
-        assertEquals("☺", emojiSlot.displayText())
+        assertEquals("☺\uFE0E", emojiSlot.displayText())
         assertEquals("顔", kaomojiSlot.displayText())
         assertEquals("∑", calculatorSlot.displayText())
 

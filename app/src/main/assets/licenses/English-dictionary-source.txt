@@ -1,0 +1,7 @@
+English (US), main:en_us, dictionary version 54, date 1414726260.
+Vendored unchanged from HeliBoard 4.1 assets/dicts/main_en-US.dict.
+HeliBoard source revision: 9f5bb635c2e8609dcd95dc7506c0c58fba82a52c.
+HeliBoard licenses: GPL-3.0 / Apache-2.0; see bundled license texts.
+Dictionary source declaration: https://codeberg.org/Helium314/aosp-dictionaries/src/branch/main/wordlists/main_en_US.source
+Original word list: https://github.com/openboard-team/openboard/blob/v1.4.5/dictionaries/en_wordlist.combined.gz
+No icon, gesture library, contacts or personal dictionaries are included.

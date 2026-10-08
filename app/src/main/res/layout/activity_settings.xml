@@ -2,181 +2,267 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:id="@+id/settings_scroll"
     android:fillViewport="true"
-    android:background="#121212">
+    android:background="#000000">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="20dp"
+        android:paddingBottom="20dp"
         android:orientation="vertical">
 
-        <!-- Title Header -->
+        <View
+            android:id="@+id/settings_top_space"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:importantForAccessibility="no" />
+
         <TextView
+            android:id="@+id/settings_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="bottom|start"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
             android:text="IPA Board Settings"
-            android:textSize="24sp"
+            android:textSize="40sp"
             android:textColor="#FFFFFF"
             android:textStyle="bold"
-            android:layout_marginBottom="6dp" />
+            android:layout_marginBottom="56dp" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Select a category below to configure keyboard options"
-            android:textColor="#888888"
-            android:textSize="14sp"
-            android:layout_marginBottom="28dp" />
-
-        <!-- Card Entry 1: Keyboard Page -->
         <LinearLayout
             android:id="@+id/btn_entry_keyboard_page"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="#1E1E24"
-            android:padding="16dp"
+            android:minHeight="72dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="#000000"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?android:attr/selectableItemBackground"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="8dp">
 
             <TextView
-                android:layout_width="match_parent"
+                android:id="@+id/icon_entry_keyboard_page"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="20dp"
+                android:background="@drawable/settings_entry_icon"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:textColor="#FFFFFF"
+                android:textSize="26sp"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Keyboard Page"
+                android:layout_weight="1"
+                android:text="Keyboard"
                 android:textColor="#FFFFFF"
                 android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="4dp" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Layout files, live preview, color tuning &amp; height"
-                android:textColor="#AAAAAA"
-                android:textSize="13sp" />
+                android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Card Entry 2: Shortcut -->
         <LinearLayout
             android:id="@+id/btn_entry_shortcut"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="#1E1E24"
-            android:padding="16dp"
+            android:minHeight="72dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="#000000"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?android:attr/selectableItemBackground"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="8dp">
 
             <TextView
-                android:layout_width="match_parent"
+                android:id="@+id/icon_entry_shortcut"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="20dp"
+                android:background="@drawable/settings_entry_icon"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:textColor="#FFFFFF"
+                android:textSize="26sp"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="Shortcut"
                 android:textColor="#FFFFFF"
                 android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="4dp" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Configure Shift &amp; Ctrl key shortcuts"
-                android:textColor="#AAAAAA"
-                android:textSize="13sp" />
+                android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Card Entry 3: Emoji -->
         <LinearLayout
             android:id="@+id/btn_entry_emoji"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="#1E1E24"
-            android:padding="16dp"
+            android:minHeight="72dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="#000000"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?android:attr/selectableItemBackground"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="8dp">
 
             <TextView
-                android:layout_width="match_parent"
+                android:id="@+id/icon_entry_emoji"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="20dp"
+                android:background="@drawable/settings_entry_icon"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:textColor="#FFFFFF"
+                android:textSize="26sp"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="Emoji"
                 android:textColor="#FFFFFF"
                 android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="4dp" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="One-click Emoji catalog updates"
-                android:textColor="#AAAAAA"
-                android:textSize="13sp" />
+                android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Card Entry 4: 顔文字 -->
         <LinearLayout
             android:id="@+id/btn_entry_kaomoji"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="#1E1E24"
-            android:padding="16dp"
+            android:minHeight="72dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="#000000"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?android:attr/selectableItemBackground"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="8dp">
 
             <TextView
-                android:layout_width="match_parent"
+                android:id="@+id/icon_entry_kaomoji"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="20dp"
+                android:background="@drawable/settings_entry_icon"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:textColor="#FFFFFF"
+                android:textSize="26sp"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="顔文字"
                 android:textColor="#FFFFFF"
                 android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="4dp" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Manage 顔文字 list, categories &amp; tags"
-                android:textColor="#AAAAAA"
-                android:textSize="13sp" />
+                android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Card Entry 5: Clipboard -->
         <LinearLayout
             android:id="@+id/btn_entry_clipboard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="#1E1E24"
-            android:padding="16dp"
+            android:minHeight="72dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="#000000"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?android:attr/selectableItemBackground"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="8dp">
 
             <TextView
-                android:layout_width="match_parent"
+                android:id="@+id/icon_entry_clipboard"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="20dp"
+                android:background="@drawable/settings_entry_icon"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:textColor="#FFFFFF"
+                android:textSize="26sp"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="Clipboard"
                 android:textColor="#FFFFFF"
                 android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="4dp" />
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/btn_entry_engine"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="72dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="#000000"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground"
+            android:layout_marginBottom="8dp">
 
             <TextView
-                android:layout_width="match_parent"
+                android:id="@+id/icon_entry_engine"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="20dp"
+                android:background="@drawable/settings_entry_icon"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:textColor="#FFFFFF"
+                android:textSize="26sp"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Quick paste, retention time &amp; usage limit"
-                android:textColor="#AAAAAA"
-                android:textSize="13sp" />
+                android:layout_weight="1"
+                android:text="Engine"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
     </LinearLayout>

@@ -1,0 +1,23 @@
+Rime Bopomofo (注音) scheme and Zhuyin spelling algebra
+Author: 佛振 <chen.sst@gmail.com> and Rime contributors
+Source: https://github.com/rime/rime-bopomofo
+Revision: 6085c9a38a4a728047862b33d67eee18aa86f3b9
+Files: bopomofo.schema.yaml (version 3.1), zhuyin.yaml
+License: GNU Lesser General Public License version 3 (rime-bopomofo-LGPL-3.0.txt).
+The accompanying GNU GPL version 3 is bundled as trime-GPL-3.0.txt.
+
+Terra Pinyin tone-annotated Chinese dictionary
+Author: 佛振 <chen.sst@gmail.com> and Rime contributors
+Source: https://github.com/rime/rime-terra-pinyin
+Revision: 723e51bc266cf9464530c1ddedb856aa18e3da34
+File: terra_pinyin.dict.yaml (version 2026.07.17)
+Project license: GNU Lesser General Public License version 3 (rime-bopomofo-LGPL-3.0.txt).
+The dictionary also references CC-CEDICT, published by MDBG:
+https://cc-cedict.org/wiki/
+CC-CEDICT license: Creative Commons Attribution-ShareAlike 3.0 Unported.
+https://creativecommons.org/licenses/by-sa/3.0/
+The original dictionary header and attribution are preserved in terra_pinyin.dict.yaml.
+
+IPA Board modifications: no changes to the upstream files listed above.
+bopomofo.custom.yaml disables user learning and automatic completion and selects traditional output.
+Candidate conversion to simplified Chinese is performed by IPA Board's existing OpenCC integration.

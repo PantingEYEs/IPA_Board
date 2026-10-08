@@ -23,23 +23,16 @@ import com.example.ipa_board.clipboard.*
 import com.example.ipa_board.calculator.*
 import com.example.ipa_board.SettingsConstants.PREFS_NAME
 import com.example.ipa_board.SettingsConstants.KEY_LAYOUT_REVISION
-import com.example.ipa_board.SettingsConstants.KEY_BG_COLOR_HEX
 import com.example.ipa_board.SettingsConstants.KEY_ACTIVE_LAYOUT_FILE
-import com.example.ipa_board.SettingsConstants.KEY_KEYBOARD_HEIGHT
-import com.example.ipa_board.SettingsConstants.KEY_SYMBOL_COLOR_HEX
 import com.example.ipa_board.SettingsConstants.KEY_SHIFT_SHORTCUTS
 import com.example.ipa_board.SettingsConstants.KEY_CTRL_SHORTCUTS
-import com.example.ipa_board.SettingsConstants.DEFAULT_KEYBOARD_HEIGHT
-import com.example.ipa_board.SettingsConstants.DEFAULT_BG_COLOR_HEX
-import com.example.ipa_board.SettingsConstants.DEFAULT_SYMBOL_COLOR_HEX
-import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT_FILENAME
-import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT
 import java.util.Locale
 
 class IpaBoardService : InputMethodService() {
     private var chrome: ImeChromeView? = null
     private lateinit var prefs: SharedPreferences
-    private val inputController = KeyboardInputController()
+    private var widthSwapEnabled = false
+    private val inputController = KeyboardInputController(::transformOutput)
     private lateinit var engines: EngineCoordinator
     private lateinit var composition: CompositionController
     private val emojiRepository by lazy { EmojiCatalogRepository.getInstance(this) }
@@ -49,14 +42,14 @@ class IpaBoardService : InputMethodService() {
     private var emojiRequest = 0L
     private var emojiClosed = false
     private var engineStatus = "Loading Dictionary"
-    private var isCalcEngineEnabled = true
+    private var isCalcEngineEnabled = false
     private var directOnly = false
     private var consumedPanelBack = false
     private var panelBackRegistered = false
     private val panelBackCallback = android.window.OnBackInvokedCallback { chrome?.showPanel(ImeChromeView.Panel.KEYBOARD) }
     private val clipboard by lazy { getSystemService(ClipboardManager::class.java) }
     private val clipboardRepository by lazy { ClipboardRepository(this) }
-    private var lastSyncedText: String? = null
+    private var clipboardPanel: ClipboardPanelView? = null
 
     private data class QuickPasteState(
         val text: String,
@@ -75,10 +68,10 @@ class IpaBoardService : InputMethodService() {
         val clip = try { clipboard.primaryClip } catch (_: SecurityException) { null }
         val text = if (clip != null && clip.itemCount > 0) clip.getItemAt(0).text?.toString() else null
         val sensitive = clip?.description?.extras?.getBoolean("android.content.extra.IS_SENSITIVE", false) == true
-        if (!text.isNullOrEmpty()) {
-            lastSyncedText = text
-            clipboardRepository.addClip(text, sensitive)
-            onNewClipCopied(text)
+        if (clip != null && !text.isNullOrEmpty()) {
+            if (clipboardRepository.syncSystemClip(text, clip.description.timestamp, sensitive) != null) {
+                onNewClipCopied(text)
+            }
         }
     }
 
@@ -107,16 +100,25 @@ class IpaBoardService : InputMethodService() {
         updateQuickPasteStatus()
     }
 
+    private fun clearQuickPasteStatus() {
+        val view = chrome ?: return
+        if (view.panel != ImeChromeView.Panel.KEYBOARD && view.panel != ImeChromeView.Panel.CLIPBOARD) return
+        view.onStatusClick = null
+        when (view.panel) {
+            ImeChromeView.Panel.KEYBOARD -> view.status.text = if (directOnly) "Direct Input" else engineStatus
+            ImeChromeView.Panel.CLIPBOARD -> view.status.text = "Clipboard"
+            else -> Unit
+        }
+    }
+
     private fun updateQuickPasteStatus() {
         val view = chrome ?: return
         val state = quickPasteState
         val enabled = prefs.getBoolean(SettingsConstants.KEY_QUICK_PASTE_ENABLED, true)
 
         if (!enabled || state == null) {
-            if (view.panel == ImeChromeView.Panel.KEYBOARD) {
-                view.onStatusClick = null
-                view.status.text = if (directOnly) "Direct Input" else engineStatus
-            }
+            if (!enabled) quickPasteState = null
+            clearQuickPasteStatus()
             return
         }
 
@@ -142,18 +144,18 @@ class IpaBoardService : InputMethodService() {
 
         if (!isValid) {
             quickPasteState = null
-            if (view.panel == ImeChromeView.Panel.KEYBOARD) {
-                view.onStatusClick = null
-                view.status.text = if (directOnly) "Direct Input" else engineStatus
-            }
+            clearQuickPasteStatus()
             return
         }
 
         val snippet = state.text.replace('\n', ' ').trim().let {
             if (it.length > 18) it.take(18) + "…" else it
         }
-        view.status.text = "📋 粘贴: $snippet"
-        view.onStatusClick = {
+        view.status.text = snippet
+        view.onStatusClick = quickPasteClick@{
+            // Revalidate in case this callback outlives a panel transition or expiry.
+            updateQuickPasteStatus()
+            if (quickPasteState !== state || state.remainingUses <= 0) return@quickPasteClick
             if (composition.literal()) {
                 currentInputConnection?.commitText(state.text, 1)
             }
@@ -166,13 +168,18 @@ class IpaBoardService : InputMethodService() {
     }
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key in setOf(KEY_LAYOUT_REVISION, KEY_BG_COLOR_HEX, KEY_ACTIVE_LAYOUT_FILE, KEY_KEYBOARD_HEIGHT, KEY_SYMBOL_COLOR_HEX, KEY_SHIFT_SHORTCUTS, KEY_CTRL_SHORTCUTS,
+        if (key == EngineFeature.CALCULATOR.key) {
+            chrome?.setCalculatorEnabled(calculatorEnabled())
+            composition.updateCandidates(composition.candidates.filter { it.language != "∑" })
+            refreshCandidates()
+        }
+        if (key in setOf(SettingsConstants.KEY_PAGE_GROUP_STATE, KEY_LAYOUT_REVISION, KEY_ACTIVE_LAYOUT_FILE, KEY_SHIFT_SHORTCUTS, KEY_CTRL_SHORTCUTS,
             SettingsConstants.KEY_QUICK_PASTE_ENABLED, SettingsConstants.KEY_QUICK_PASTE_RETENTION_TYPE, SettingsConstants.KEY_QUICK_PASTE_RETENTION_SECONDS,
             SettingsConstants.KEY_QUICK_PASTE_USAGE_TYPE, SettingsConstants.KEY_QUICK_PASTE_USAGE_TIMES)) {
             if (key == KEY_ACTIVE_LAYOUT_FILE || key == KEY_LAYOUT_REVISION) inputController.reset()
             applySettings()
             updateQuickPasteStatus()
-            if (key == KEY_LAYOUT_REVISION && chrome?.panel == ImeChromeView.Panel.PAGES) showPages()
+            if (key in setOf(KEY_LAYOUT_REVISION, KEY_ACTIVE_LAYOUT_FILE, SettingsConstants.KEY_PAGE_GROUP_STATE) && chrome?.panel == ImeChromeView.Panel.PAGES) showPages()
         }
     }
     override fun onCreate() {
@@ -180,7 +187,10 @@ class IpaBoardService : InputMethodService() {
         LayoutFileManager.initDefaultLayout(this)
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
-        composition = CompositionController({ currentInputConnection }, { id, raw -> engines.query(id, raw) }, { refreshCandidates() })
+        composition = CompositionController({ currentInputConnection }, { id, raw ->
+            engines.query(id, if (directOnly) "" else raw, if (directOnly) "" else composition.beforeCursor,
+                if (directOnly) "" else composition.afterCursor)
+        }, { refreshCandidates() }, contextAllowed = { !directOnly }, transformOutput = ::transformOutput)
         engines = EngineCoordinator(this) { id, candidates, state ->
             engineStatus = state
             composition.acceptResults(id, candidates)
@@ -188,17 +198,21 @@ class IpaBoardService : InputMethodService() {
         }
     }
     override fun onCreateInputView(): View {
+        clipboardPanel = null
         return ImeChromeView(this).also { view ->
             chrome = view
             view.onCalculatorToggle = {
-                isCalcEngineEnabled = !isCalcEngineEnabled
-                chrome?.setCalculatorEnabled(isCalcEngineEnabled)
-                refreshCandidates()
+                toggleCalculator()
             }
+            view.onWidthSwapToggle = { toggleWidthSwap() }
             view.onCandidate = { candidate, generation -> if (composition.select(candidate, generation)) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
             view.onLiteral = { if (composition.literal()) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
             view.onPanel = { panel ->
                 updatePanelBack(panel != ImeChromeView.Panel.KEYBOARD)
+                if (panel != ImeChromeView.Panel.CLIPBOARD) {
+                    clipboardPanel?.commitPendingDelete()
+                    clipboardPanel = null
+                }
                 when (panel) {
                     ImeChromeView.Panel.CLIPBOARD -> {
                         showClipboard()
@@ -215,8 +229,26 @@ class IpaBoardService : InputMethodService() {
             engines.start()
         }
     }
+    private fun calculatorEnabled() = isCalcEngineEnabled && EngineSettings.enabled(this, EngineFeature.CALCULATOR)
+    private fun transformOutput(text: String): String = if (widthSwapEnabled) CharacterWidthConverter.swap(text) else text
+
+    private fun toggleWidthSwap() {
+        widthSwapEnabled = !widthSwapEnabled
+        chrome?.setWidthSwapEnabled(widthSwapEnabled)
+        composition.refreshOutput()
+    }
+    private fun toggleCalculator() {
+        if (!EngineSettings.enabled(this, EngineFeature.CALCULATOR)) {
+            Toast.makeText(this, "Calculator is disabled in Engine Management", Toast.LENGTH_SHORT).show()
+            return
+        }
+        isCalcEngineEnabled = !isCalcEngineEnabled
+        chrome?.setCalculatorEnabled(calculatorEnabled())
+        composition.updateCandidates(composition.candidates.filter { it.language != "∑" })
+        refreshCandidates()
+    }
     private fun getMathCandidate(raw: String): Candidate? {
-        if (!isCalcEngineEnabled) return null
+        if (!calculatorEnabled()) return null
         val trimmed = raw.trim()
         if (trimmed.isEmpty()) return null
 
@@ -267,15 +299,18 @@ class IpaBoardService : InputMethodService() {
         inputController.ctrlShortcuts = SettingsConstants.parseShortcutsJson(prefs.getString(KEY_CTRL_SHORTCUTS, null))
         val density = resources.displayMetrics.density
         val availableDp = (resources.displayMetrics.heightPixels / density - 180).toInt().coerceAtLeast(100)
-        val height = (prefs.getInt(KEY_KEYBOARD_HEIGHT, DEFAULT_KEYBOARD_HEIGHT).coerceIn(100, availableDp) * density).toInt()
+        val appearance = PageGroupManager.active(this).appearance
+        val height = (appearance.heightDp.coerceIn(100, availableDp) * density).toInt()
         view.setKeyboardHeight(height)
-        fun color(key: String, fallback: String) = try { Color.parseColor(prefs.getString(key, fallback)) } catch (_: IllegalArgumentException) { Color.parseColor(fallback) }
-        view.keyboardHost.setBackgroundColor(color(KEY_BG_COLOR_HEX, DEFAULT_BG_COLOR_HEX))
-        val filename = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME) ?: DEFAULT_LAYOUT_FILENAME
-        val layout = LayoutFileManager.loadLayout(this, filename) ?: DEFAULT_LAYOUT
-        KeyboardRenderer.render(this, view.keyboardHost, layout, height, color(KEY_SYMBOL_COLOR_HEX, DEFAULT_SYMBOL_COLOR_HEX),
+        view.setCalculatorEnabled(calculatorEnabled())
+        view.setWidthSwapEnabled(widthSwapEnabled)
+        view.keyboardHost.setBackgroundColor(Color.parseColor(appearance.backgroundColor))
+        val layout = LayoutFileManager.activeLayout(this)
+        KeyboardRenderer.render(this, view.keyboardHost, layout, height, Color.parseColor(appearance.symbolColor),
             inputController.shiftEnabled, inputController.ctrlEnabled,
             showKeyPreview = true,
+            fontSizeSp = appearance.fontSizeSp,
+            showGrid = appearance.showGrid,
             onKeyQuickSwipeItemClick = { _, _, slot, item -> handleLongPressItem(slot, item) },
             onKeyLongItemClick = { _, _, slot, item -> handleLongPressItem(slot, item) },
             onKeyLongClick = { _, _, slot -> handleLongPress(slot) }) { _, _, slot -> handleKey(slot) }
@@ -288,7 +323,7 @@ class IpaBoardService : InputMethodService() {
                 if (inputController.consumeSingleShift()) applySettings()
             } else {
                 val ic = currentInputConnection ?: return
-                if (ic.commitText(item.text, 1)) {
+                if (ic.commitText(transformOutput(item.text), 1)) {
                     if (inputController.consumeSingleShift()) applySettings()
                 }
             }
@@ -319,10 +354,12 @@ class IpaBoardService : InputMethodService() {
                 chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.KAOMOJI) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.KAOMOJI)
                 return
             }
+            KeyAction.WIDTH_SWAP -> {
+                toggleWidthSwap()
+                return
+            }
             KeyAction.CALCULATOR -> {
-                isCalcEngineEnabled = !isCalcEngineEnabled
-                chrome?.setCalculatorEnabled(isCalcEngineEnabled)
-                refreshCandidates()
+                toggleCalculator()
                 return
             }
             KeyAction.CANDIDATES -> {
@@ -371,11 +408,10 @@ class IpaBoardService : InputMethodService() {
             when (activeShortcut) {
                 KeyAction.EMOJI -> { consumeModifiers(); chrome?.showPanel(ImeChromeView.Panel.EMOJI); return }
                 KeyAction.KAOMOJI -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.KAOMOJI) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.KAOMOJI); return }
+                KeyAction.WIDTH_SWAP -> { consumeModifiers(); toggleWidthSwap(); return }
                 KeyAction.CALCULATOR -> {
                     consumeModifiers()
-                    isCalcEngineEnabled = !isCalcEngineEnabled
-                    chrome?.setCalculatorEnabled(isCalcEngineEnabled)
-                    refreshCandidates()
+                    toggleCalculator()
                     return
                 }
                 KeyAction.CANDIDATES -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.CANDIDATES) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.CANDIDATES); return }
@@ -418,7 +454,7 @@ class IpaBoardService : InputMethodService() {
                     if (inputController.consumeSingleShift()) applySettings()
                     return
                 }
-                slot.action == KeyAction.TEXT && text.isNotEmpty() -> {
+                slot.action == KeyAction.TEXT && text != " " && text.isNotEmpty() -> {
                     composition.input(text)
                     if (inputController.consumeSingleShift()) applySettings()
                     return
@@ -427,6 +463,7 @@ class IpaBoardService : InputMethodService() {
         }
         if (!isModifier && !composition.literal()) return
         if (!inputController.handle(slot, ic, currentInputEditorInfo)) Toast.makeText(this, R.string.unsupported_shortcut, Toast.LENGTH_SHORT).show()
+        if (!directOnly && !isModifier) composition.refreshContext()
         if (beforeShiftState != inputController.shiftState || beforeCtrl != inputController.ctrlEnabled) applySettings()
     }
     private fun showEmoji() {
@@ -445,7 +482,7 @@ class IpaBoardService : InputMethodService() {
                 result.fold(onSuccess = { catalog ->
                     val picker = EmojiPickerView(this, catalog) { entry ->
                         // Commit any pending composition first. Emoji bypass Shift/Ctrl and language conversion.
-                        if (composition.literal()) currentInputConnection?.commitText(entry.text, 1)
+                        if (composition.literal()) currentInputConnection?.commitText(transformOutput(entry.text), 1)
                     }
                     fun updateStatus() {
                         view.showContent("Emoji · ${picker.currentCategoryName} ▾", picker)
@@ -481,7 +518,7 @@ class IpaBoardService : InputMethodService() {
     private fun showKaomojiPanel() {
         val view = chrome ?: return
         val panelView = KaomojiPanelView(this, kaomojiRepository) { item ->
-            if (composition.literal() && currentInputConnection?.commitText(item.text, 1) == true) {
+            if (composition.literal() && currentInputConnection?.commitText(transformOutput(item.text), 1) == true) {
                 // Keep panel open so user can input multiple kaomojis
             }
         }
@@ -735,17 +772,21 @@ class IpaBoardService : InputMethodService() {
     private fun showClipboard() {
         val view = chrome ?: return
         syncClipboardHistory()
-        val panelView = ClipboardPanelView(this, clipboardRepository) { item ->
+        // Reuse an open panel on new clipboard events so refreshes keep its viewing order and undo.
+        val panelView = clipboardPanel ?: ClipboardPanelView(this, clipboardRepository) { item ->
             if (composition.literal() && currentInputConnection?.commitText(item.text, 1) == true) {
                 view.showPanel(ImeChromeView.Panel.KEYBOARD)
             }
-        }
+        }.also { clipboardPanel = it }
+        panelView.refreshList()
         view.showContent("Clipboard", panelView)
+        view.setStatusCustomView(ClipboardStatusView(this, panelView, view.status))
     }
     private fun showPages() {
         val view = chrome ?: return
-        val active = prefs.getString(KEY_ACTIVE_LAYOUT_FILE, DEFAULT_LAYOUT_FILENAME)
-        val layouts = LayoutFileManager.getLayoutOrder(this).mapNotNull { file -> LayoutFileManager.loadLayout(this, file)?.let { file to it } }
+        val group = PageGroupManager.active(this)
+        val active = PageGroupManager.activeFilename(this)
+        val layouts = PageGroupManager.pages(this, group).mapNotNull { file -> LayoutFileManager.loadLayout(this, file)?.let { file to it } }
         val grid = GridLayout(this).apply { columnCount = 2 }
         layouts.forEach { (file, layout) ->
             val pageName = file.removeSuffix(".json")
@@ -757,25 +798,48 @@ class IpaBoardService : InputMethodService() {
                 setBackgroundColor(if (file == active) Color.rgb(55,65,88) else Color.rgb(35,38,46))
                 addView(TextView(this@IpaBoardService).apply { text = (if (file == active) "✓ " else "") + pageName; setTextColor(Color.WHITE); textSize = 15f })
                 val preview = LinearLayout(this@IpaBoardService).apply { orientation = LinearLayout.VERTICAL; importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS }
-                KeyboardRenderer.render(this@IpaBoardService, preview, layout, (80 * resources.displayMetrics.density).toInt(), Color.LTGRAY)
+                preview.setBackgroundColor(Color.parseColor(group.appearance.backgroundColor))
+                KeyboardRenderer.render(this@IpaBoardService, preview, layout, (80 * resources.displayMetrics.density).toInt(),
+                    Color.parseColor(group.appearance.symbolColor), fontSizeSp = group.appearance.fontSizeSp, showGrid = group.appearance.showGrid)
                 addView(preview)
                 setOnClickListener {
-                    prefs.edit().putString(KEY_ACTIVE_LAYOUT_FILE, file).apply()
+                    PageGroupManager.selectPage(this@IpaBoardService, file)
                     view.showPanel(ImeChromeView.Panel.KEYBOARD)
                 }
             }
             grid.addView(cell, GridLayout.LayoutParams().apply { width = 0; columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f); setMargins(4,4,4,4) })
         }
-        view.showContent("Keyboard Pages", ScrollView(this).apply { addView(grid) })
+        if (layouts.isEmpty()) grid.addView(TextView(this).apply {
+            text = getString(R.string.empty_group_ime)
+            setTextColor(Color.WHITE)
+            setPadding(16, 24, 16, 24)
+        })
+        view.showContent(PageGroupManager.label(this, group) + " ▾", ScrollView(this).apply { addView(grid) })
+        view.onStatusClick = {
+            val state = PageGroupManager.state(this)
+            PopupMenu(this, view.status).apply {
+                state.groups.forEachIndexed { index, item -> menu.add(0, index, index, "$index · ${item.name}").apply {
+                    isCheckable = true
+                    isChecked = item.id == state.activeGroupId
+                } }
+                setOnMenuItemClickListener { item ->
+                    PageGroupManager.select(this@IpaBoardService, state.groups[item.itemId].id)
+                    applySettings()
+                    showPages()
+                    true
+                }
+            }.show()
+        }
     }
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
         inputController.reset()
-        composition.start()
         val type = attribute?.inputType ?: 0
         val variation = type and InputType.TYPE_MASK_VARIATION
         directOnly = (type and InputType.TYPE_MASK_CLASS) != InputType.TYPE_CLASS_TEXT ||
             variation in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)
+        if (directOnly) engines.suspendSemantic()
+        composition.start()
         chrome?.showPanel(ImeChromeView.Panel.KEYBOARD)
         refreshCandidates()
     }
@@ -810,10 +874,10 @@ class IpaBoardService : InputMethodService() {
     override fun onFinishInputView(finishingInput: Boolean) {
         clipboard.removePrimaryClipChangedListener(clipboardListener)
         chrome?.showPanel(ImeChromeView.Panel.KEYBOARD)
-        composition.finish(); inputController.reset()
+        composition.finish(); engines.suspendSemantic(); inputController.reset()
         super.onFinishInputView(finishingInput)
     }
-    override fun onFinishInput() { composition.finish(); inputController.reset(); super.onFinishInput() }
+    override fun onFinishInput() { composition.finish(); engines.suspendSemantic(); inputController.reset(); super.onFinishInput() }
     override fun onDestroy() {
         emojiClosed = true
         emojiRequest++

@@ -16,12 +16,23 @@ object SettingsConstants {
     const val KEY_ACTIVE_LAYOUT_FILE = "active_layout_file"
     const val DEFAULT_LAYOUT_FILENAME = "default.json"
     const val KEY_LAYOUT_ORDER = "layout_order"
+    const val KEY_PAGE_GROUP_STATE = "page_groups_v1"
     
     const val KEY_KEYBOARD_HEIGHT = "keyboard_height_dp"
     const val DEFAULT_KEYBOARD_HEIGHT = 210
+    const val KEY_KEYBOARD_FONT_SIZE = "keyboard_font_size_sp"
+    const val DEFAULT_KEYBOARD_FONT_SIZE = 14
+    const val MIN_KEYBOARD_FONT_SIZE = 10
+    const val MAX_KEYBOARD_FONT_SIZE = 40
+
+    const val KEY_LONG_PRESS_TIMEOUT_MS = "long_press_timeout_ms"
+    const val MIN_LONG_PRESS_TIMEOUT_MS = 200
+    const val MAX_LONG_PRESS_TIMEOUT_MS = 2000
+    const val LONG_PRESS_TIMEOUT_STEP_MS = 50
 
     const val KEY_SHIFT_SHORTCUTS = "shift_shortcuts_json"
     const val KEY_CTRL_SHORTCUTS = "ctrl_shortcuts_json"
+    const val KEY_SEMANTIC_CONTEXT_ENABLED = "semantic_context_enabled"
 
     const val KEY_QUICK_PASTE_ENABLED = "quick_paste_enabled"
     const val KEY_QUICK_PASTE_RETENTION_TYPE = "quick_paste_retention_type"

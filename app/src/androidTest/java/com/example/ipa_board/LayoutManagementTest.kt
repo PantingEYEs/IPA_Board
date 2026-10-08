@@ -25,14 +25,14 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class LayoutManagementTest {
-    @Test fun renamePageValidatesAndPersistsWithoutChangingMappingsOrActiveFile() {
+    @Test fun renamePageValidatesPreservesMappingsAndUpdatesActiveFile() {
         LayoutFixture().use { fixture ->
             val original = KeyboardLayout("Before", listOf(RowLayout(1f, listOf(KeySlot(1f, "a", longPressText = "ɑ")))))
             val filename = fixture.create(original)
             fixture.select(filename)
             ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
                 onView(withId(R.id.btn_rename_layout)).perform(scrollTo(), click())
-                onView(withId(R.id.et_layout_name)).check(matches(withText("Before")))
+                onView(withId(R.id.et_layout_name)).check(matches(withText(filename.removeSuffix(".json"))))
                 onView(withId(R.id.et_layout_name)).perform(replaceText("Cancelled"), closeSoftKeyboard())
                 onView(withText("Cancel")).perform(click())
                 assertEquals(original, LayoutFileManager.loadLayout(fixture.context, filename))
@@ -41,22 +41,27 @@ class LayoutManagementTest {
                 onView(withText("Save")).perform(click())
                 onView(withId(R.id.et_layout_name)).check(matches(isDisplayed()))
                 assertEquals(original, LayoutFileManager.loadLayout(fixture.context, filename))
-                onView(withId(R.id.et_layout_name)).perform(replaceText("  IPA renamed  "), closeSoftKeyboard())
+                val newName = "Test Renamed ${System.nanoTime()}"
+                val newFilename = "$newName.json"
+                fixture.track(newFilename)
+                onView(withId(R.id.et_layout_name)).perform(replaceText("  $newName  "), closeSoftKeyboard())
                 onView(withText("Save")).perform(click())
-                val newFilename = "IPA renamed.json"
-                assertEquals(original.copy(name = "IPA renamed"), LayoutFileManager.loadLayout(fixture.context, newFilename))
+                assertNull(LayoutFileManager.loadLayout(fixture.context, filename))
+                assertEquals(original.copy(name = newName), LayoutFileManager.loadLayout(fixture.context, newFilename))
                 assertEquals(newFilename, fixture.activeFilename())
-                onView(withId(R.id.tv_layout_name)).check(matches(withText("IPA renamed")))
+                onView(withId(R.id.tv_layout_name)).check(matches(withText(newName)))
                 scenario.recreate()
-                onView(withId(R.id.tv_layout_name)).check(matches(withText("IPA renamed")))
+                onView(withId(R.id.tv_layout_name)).check(matches(withText(newName)))
                 assertEquals(newFilename, fixture.activeFilename())
             }
         }
     }
 
-    @Test fun deletingActiveLayoutCanBeCancelledAndFallsBackToProtectedDefault() {
+    @Test fun deletingActiveLayoutCanBeCancelledAndSelectsRemainingPage() {
         LayoutFixture().use { fixture ->
             val filename = fixture.create(SettingsConstants.DEFAULT_LAYOUT)
+            val remaining = fixture.create(SettingsConstants.DEFAULT_LAYOUT.copy(name = "Remaining"))
+            PageGroupManager.addPages(fixture.context, PageGroupManager.active(fixture.context).id, listOf(remaining))
             fixture.select(filename)
             ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
                 onView(withId(R.id.btn_delete_layout)).perform(scrollTo(), click())
@@ -67,14 +72,13 @@ class LayoutManagementTest {
                 onView(withText("Delete")).perform(click())
                 assertNull(LayoutFileManager.loadLayout(fixture.context, filename))
                 assertFalse(LayoutFileManager.listLayoutFiles(fixture.context).contains(filename))
-                assertEquals(SettingsConstants.DEFAULT_LAYOUT_FILENAME, fixture.activeFilename())
-                onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(SettingsConstants.DEFAULT_LAYOUT_FILENAME)))
+                assertEquals(PageGroupManager.pages(fixture.context).firstOrNull(), fixture.activeFilename())
+                onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(requireNotNull(fixture.activeFilename()).removeSuffix(".json"))))
                 scenario.onActivity { activity ->
-                    assertFalse(activity.findViewById<android.widget.Button>(R.id.btn_delete_layout).isEnabled)
+                    assertTrue(activity.findViewById<android.widget.Button>(R.id.btn_delete_layout).isEnabled)
                 }
                 scenario.recreate()
-                assertEquals(SettingsConstants.DEFAULT_LAYOUT_FILENAME, fixture.activeFilename())
-                assertFalse(LayoutFileManager.deleteLayout(fixture.context, SettingsConstants.DEFAULT_LAYOUT_FILENAME))
+                assertEquals(PageGroupManager.pages(fixture.context).firstOrNull(), fixture.activeFilename())
             }
         }
     }
@@ -103,7 +107,7 @@ class LayoutManagementTest {
             try {
                 sourceFile.writeText(config.toString())
                 ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
-                    onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(originalFilename)))
+                    onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(originalFilename.removeSuffix(".json"))))
                     scenario.onActivity { activity ->
                         // File URIs can be read but provide no DISPLAY_NAME, exercising the name fallback.
                         val result = Intent().setData(Uri.fromFile(sourceFile))
@@ -112,15 +116,15 @@ class LayoutManagementTest {
                         ).apply { isAccessible = true }.invoke(activity, 123, Activity.RESULT_OK, result)
                     }
 
-                    onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(importedFilename)))
+                    onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(importedName)))
                     onView(withId(R.id.tv_height_value)).check(matches(withText("300dp")))
                     assertEquals(importedFilename, fixture.activeFilename())
                     assertEquals(imported, LayoutFileManager.loadLayout(fixture.context, importedFilename))
                     assertEquals(SettingsConstants.DEFAULT_LAYOUT, LayoutFileManager.loadLayout(fixture.context, originalFilename))
-                    val prefs = fixture.context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
-                    assertEquals("#123456", prefs.getString(SettingsConstants.KEY_BG_COLOR_HEX, null))
-                    assertEquals("#FEDCBA", prefs.getString(SettingsConstants.KEY_SYMBOL_COLOR_HEX, null))
-                    assertEquals(300, prefs.getInt(SettingsConstants.KEY_KEYBOARD_HEIGHT, 0))
+                    val appearance = PageGroupManager.active(fixture.context).appearance
+                    assertEquals("#123456", appearance.backgroundColor)
+                    assertEquals("#FEDCBA", appearance.symbolColor)
+                    assertEquals(300, appearance.heightDp)
                     scenario.onActivity { activity ->
                         assertEquals(150, activity.findViewById<SeekBar>(R.id.sb_height).progress)
                     }
@@ -145,16 +149,18 @@ class LayoutManagementTest {
                 onView(withId(R.id.et_layout_name)).perform(replaceText(name), closeSoftKeyboard())
                 onView(withText("Create")).perform(click())
 
-                onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(expectedFilename)))
+                onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(name)))
                 assertEquals(expectedFilename, fixture.activeFilename())
                 val saved = requireNotNull(LayoutFileManager.loadLayout(fixture.context, expectedFilename))
                 assertEquals(name, saved.name)
                 assertEquals(SettingsConstants.DEFAULT_LAYOUT.rows, saved.rows)
-                assertTrue(saved.rows.flatMap { it.slots }.all { it.text.isEmpty() && it.action == KeyAction.TEXT })
+                val keys = saved.rows.flatMap { it.slots }
+                assertEquals(1, keys.count { it.text == " " })
+                assertTrue(keys.all { (it.text.isEmpty() || it.text == " ") && it.action == KeyAction.TEXT })
                 assertEquals(SettingsConstants.DEFAULT_LAYOUT, LayoutFileManager.loadLayout(fixture.context, original))
 
                 scenario.recreate()
-                onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(expectedFilename)))
+                onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(name)))
                 assertEquals(saved, LayoutFileManager.loadLayout(fixture.context, expectedFilename))
             }
         }
@@ -173,7 +179,7 @@ class LayoutManagementTest {
                 onView(withId(R.id.et_layout_name)).perform(replaceText(cancelledName), closeSoftKeyboard())
                 onView(withText("Cancel")).perform(click())
 
-                onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(filename)))
+                onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(filename.removeSuffix(".json"))))
                 assertEquals(filename, fixture.activeFilename())
                 assertEquals(filesBefore, LayoutFileManager.listLayoutFiles(fixture.context))
             }
@@ -223,18 +229,26 @@ class LayoutManagementTest {
             val other = KeyboardLayout("Second", listOf(RowLayout(2f, listOf(KeySlot(3f, "ʊ")))))
             val firstFilename = fixture.create(original)
             val secondFilename = fixture.create(other)
+            // Raw save creates the file, while the default spinner lists only current-group members.
+            PageGroupManager.addPages(fixture.context, PageGroupManager.active(fixture.context).id,
+                listOf(firstFilename, secondFilename))
             fixture.select(firstFilename)
 
             ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
+                onView(withId(R.id.cb_all_pages)).check(matches(isNotChecked()))
+                onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(firstFilename.removeSuffix(".json"))))
                 onView(withId(R.id.btn_clear_layout)).perform(scrollTo(), click())
                 onView(withId(R.id.btn_undo_clear)).check(matches(withEffectiveVisibility(Visibility.VISIBLE)))
                 scenario.onActivity { activity ->
                     val spinner = activity.findViewById<Spinner>(R.id.sp_layouts)
-                    val index = (0 until spinner.count).first { spinner.getItemAtPosition(it) == secondFilename }
+                    val displayed = (0 until spinner.count).map { spinner.getItemAtPosition(it).toString() }
+                    val target = secondFilename.removeSuffix(".json")
+                    val index = displayed.indexOf(target)
+                    assertTrue("Current-group spinner is missing $target; displayed=$displayed", index >= 0)
                     spinner.setSelection(index)
                 }
 
-                onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(secondFilename)))
+                onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(secondFilename.removeSuffix(".json"))))
                 onView(withId(R.id.btn_undo_clear)).check(matches(withEffectiveVisibility(Visibility.GONE)))
                 assertEquals(secondFilename, fixture.activeFilename())
                 assertEquals(other, LayoutFileManager.loadLayout(fixture.context, secondFilename))
@@ -247,6 +261,7 @@ class LayoutManagementTest {
     private class LayoutFixture : Closeable {
         val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
         private val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        private val groupSnapshot = PageGroupTestState(context)
         private val originalActive = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, null)
         private val hadRevision = prefs.contains(SettingsConstants.KEY_LAYOUT_REVISION)
         private val originalRevision = prefs.getLong(SettingsConstants.KEY_LAYOUT_REVISION, 0)
@@ -267,12 +282,16 @@ class LayoutManagementTest {
         }
 
         fun select(filename: String) {
-            prefs.edit().putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, filename).commit()
+            PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(filename))
+            PageGroupManager.selectPage(context, filename)
         }
 
         fun activeFilename(): String? = prefs.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, null)
 
         override fun close() {
+            // Deleting disposable pages changes revision and group state; restore only afterwards.
+            files.forEach { LayoutFileManager.deleteLayout(context, it) }
+            groupSnapshot.close()
             prefs.edit().apply {
                 if (originalActive == null) remove(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE)
                 else putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, originalActive)
@@ -286,7 +305,6 @@ class LayoutManagementTest {
                     }
                 }
             }.commit()
-            files.forEach { LayoutFileManager.deleteLayout(context, it) }
         }
     }
 }

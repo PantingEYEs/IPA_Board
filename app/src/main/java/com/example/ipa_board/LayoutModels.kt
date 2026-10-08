@@ -158,11 +158,7 @@ data class KeySlot(
                 return listOf(LongPressItem(action = longPressAction))
             }
             if (longPressText.isNotEmpty()) {
-                return if (longPressText.contains(",")) {
-                    longPressText.split(",").map { it.trim() }.filter { it.isNotEmpty() }.map { LongPressItem(text = it) }
-                } else {
-                    listOf(LongPressItem(text = longPressText))
-                }
+                return LongPressTextCodec.parse(longPressText).map { LongPressItem(text = it) }
             }
             return emptyList()
         }
@@ -257,8 +253,9 @@ enum class KeyAction(val wireValue: String, val title: String, val keyLabel: Str
     TAB("tab", "Tab", "Tab", "Send Tab. Focus movement depends on the receiving app."),
     HOME("home", "Home", "Home", "Move to the beginning of the line. Shift extends the selection."),
     END("end", "End", "End", "Move to the end of the line. Shift extends the selection."),
-    EMOJI("emoji", "Emoji", "☺", "Open the scrollable emoji panel. Tap an emoji to insert it; Return closes the panel."),
+    EMOJI("emoji", "Emoji", "☺\uFE0E", "Open the scrollable emoji panel. Tap an emoji to insert it; Return closes the panel."),
     KAOMOJI("kaomoji", "顔文字", "顔", "Open the scrollable 顔文字 panel. Tap a 顔文字 to insert it; Return closes the panel."),
+    WIDTH_SWAP("width_swap", "全角 / 半角转换", "◩", "Off by default. When enabled, swap full-width and half-width forms of typed characters that have a width counterpart. Tap again to turn off."),
     CALCULATOR("calculator", "计算器", "∑", "Toggle calculator mode. Evaluate math expressions and output results as candidates."),
     CANDIDATES("candidates", "Candidates", "⋯", "Open the candidate word list panel."),
     CLIPBOARD("clipboard", "Clipboard", "⧉", "Open the clipboard panel. Tap an item to insert it; Return closes the panel."),
@@ -279,7 +276,7 @@ enum class KeyAction(val wireValue: String, val title: String, val keyLabel: Str
 /** Missing fields in old layouts deliberately retain direct IPA entry. */
 enum class TextBehavior(val wireValue: String, val title: String) {
     LITERAL("literal", "Direct text / IPA"),
-    AUTO("auto", "Mixed input (拼音 / English / ローマ字)");
+    AUTO("auto", "Mixed input (拼音 / 注音 / English / ローマ字)");
 
     companion object {
         fun fromWireValue(value: String): TextBehavior = entries.firstOrNull { it.wireValue == value }

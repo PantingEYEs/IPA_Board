@@ -1,0 +1,6 @@
+# Preserve byte-exact model chunks and upstream artifacts.
+app/src/main/assets/engines/semantic/model.part* binary
+app/src/main/assets/engines/semantic/*.onnx binary
+app/libs/*.aar binary
+# Upstream license/notice text is retained verbatim and covered by the resource lockfile.
+app/src/main/assets/licenses/* -whitespace

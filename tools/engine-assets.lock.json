@@ -19,6 +19,38 @@
       "file": "jna.aar",
       "url": "https://repo.maven.apache.org/maven2/net/java/dev/jna/jna/5.17.0/jna-5.17.0.aar",
       "sha256": "4dbeffffa665d97ad5aa7eee297531d3c841a86716ab7f774fd6956422b3cf38"
+    },
+    {
+      "file": "heliboard-4.1-heli.apk",
+      "url": "https://github.com/HeliBorg/HeliBoard/releases/download/v4.1/HeliBoard_4.1-release.apk",
+      "sha256": "eb9c06685ebd5b7307491da9ef15fb5e29694077a934a8699b9b6772c6f76075",
+      "source_revision": "9f5bb635c2e8609dcd95dc7506c0c58fba82a52c"
+    },
+    {
+      "file": "heliboard-4.1-source.tar.gz",
+      "url": "https://api.github.com/repos/HeliBorg/HeliBoard/tarball/v4.1",
+      "sha256": "4089242b9e102467b5c3875a42794b16c9d1162ad263c0828e2a1a24124f1fd8",
+      "source_revision": "9f5bb635c2e8609dcd95dc7506c0c58fba82a52c"
+    },
+    {
+      "file": "ort.aar",
+      "url": "https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.23.2/onnxruntime-android-1.23.2.aar",
+      "sha256": "82048d1f462218adae4ba76477089ab0ba76093d84f733540066db1a8ba6b827"
+    },
+    {
+      "file": "extensions.aar",
+      "url": "https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-extensions-android/0.13.0/onnxruntime-extensions-android-0.13.0.aar",
+      "sha256": "cb98c6fbeac1a9707228c4b76cfbb395b4dc4d310900aefaa672561d17fd6d9d"
+    },
+    {
+      "file": "model.onnx",
+      "url": "https://huggingface.co/intfloat/multilingual-e5-small/resolve/614241f622f53c4eeff9890bdc4f31cfecc418b3/onnx/model_qint8_avx512_vnni.onnx",
+      "sha256": "dd476dd0c2514e9b9be83aeb3853fac0763e0bdf4a71645407587d77c48a2d88"
+    },
+    {
+      "file": "sentencepiece.bpe.model",
+      "url": "https://huggingface.co/intfloat/multilingual-e5-small/resolve/614241f622f53c4eeff9890bdc4f31cfecc418b3/sentencepiece.bpe.model",
+      "sha256": "cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865"
     }
   ],
   "files": [
@@ -28,29 +60,24 @@
       "bytes": 522249
     },
     {
+      "path": "app/src/main/assets/engines/english/main_en-US.dict",
+      "sha256": "bd950ef4b57655120eee65cee62a5d216a63f721d9a8bb759ce2022437840443",
+      "bytes": 2956881
+    },
+    {
       "path": "app/src/main/assets/engines/mozc.data",
       "sha256": "a905f88e772bafd4b070cebfe66fbb061fab04496f22166fd37875aa34713ccd",
       "bytes": 20489885
     },
     {
       "path": "app/src/main/assets/engines/rime/default.custom.yaml",
-      "sha256": "2dc2eb9e9d56ed9dd7678838a8724b8c297bfbfa6aa6199ea7bb03c614e230e4",
-      "bytes": 70
+      "sha256": "98e4d156e0000c930cd0f7a54a8aaeebaba7862be84c162bac94e7d0ad95aaa9",
+      "bytes": 48
     },
     {
       "path": "app/src/main/assets/engines/rime/default.yaml",
       "sha256": "dd55653a991f9418eb425ee2112666f82e3e753c5ce3ed5702dd243041a45382",
       "bytes": 1365
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/easy_en.dict.yaml",
-      "sha256": "4f039026b2746fa9b0d4d7a248cdf866b64609dca2317708f04e9e68ac7d868a",
-      "bytes": 14566541
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/easy_en.schema.yaml",
-      "sha256": "728d91a47dd1db9b0fe6f4f10cdd539cb2ebbde8756b5ce918a44344bc29adcb",
-      "bytes": 432
     },
     {
       "path": "app/src/main/assets/engines/rime/essay.txt",
@@ -273,6 +300,66 @@
       "bytes": 28356
     },
     {
+      "path": "app/src/main/assets/licenses/English-dictionary-source.txt",
+      "sha256": "a4a8a2580d999dccf7bad2ac152d1ac19d4db359a834e86b1d27f35711d283b8",
+      "bytes": 583
+    },
+    {
+      "path": "app/src/main/assets/licenses/HeliBoard-GPL-3.0.txt",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "bytes": 35149
+    },
+    {
+      "path": "app/src/main/assets/licenses/LatinIME-Apache-2.0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "bytes": 11358
+    },
+    {
+      "path": "app/src/main/assets/licenses/jna.txt",
+      "sha256": "07c938b23950ab7d47a24ef35f9f5da3a05ae164278dc959ad6994135ed59ff1",
+      "bytes": 797
+    },
+    {
+      "path": "app/src/main/assets/licenses/luna-pinyin.txt",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+      "bytes": 7651
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc-credits.html",
+      "sha256": "25d6ecc9ee462302ef810cccfbd59218e582f1cde5351787d31b0cd20129a995",
+      "bytes": 41175
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc.txt",
+      "sha256": "44cdd923b91ea9199293abecc2762c70c87dbf1e581c027a94c416368d1a648c",
+      "bytes": 5734
+    },
+    {
+      "path": "app/src/main/assets/licenses/opencc.txt",
+      "sha256": "b534e465949558eec2597b04f5092b5e161236a68dfbfd04d547592ac3964308",
+      "bytes": 9165
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-essay.txt",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+      "bytes": 7651
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime.txt",
+      "sha256": "f67d27a6d2d586fcfed4b4c886a83747095396a39b6641e18e855086be2ec400",
+      "bytes": 1513
+    },
+    {
+      "path": "app/src/main/assets/licenses/trime-GPL-3.0.txt",
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+      "bytes": 35147
+    },
+    {
+      "path": "app/src/main/jniLibs/arm64-v8a/libjni_latinime.so",
+      "sha256": "a97b09fd3de5395023df9fb4ddc2b1eef44162bd6e987b975897d74fc3ee7081",
+      "bytes": 1347040
+    },
+    {
       "path": "app/src/main/jniLibs/arm64-v8a/libmozc.so",
       "sha256": "07dfa8131d8f0081baa771c771eea7198886860deab3ecff4ccd151fdf2eec2f",
       "bytes": 14739336
@@ -283,6 +370,11 @@
       "bytes": 5521416
     },
     {
+      "path": "app/src/main/jniLibs/x86_64/libjni_latinime.so",
+      "sha256": "6f85b8fcb378ce0e53bf6df12ec2ad69286c0e61bda21cb2eb565dcbeb2fd0d0",
+      "bytes": 1339072
+    },
+    {
       "path": "app/src/main/jniLibs/x86_64/libmozc.so",
       "sha256": "225729497d0f32fbd567517c8a88a51e8f028e1febd0df6788fbad1c688785ad",
       "bytes": 13677848
@@ -291,6 +383,111 @@
       "path": "app/src/main/jniLibs/x86_64/librime_jni.so",
       "sha256": "98869ae0866f4f5ea452f76cfaa0889b98bf9b11ac33a62d0534d43c14cb9128",
       "bytes": 5516376
+    },
+    {
+      "path": "app/libs/onnxruntime-android-1.23.2.aar",
+      "sha256": "82048d1f462218adae4ba76477089ab0ba76093d84f733540066db1a8ba6b827",
+      "bytes": 30241654
+    },
+    {
+      "path": "app/libs/onnxruntime-extensions-android-0.13.0.aar",
+      "sha256": "cb98c6fbeac1a9707228c4b76cfbb395b4dc4d310900aefaa672561d17fd6d9d",
+      "bytes": 9040811
+    },
+    {
+      "path": "app/src/main/assets/engines/semantic/centering.json",
+      "sha256": "f02c1d01cf2847822c8c11a3b378fb41bff5e056cd9272c6a370ce2ed1d26585",
+      "bytes": 25151
+    },
+    {
+      "path": "app/src/main/assets/engines/semantic/manifest.json",
+      "sha256": "c36caee5cd6f7e18acaf270c4aabf94761331fdc04ab870cf7e160240d0ea03e",
+      "bytes": 866
+    },
+    {
+      "path": "app/src/main/assets/engines/semantic/model.part0",
+      "sha256": "7dd0923fa60b82970fbeba26c264b84507741ea463b670f263b2207b5f902c4f",
+      "bytes": 41943040
+    },
+    {
+      "path": "app/src/main/assets/engines/semantic/model.part1",
+      "sha256": "8dce92133bdf354187b396ff5c3d98f3459e659601c017b59fdee86fad1038bc",
+      "bytes": 41943040
+    },
+    {
+      "path": "app/src/main/assets/engines/semantic/model.part2",
+      "sha256": "3b5b43def6e8cd95448518c6cb2d4cd3614cffad31dad5b1b9031d337a78caa3",
+      "bytes": 34460744
+    },
+    {
+      "path": "app/src/main/assets/engines/semantic/tokenizer.onnx",
+      "sha256": "4d28a2a61017a7b222164065d832e51103fbb3a4451c4e4938a2eeb8e83e44e8",
+      "bytes": 5069533
+    },
+    {
+      "path": "app/src/main/assets/licenses/E5-MIT.txt",
+      "sha256": "904dc4d8749877f1dba1cda48200d2462dccbeb7c134d5e4ef6fa75e0198c8fe",
+      "bytes": 1104
+    },
+    {
+      "path": "app/src/main/assets/licenses/ONNX-Runtime-Extensions-MIT.txt",
+      "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+      "bytes": 1141
+    },
+    {
+      "path": "app/src/main/assets/licenses/ONNX-Runtime-MIT.txt",
+      "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c",
+      "bytes": 1073
+    },
+    {
+      "path": "app/src/main/assets/licenses/SentencePiece-Apache-2.0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "bytes": 11358
+    },
+    {
+      "path": "app/src/main/assets/licenses/E5-source.txt",
+      "sha256": "46f71029eb47aeaa72368b512f3e79d0a1fa1ad3ffe0c74e59c43a80ecaa71f2",
+      "bytes": 780
+    },
+    {
+      "path": "app/src/main/assets/licenses/ONNX-Runtime-Extensions-ThirdPartyNotices.txt",
+      "sha256": "f5fdecd0efb3ff1b4b619f74fe0cb4991299101853ba9ffe988265f8a067d74a",
+      "bytes": 53916
+    },
+    {
+      "path": "app/src/main/assets/licenses/ONNX-Runtime-ThirdPartyNotices.txt",
+      "sha256": "e9e90971a8e75a9a8ac0c6412e29c1202d079998389915aa485f46c816c3b4cc",
+      "bytes": 326866
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/bopomofo.schema.yaml",
+      "sha256": "21301f17f799c4779516d69bb9d80a343c1cc36f06cdcb8607860c80394bb8cc",
+      "source": "rime-bopomofo @ 6085c9a38a4a728047862b33d67eee18aa86f3b9"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/zhuyin.yaml",
+      "sha256": "77931ab77952fdb2535f8addebc0918453e0220a50ca176380971203f14c48be",
+      "source": "rime-bopomofo @ 6085c9a38a4a728047862b33d67eee18aa86f3b9"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/terra_pinyin.dict.yaml",
+      "sha256": "2f881a239e09a61e5993e79257655f98f81c3789dc8aeea5f33477f710345b27",
+      "source": "rime-terra-pinyin @ 723e51bc266cf9464530c1ddedb856aa18e3da34"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/bopomofo.custom.yaml",
+      "sha256": "e9386bd25556f5f4d9b9e0b9b0b3bef76bdf6797f69000fbc1c36ca8026bd35c",
+      "source": "IPA Board custom patch: learning/completion disabled"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-bopomofo-LGPL-3.0.txt",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+      "source": "Rime Bopomofo license/source notice"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-bopomofo-source.txt",
+      "sha256": "dbcba436dee5ade7b0e51ec85f7dbc9f0ffac0931526306df278c6c4c4c6f23f",
+      "source": "Rime Bopomofo license/source notice"
     }
   ]
 }

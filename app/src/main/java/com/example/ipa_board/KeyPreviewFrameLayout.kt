@@ -7,7 +7,6 @@ import android.text.TextUtils
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
-import android.view.ViewConfiguration
 import android.widget.FrameLayout
 import android.widget.PopupWindow
 import android.widget.TextView
@@ -110,7 +109,7 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
                 val items = getEffectiveItems()
                 val hasLong = (items.isNotEmpty() || holdPreview.isNotEmpty()) && isLongClickable
                 if (hasLong) {
-                    postDelayed(selectHold, ViewConfiguration.getLongPressTimeout().toLong())
+                    postDelayed(selectHold, KeyboardGestureSettings.longPressTimeoutMs(context).toLong())
                 }
             }
             MotionEvent.ACTION_MOVE -> {

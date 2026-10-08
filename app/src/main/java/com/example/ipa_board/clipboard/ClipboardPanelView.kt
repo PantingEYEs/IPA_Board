@@ -1,5 +1,6 @@
 package com.example.ipa_board.clipboard
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
@@ -13,8 +14,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.recyclerview.widget.ItemTouchHelper
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.ipa_board.R
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -36,6 +38,9 @@ class ClipboardPanelView(
 
     private var pendingDeleteItem: ClipboardItem? = null
     private val commitDeleteRunnable = Runnable { commitPendingDelete() }
+    var isReversed = false
+        private set
+    var onOrderChanged: (() -> Unit)? = null
 
     init {
         setBackgroundColor(Color.rgb(18, 18, 18))
@@ -54,8 +59,9 @@ class ClipboardPanelView(
 
         // RecyclerView setup
         recyclerView.apply {
-            layoutManager = LinearLayoutManager(context)
+            layoutManager = GridLayoutManager(context, 2)
             adapter = this@ClipboardPanelView.adapter
+            setPadding(dp(6), 0, dp(6), 0)
         }
         addView(recyclerView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
 
@@ -103,6 +109,13 @@ class ClipboardPanelView(
                 target: RecyclerView.ViewHolder
             ): Boolean = false
 
+            override fun getSwipeThreshold(viewHolder: RecyclerView.ViewHolder): Float {
+                // ItemTouchHelper uses the list width; require half of one card instead.
+                return if (recyclerView.width > 0 && viewHolder.itemView.width > 0) {
+                    0.5f * viewHolder.itemView.width / recyclerView.width
+                } else super.getSwipeThreshold(viewHolder)
+            }
+
             override fun getSwipeDirs(
                 recyclerView: RecyclerView,
                 viewHolder: RecyclerView.ViewHolder
@@ -129,9 +142,23 @@ class ClipboardPanelView(
     }
 
     fun refreshList() {
-        val items = repository.getItems()
-        adapter.setItems(items)
+        // New copies can evict the pending item at the history limit; do not offer a dead Undo.
+        val pending = pendingDeleteItem
+        if (pending != null && repository.getItemById(pending.id) == null) {
+            handler.removeCallbacks(commitDeleteRunnable)
+            pendingDeleteItem = null
+            undoBar.visibility = GONE
+        }
+        // Sorting and clipboard refreshes must not revive an item while its undo is pending.
+        val items = repository.getItems().filter { it.id != pendingDeleteItem?.id }
+        adapter.setItems(if (isReversed) items.reversed() else items)
         updateEmptyState()
+    }
+
+    fun toggleReversed() {
+        isReversed = !isReversed
+        refreshList()
+        onOrderChanged?.invoke()
     }
 
     private fun updateEmptyState() {
@@ -213,9 +240,9 @@ class ClipboardPanelView(
                 setPadding(dp(16), dp(10), dp(16), dp(10))
                 isClickable = true
                 isFocusable = true
-                layoutParams = RecyclerView.LayoutParams(
-                    RecyclerView.LayoutParams.MATCH_PARENT,
-                    RecyclerView.LayoutParams.WRAP_CONTENT
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
                 )
 
                 background = GradientDrawable().apply {
@@ -234,8 +261,9 @@ class ClipboardPanelView(
                 textSize = 14f
                 maxLines = 3
                 ellipsize = TextUtils.TruncateAt.END
+                gravity = Gravity.TOP or Gravity.START
             }
-            textLayout.addView(contentTextView, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            textLayout.addView(contentTextView, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
 
             val metaLayout = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -244,9 +272,10 @@ class ClipboardPanelView(
             }
 
             val pinTextView = TextView(context).apply {
-                text = "📌 Pinned"
+                text = "Pinned"
                 setTextColor(Color.parseColor("#FFD700"))
                 textSize = 11f
+                setSingleLine(true)
                 setPadding(0, 0, dp(12), 0)
             }
             metaLayout.addView(pinTextView)
@@ -254,18 +283,24 @@ class ClipboardPanelView(
             val timeTextView = TextView(context).apply {
                 setTextColor(Color.GRAY)
                 textSize = 11f
+                setSingleLine(true)
+                ellipsize = TextUtils.TruncateAt.END
             }
-            metaLayout.addView(timeTextView)
+            metaLayout.addView(timeTextView, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
 
-            container.addView(textLayout)
+            container.addView(textLayout, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
             container.addView(metaLayout)
 
+            // Same viewport for every item, with room for three preview lines and Unicode fallback fonts.
+            val cardHeight = container.paddingTop + container.paddingBottom +
+                contentTextView.lineHeight * 4 + timeTextView.lineHeight +
+                metaLayout.paddingTop + metaLayout.paddingBottom
             val wrapper = FrameLayout(context).apply {
                 layoutParams = RecyclerView.LayoutParams(
                     RecyclerView.LayoutParams.MATCH_PARENT,
-                    RecyclerView.LayoutParams.WRAP_CONTENT
+                    cardHeight
                 ).apply {
-                    setMargins(dp(8), dp(4), dp(8), dp(4))
+                    setMargins(dp(2), dp(4), dp(2), dp(4))
                 }
                 addView(container)
             }
@@ -304,4 +339,47 @@ class ClipboardPanelView(
             val timeTextView: TextView
         ) : RecyclerView.ViewHolder(itemView)
     }
+}
+
+/** Same IME status-bar sort control as the kaomoji panel; order is local to this panel. */
+@SuppressLint("ViewConstructor") // Created in code with its panel; never inflated from XML.
+class ClipboardStatusView(
+    context: Context,
+    private val panelView: ClipboardPanelView,
+    titleView: TextView? = null
+) : LinearLayout(context) {
+    // The service supplies its existing status view to keep quick-paste text/clicks available.
+    val tvTitle = titleView ?: TextView(context).apply {
+        text = context.getString(R.string.clipboard_panel_title)
+        setTextColor(Color.LTGRAY)
+        textSize = 10f
+        gravity = Gravity.CENTER_VERTICAL
+    }
+    private val btnSort = TextView(context).apply {
+        contentDescription = context.getString(R.string.clipboard_reverse_order)
+        textSize = 10f
+        gravity = Gravity.CENTER
+        setPadding(dp(3), dp(1), dp(3), dp(1))
+        setOnClickListener { panelView.toggleReversed() }
+    }
+    init {
+        orientation = HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        (tvTitle.parent as? ViewGroup)?.removeView(tvTitle)
+        addView(tvTitle, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        addView(btnSort, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT).apply {
+            setMargins(dp(2), 0, dp(4), 0)
+        })
+        panelView.onOrderChanged = { updateUI() }
+        updateUI()
+    }
+    private fun updateUI() {
+        btnSort.setText(if (panelView.isReversed) R.string.clipboard_reverse_label else R.string.clipboard_order_label)
+        btnSort.setTextColor(if (panelView.isReversed) Color.WHITE else Color.LTGRAY)
+        btnSort.isSelected = panelView.isReversed
+        btnSort.stateDescription = context.getString(
+            if (panelView.isReversed) R.string.clipboard_reverse_state else R.string.clipboard_normal_state
+        )
+    }
+    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 }

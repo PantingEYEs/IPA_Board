@@ -1,0 +1,6 @@
+# IPA Board: use the official tone-aware schema without modifying its upstream spelling algebra.
+patch:
+  translator/enable_user_dict: false
+  translator/enable_completion: false
+  switches/@0/reset: 0
+  switches/@2/reset: 0

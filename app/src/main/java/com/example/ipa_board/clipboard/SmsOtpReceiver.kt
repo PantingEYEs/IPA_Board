@@ -8,11 +8,14 @@ import android.content.Intent
 import android.provider.Telephony
 import android.widget.Toast
 import com.example.ipa_board.SettingsConstants
+import com.example.ipa_board.ime.EngineSettings
+import com.example.ipa_board.ime.EngineFeature
 
 class SmsOtpReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context?, intent: Intent?) {
         if (context == null || intent == null) return
+        if (!EngineSettings.enabled(context, EngineFeature.SMS_OTP)) return
 
         val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
         val enabled = prefs.getBoolean(SettingsConstants.KEY_SMS_OTP_AUTO_COPY_ENABLED, false)

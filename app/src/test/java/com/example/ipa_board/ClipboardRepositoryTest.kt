@@ -117,6 +117,40 @@ class ClipboardRepositoryTest {
         assertEquals("To Delete", repository.getItems()[0].text)
     }
 
+    @Test
+    fun deletedSystemClipIsNotReaddedByRefreshOrServiceRestart() {
+        val item = repository.syncSystemClip("Current system clip", 100)!!
+        repository.deleteItem(item.id)
+        assertNull(repository.syncSystemClip(item.text, 100))
+        val restarted = ClipboardRepository(prefsOverride = fakePrefs)
+        assertNull(restarted.syncSystemClip(item.text, 100))
+        assertTrue(restarted.getItems().isEmpty())
+        assertNotNull(restarted.syncSystemClip(item.text, 200))
+        assertEquals(1, restarted.getItems().size)
+    }
+
+    @Test
+    fun repeatedSyncPreservesHistoryAndUndo() {
+        val item = repository.syncSystemClip("Undo clip", 100)!!
+        val newer = repository.addClip("Newer history")!!
+        assertNull(repository.syncSystemClip(item.text, 100))
+        assertEquals(item, repository.getItemById(item.id))
+        assertNotNull(repository.getItemById(newer.id))
+        repository.deleteItem(item.id)
+        repository.restoreItem(item)
+        assertNull(repository.syncSystemClip(item.text, 100))
+        assertEquals(item, repository.getItemById(item.id))
+    }
+
+    @Test
+    fun clearedHistoryStaysEmptyUntilClipboardChanges() {
+        repository.syncSystemClip("Old clip", 100)
+        repository.clearAllUnpinned()
+        assertNull(repository.syncSystemClip("Old clip", 100))
+        assertTrue(repository.getItems().isEmpty())
+        assertNotNull(repository.syncSystemClip("Different clip", 100))
+    }
+
     private class FakeSharedPreferences : SharedPreferences {
         private val map = mutableMapOf<String, Any?>()
 

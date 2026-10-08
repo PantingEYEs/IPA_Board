@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "package": "com.example.ipa_board",
+  "runner": "com.example.ipa_board.RegressionTestRunner",
+  "suites": {
+    "smoke": {
+      "classes": [
+        "com.example.ipa_board.CompositionControllerTest",
+        "com.example.ipa_board.LayoutImportContractTest",
+        "com.example.ipa_board.EngineSettingsContractTest",
+        "com.example.ipa_board.QuickPasteStatusTest",
+        "com.example.ipa_board.PresentationContractTest"
+      ]
+    },
+    "platform": {
+      "classes": [
+        "com.example.ipa_board.CompositionControllerTest",
+        "com.example.ipa_board.KeyboardInputControllerTest",
+        "com.example.ipa_board.KeyboardConfigurationTest",
+        "com.example.ipa_board.ImportSelectionTest",
+        "com.example.ipa_board.LayoutFileManagerTest",
+        "com.example.ipa_board.PageGroupTest",
+        "com.example.ipa_board.QuickPasteStatusTest",
+        "com.example.ipa_board.LayoutImportContractTest",
+        "com.example.ipa_board.EngineSettingsContractTest",
+        "com.example.ipa_board.InstalledEmojiCatalogTest",
+        "com.example.ipa_board.EngineVersionLookupContractTest",
+        "com.example.ipa_board.DiagnosticsContractTest"
+      ]
+    },
+    "engines": {
+      "classes": [
+        "com.example.ipa_board.MultilingualEngineTest",
+        "com.example.ipa_board.ZhuyinEngineTest"
+      ]
+    },
+    "ui": {
+      "classes": [
+        "com.example.ipa_board.ContextRankingSettingsTest",
+        "com.example.ipa_board.EngineControlsTest",
+        "com.example.ipa_board.EngineManagementTest",
+        "com.example.ipa_board.EmojiFeatureTest",
+        "com.example.ipa_board.ImeChromeTest",
+        "com.example.ipa_board.KeyEditorTest",
+        "com.example.ipa_board.KeyPressPreviewTest",
+        "com.example.ipa_board.KeyboardWindowTest",
+        "com.example.ipa_board.LayoutManagementTest",
+        "com.example.ipa_board.PageGroupUiTest",
+        "com.example.ipa_board.PresentationContractTest",
+        "com.example.ipa_board.ClipboardPanelOrderTest"
+      ]
+    },
+    "e2e": {
+      "classes": [
+        "com.example.ipa_board.ImeEndToEndTest",
+        "com.example.ipa_board.EnglishImeIntegrationTest",
+        "com.example.ipa_board.PageGroupImeTest"
+      ]
+    },
+    "semantic": {
+      "classes": [
+        "com.example.ipa_board.SemanticContextIntegrationTest"
+      ]
+    },
+    "full": {
+      "classes": [
+        "com.example.ipa_board.CompositionControllerTest",
+        "com.example.ipa_board.KeyboardInputControllerTest",
+        "com.example.ipa_board.KeyboardConfigurationTest",
+        "com.example.ipa_board.ImportSelectionTest",
+        "com.example.ipa_board.LayoutFileManagerTest",
+        "com.example.ipa_board.PageGroupTest",
+        "com.example.ipa_board.QuickPasteStatusTest",
+        "com.example.ipa_board.LayoutImportContractTest",
+        "com.example.ipa_board.EngineSettingsContractTest",
+        "com.example.ipa_board.InstalledEmojiCatalogTest",
+        "com.example.ipa_board.EngineVersionLookupContractTest",
+        "com.example.ipa_board.DiagnosticsContractTest",
+        "com.example.ipa_board.MultilingualEngineTest",
+        "com.example.ipa_board.ZhuyinEngineTest",
+        "com.example.ipa_board.ContextRankingSettingsTest",
+        "com.example.ipa_board.EngineControlsTest",
+        "com.example.ipa_board.EngineManagementTest",
+        "com.example.ipa_board.EmojiFeatureTest",
+        "com.example.ipa_board.ImeChromeTest",
+        "com.example.ipa_board.KeyEditorTest",
+        "com.example.ipa_board.KeyPressPreviewTest",
+        "com.example.ipa_board.KeyboardWindowTest",
+        "com.example.ipa_board.LayoutManagementTest",
+        "com.example.ipa_board.PageGroupUiTest",
+        "com.example.ipa_board.PresentationContractTest",
+        "com.example.ipa_board.ClipboardPanelOrderTest",
+        "com.example.ipa_board.ImeEndToEndTest",
+        "com.example.ipa_board.EnglishImeIntegrationTest",
+        "com.example.ipa_board.PageGroupImeTest",
+        "com.example.ipa_board.SemanticContextIntegrationTest"
+      ]
+    }
+  }
+}
