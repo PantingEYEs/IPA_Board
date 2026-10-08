@@ -2,7 +2,9 @@
 
 可自定义的 Android 音标键盘，支持 IPA 输入、中英日混合候选与联想、注音、Emoji、颜文字、剪贴板和行内计算。
 
-当前正式版本：**v0.0.2**，`versionCode = 2`。变更见 [更新日志](CHANGELOG.md)；正式安装包以 [GitHub Releases](https://github.com/PantingEYEs/IPA_Board/releases) 为准。
+当前开发版本：**0.0.3-dev**，`versionCode = 3`，开发分支为 `0.0.3-dev`。最新正式版本为 **v0.0.2**。变更见 [更新日志](CHANGELOG.md)；正式安装包以 [GitHub Releases](https://github.com/PantingEYEs/IPA_Board/releases) 为准。
+
+0.0.3 计划采用 Issue 驱动开发，推进鸿蒙 4.2.0.x 兼容、无候选问题与日志管理、仪表盘、按页绑定引擎、计算器、可编辑多功能栏及 IPA 键盘与自研基础引擎。范围、验收标准和建议见 [0.0.3 开发计划](docs/0.0.3-development-plan.md)；这些项目尚未实现。
 
 ## 安装
 
