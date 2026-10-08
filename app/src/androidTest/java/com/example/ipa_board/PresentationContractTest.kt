@@ -2,6 +2,7 @@ package com.example.ipa_board
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Color
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
@@ -15,6 +16,7 @@ import android.widget.FrameLayout
 import android.widget.SeekBar
 import android.widget.Spinner
 import android.widget.TextView
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -22,11 +24,16 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.example.ipa_board.clipboard.ClipboardItem
 import com.example.ipa_board.clipboard.ClipboardPanelView
 import com.example.ipa_board.clipboard.ClipboardRepository
+import com.example.ipa_board.clipboard.ClipboardStatusView
 import com.example.ipa_board.ime.Candidate
 import com.example.ipa_board.ime.ImeChromeView
 import com.example.ipa_board.kaomoji.KaomojiManagerActivity
+import com.example.ipa_board.kaomoji.KaomojiPanelView
+import com.example.ipa_board.kaomoji.KaomojiRepository
+import com.example.ipa_board.kaomoji.KaomojiStatusView
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.UUID
@@ -234,6 +241,259 @@ class PresentationContractTest {
         } finally {
             context.deleteSharedPreferences(preferenceName)
         }
+    }
+
+    @Test fun clipboardSortReversesTheWholeDisplayWithoutChangingStoredItems() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val preferenceName = "clipboard_order_${UUID.randomUUID()}"
+        val preferences = context.getSharedPreferences(preferenceName, Context.MODE_PRIVATE)
+        val repository = ClipboardRepository(prefsOverride = preferences)
+        val (pinnedOld, pinnedNew, longItem, sensitiveItem) = clipboardOrderItems()
+        listOf(pinnedOld, pinnedNew, longItem, sensitiveItem).forEach(repository::restoreItem)
+        val normalIds = listOf(pinnedNew.id, pinnedOld.id, longItem.id, sensitiveItem.id)
+        val storedItems = repository.getItems()
+        val savedPreferences = preferences.all.toMap()
+        val kaomojiDirectory = File(context.cacheDir, "clipboard_sort_reference_${UUID.randomUUID()}")
+        try {
+            assertTrue(kaomojiDirectory.mkdirs())
+            ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+                scenario.onActivity { activity ->
+                    val panel = ClipboardPanelView(activity, repository) {}
+                    val toolbar = ClipboardStatusView(activity, panel)
+                    val recycler = clipboardRecycler(panel)
+                    val adapter = recycler.adapter as ClipboardPanelView.ClipboardAdapter
+                    val sort = descendants(toolbar).filterIsInstance<TextView>()
+                        .single { it.contentDescription == "Clipboard reverse order" }
+                    val referencePanel = KaomojiPanelView(activity,
+                        KaomojiRepository(storageDirOverride = kaomojiDirectory)) {}
+                    val reference = KaomojiStatusView(activity, referencePanel) {}
+                    val referenceSort = descendants(reference).filterIsInstance<TextView>()
+                        .single { it.text.toString() == "⇅" }
+                    activity.setContentView(FrameLayout(activity).apply { addView(panel) })
+
+                    fun checkStyle(reversed: Boolean) {
+                        assertEquals(if (reversed) "⇅ Rev" else "⇅", sort.text.toString())
+                        assertEquals(if (reversed) Color.WHITE else Color.LTGRAY, sort.currentTextColor)
+                        assertEquals(reversed, sort.isSelected)
+                        assertEquals(if (reversed) "Reverse order" else "Normal order", sort.stateDescription.toString())
+                        assertEquals("Clipboard sort should use the kaomoji control's small text size",
+                            referenceSort.textSize, sort.textSize, 0f)
+                        assertEquals(referenceSort.gravity, sort.gravity)
+                        assertEquals(listOf(referenceSort.paddingLeft, referenceSort.paddingTop,
+                            referenceSort.paddingRight, referenceSort.paddingBottom),
+                            listOf(sort.paddingLeft, sort.paddingTop, sort.paddingRight, sort.paddingBottom))
+                        val referenceMargins = referenceSort.layoutParams as ViewGroup.MarginLayoutParams
+                        val margins = sort.layoutParams as ViewGroup.MarginLayoutParams
+                        assertEquals(listOf(referenceMargins.leftMargin, referenceMargins.topMargin,
+                            referenceMargins.rightMargin, referenceMargins.bottomMargin),
+                            listOf(margins.leftMargin, margins.topMargin, margins.rightMargin, margins.bottomMargin))
+                        assertNull("Sort should have no colored button background", sort.background)
+                    }
+
+                    assertEquals("Clipboard", toolbar.tvTitle.text.toString())
+                    assertSame(toolbar.tvTitle, toolbar.getChildAt(0))
+                    assertSame(sort, toolbar.getChildAt(toolbar.childCount - 1))
+                    assertFalse(panel.isReversed)
+                    assertEquals(normalIds, adapter.displayItems.map { it.id })
+                    checkStyle(false)
+                    assertTrue(sort.performClick())
+                    referencePanel.toggleReversed()
+                    assertTrue(panel.isReversed)
+                    assertEquals("Pinned entries must move with the entire displayed sequence",
+                        normalIds.reversed(), adapter.displayItems.map { it.id })
+                    assertEquals(referenceSort.text.toString(), sort.text.toString())
+                    assertEquals(referenceSort.currentTextColor, sort.currentTextColor)
+                    checkStyle(true)
+                    assertTrue(sort.performClick())
+                    assertFalse(panel.isReversed)
+                    assertEquals("Two sort clicks must restore the exact original sequence",
+                        normalIds, adapter.displayItems.map { it.id })
+                    checkStyle(false)
+
+                    panel.toggleReversed()
+                    checkStyle(true)
+                    val newPanel = ClipboardPanelView(activity, repository) {}
+                    assertFalse("A newly opened panel starts in normal order", newPanel.isReversed)
+                    assertEquals(normalIds,
+                        (clipboardRecycler(newPanel).adapter as ClipboardPanelView.ClipboardAdapter).displayItems.map { it.id })
+                    assertEquals("Display sorting must not mutate pin, timestamp, text or repository order",
+                        storedItems, repository.getItems())
+                    assertEquals("Display sorting must not rewrite persisted history", savedPreferences, preferences.all)
+                    assertEquals(storedItems, ClipboardRepository(prefsOverride = preferences).getItems())
+                }
+            }
+        } finally {
+            kaomojiDirectory.deleteRecursively()
+            context.deleteSharedPreferences(preferenceName)
+        }
+    }
+
+    @Test fun reversedClipboardRefreshKeepsTwoColumnsAndPastesCompleteUnicodeAndSensitiveText() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val preferenceName = "clipboard_reverse_refresh_${UUID.randomUUID()}"
+        val preferences = context.getSharedPreferences(preferenceName, Context.MODE_PRIVATE)
+        val repository = ClipboardRepository(prefsOverride = preferences)
+        val (pinnedOld, pinnedNew, longItem, sensitiveItem) = clipboardOrderItems()
+        listOf(pinnedOld, pinnedNew, longItem, sensitiveItem).forEach(repository::restoreItem)
+        val newItem = ClipboardItem(UUID.randomUUID().toString(), "New synthetic copy 🧪", 5_000L)
+        val expectedIds = listOf(sensitiveItem.id, longItem.id, newItem.id, pinnedOld.id, pinnedNew.id)
+        val settled = CountDownLatch(1)
+        lateinit var panel: ClipboardPanelView
+        lateinit var recycler: RecyclerView
+        lateinit var editor: EditText
+        lateinit var listener: ViewTreeObserver.OnPreDrawListener
+        lateinit var savedPreferences: Map<String, *>
+        var pastedItem: ClipboardItem? = null
+        try {
+            ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+                scenario.onActivity { activity ->
+                    editor = EditText(activity).apply { showSoftInputOnFocus = false }
+                    val connection = requireNotNull(editor.onCreateInputConnection(EditorInfo()))
+                    panel = ClipboardPanelView(activity, repository) { item ->
+                        pastedItem = item
+                        assertTrue(connection.commitText(item.text, 1))
+                    }
+                    recycler = clipboardRecycler(panel)
+                    val adapter = recycler.adapter as ClipboardPanelView.ClipboardAdapter
+                    val toolbar = ClipboardStatusView(activity, panel)
+                    assertTrue(descendants(toolbar).single { it.contentDescription == "Clipboard reverse order" }.performClick())
+                    panel.refreshList()
+                    assertTrue("An ordinary refresh must retain reversed order", panel.isReversed)
+                    assertEquals(listOf(sensitiveItem.id, longItem.id, pinnedOld.id, pinnedNew.id),
+                        adapter.displayItems.map { it.id })
+                    repository.restoreItem(newItem)
+                    savedPreferences = preferences.all.toMap()
+                    panel.refreshList()
+                    assertTrue("A new copy must not reset the active panel's order", panel.isReversed)
+                    assertEquals(expectedIds, adapter.displayItems.map { it.id })
+
+                    val width = activity.resources.displayMetrics.widthPixels.coerceAtMost(1080) / 2 * 2
+                    val editorHeight = (48 * activity.resources.displayMetrics.density).toInt()
+                    activity.setContentView(FrameLayout(activity).apply {
+                        isFocusableInTouchMode = true
+                        addView(panel, FrameLayout.LayoutParams(width, ViewGroup.LayoutParams.MATCH_PARENT).apply {
+                            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                            bottomMargin = editorHeight
+                        })
+                        addView(editor, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, editorHeight).apply {
+                            gravity = Gravity.BOTTOM
+                        })
+                        requestFocus()
+                    })
+                    listener = ViewTreeObserver.OnPreDrawListener {
+                        val cards = expectedIds.indices.mapNotNull { recycler.findViewHolderForAdapterPosition(it) }
+                        if (panel.isAttachedToWindow && !recycler.isLayoutRequested && cards.size == expectedIds.size &&
+                            cards.all { it.itemView.width > 0 && it.itemView.height > 0 && !it.itemView.isLayoutRequested }) {
+                            settled.countDown()
+                        }
+                        true
+                    }
+                    recycler.viewTreeObserver.addOnPreDrawListener(listener)
+                }
+                val completed = settled.await(5, TimeUnit.SECONDS)
+                scenario.onActivity {
+                    recycler.viewTreeObserver.removeOnPreDrawListener(listener)
+                    assertTrue("Reversed clipboard cards did not finish laying out", completed)
+                    assertEquals(2, (recycler.layoutManager as GridLayoutManager).spanCount)
+                    val holders = expectedIds.indices.map { index ->
+                        requireNotNull(recycler.findViewHolderForAdapterPosition(index)) as ClipboardPanelView.ClipboardAdapter.ViewHolder
+                    }
+                    assertEquals(1, holders.map { it.itemView.width to it.itemView.height }.distinct().size)
+                    assertEquals(holders[0].itemView.top, holders[1].itemView.top)
+                    assertTrue(holders[1].itemView.left >= holders[0].itemView.right)
+                    assertEquals("Reversing must retain both pinned markers", 2,
+                        holders.count { it.pinTextView.visibility == View.VISIBLE })
+
+                    val longHolder = holders[expectedIds.indexOf(longItem.id)]
+                    val longLayout = requireNotNull(longHolder.contentTextView.layout)
+                    assertTrue("Long Unicode preview should remain visually abbreviated",
+                        (0 until longLayout.lineCount).any { longLayout.getEllipsisCount(it) > 0 })
+                    assertTrue(longHolder.container.performClick())
+                    assertEquals(longItem, pastedItem)
+                    assertEquals("Reverse order must still paste full multiline Unicode", longItem.text, editor.text.toString())
+                    val sensitiveHolder = holders[expectedIds.indexOf(sensitiveItem.id)]
+                    assertFalse(sensitiveHolder.contentTextView.text.toString().contains("Synthetic sensitive sample"))
+                    editor.text.clear()
+                    assertTrue(sensitiveHolder.container.performClick())
+                    assertEquals(sensitiveItem, pastedItem)
+                    assertEquals("Sensitive previews must still paste the complete original", sensitiveItem.text, editor.text.toString())
+                    assertEquals(expectedIds, (recycler.adapter as ClipboardPanelView.ClipboardAdapter).displayItems.map { it.id })
+                    assertEquals("Refresh and paste must not rewrite stored items", savedPreferences, preferences.all)
+                    assertEquals(listOf(pinnedNew, pinnedOld, newItem, longItem, sensitiveItem),
+                        ClipboardRepository(prefsOverride = preferences).getItems())
+                }
+            }
+        } finally {
+            context.deleteSharedPreferences(preferenceName)
+        }
+    }
+
+    @Test fun clipboardSortToolbarPreservesQuickPasteAndReattachesStatusAcrossPanels() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val preferenceName = "clipboard_status_parent_${UUID.randomUUID()}"
+        val repository = ClipboardRepository(prefsOverride = context.getSharedPreferences(preferenceName, Context.MODE_PRIVATE))
+        try {
+            ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+                scenario.onActivity { activity ->
+                    val chrome = ImeChromeView(activity)
+                    val panel = ClipboardPanelView(activity, repository) {}
+                    activity.setContentView(chrome)
+                    chrome.showPanel(ImeChromeView.Panel.CLIPBOARD)
+                    var quickPasteClicks = 0
+                    chrome.status.text = "Synthetic quick paste 🧪"
+                    chrome.onStatusClick = { quickPasteClicks++ }
+                    val toolbar = ClipboardStatusView(activity, panel, chrome.status)
+                    chrome.setStatusCustomView(toolbar)
+                    val sort = descendants(toolbar).single { it.contentDescription == "Clipboard reverse order" }
+                    assertSame("Quick-paste status should remain in the clipboard toolbar", toolbar, chrome.status.parent)
+                    assertSame(toolbar, chrome.statusContainer.getChildAt(0))
+                    assertEquals("Synthetic quick paste 🧪", chrome.status.text.toString())
+                    assertTrue(chrome.status.performClick())
+                    assertEquals(1, quickPasteClicks)
+                    assertTrue(sort.performClick())
+                    assertTrue(panel.isReversed)
+                    assertEquals("Sorting must not trigger the adjacent quick-paste action", 1, quickPasteClicks)
+
+                    chrome.showPanel(ImeChromeView.Panel.CLIPBOARD)
+                    assertSame("Refreshing the same clipboard panel must retain its custom toolbar",
+                        toolbar, chrome.statusContainer.getChildAt(0))
+                    assertSame(toolbar, chrome.status.parent)
+                    assertTrue(panel.isReversed)
+                    chrome.showPanel(ImeChromeView.Panel.KEYBOARD)
+                    assertNull("Leaving clipboard should detach its sort toolbar", toolbar.parent)
+                    assertSame("The original status must be reattached for keyboard mode", chrome.statusContainer, chrome.status.parent)
+                    assertEquals(-1, toolbar.indexOfChild(chrome.status))
+                    assertNull(chrome.onStatusClick)
+
+                    chrome.showPanel(ImeChromeView.Panel.CLIPBOARD)
+                    val nextToolbar = ClipboardStatusView(activity, panel, chrome.status)
+                    chrome.setStatusCustomView(nextToolbar)
+                    chrome.showPanel(ImeChromeView.Panel.KAOMOJI)
+                    assertNull("Kaomoji mode must detach the previous clipboard toolbar", nextToolbar.parent)
+                    assertSame(chrome.statusContainer, chrome.status.parent)
+                    assertTrue("Kaomoji mode must not retain a clipboard sort control",
+                        descendants(chrome.statusContainer).none { it.contentDescription == "Clipboard reverse order" })
+                }
+            }
+        } finally {
+            context.deleteSharedPreferences(preferenceName)
+        }
+    }
+
+    private fun clipboardOrderItems(): List<ClipboardItem> = listOf(
+        ClipboardItem(UUID.randomUUID().toString(), "Older pinned 👩🏽‍💻", 1_000L, isPinned = true),
+        ClipboardItem(UUID.randomUUID().toString(), "Newer pinned 漢字", 4_000L, isPinned = true),
+        ClipboardItem(UUID.randomUUID().toString(),
+            (1..12).joinToString("\n") { "第 $it 行：漢字、かな、한글 😀 e\u0301 👩🏽‍💻 与完整粘贴内容。" }, 3_000L),
+        ClipboardItem(UUID.randomUUID().toString(), "Synthetic sensitive sample 🔒\n第二行完整内容 e\u0301", 2_000L, isSensitive = true)
+    )
+
+    private fun clipboardRecycler(panel: ClipboardPanelView): RecyclerView =
+        (0 until panel.childCount).map { panel.getChildAt(it) }.filterIsInstance<RecyclerView>().single()
+
+    private fun descendants(root: View): List<View> = buildList {
+        add(root)
+        if (root is ViewGroup) for (index in 0 until root.childCount) addAll(descendants(root.getChildAt(index)))
     }
 
     @Test fun candidateTouchTargetsFollowKeyboardGeometryAcrossPageAndWidthChanges() {

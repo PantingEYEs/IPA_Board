@@ -2,10 +2,14 @@ package com.example.ipa_board
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.view.View
 import android.view.ViewGroup
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.appcompat.widget.SwitchCompat
+import com.example.ipa_board.diagnostics.AppDiagnostics
+import com.example.ipa_board.diagnostics.DebugDiagnosticsSettings
 import com.example.ipa_board.ime.EngineCatalog
 import com.example.ipa_board.ime.EngineStatus
 import org.junit.Assert.*
@@ -13,6 +17,60 @@ import org.junit.Test
 import java.io.File
 
 class EngineManagementTest {
+    @Test fun diagnosticsSwitchStartsOffSavesClicksAndSurvivesActivityRecreation() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val preferences = DebugDiagnosticsSettings.preferences(context)
+        val key = DebugDiagnosticsSettings.KEY_ENABLED
+        val original = preferences.all[key]
+        val originallyPresent = preferences.contains(key)
+        try {
+            preferences.edit().remove(key).commit()
+            AppDiagnostics.configure(preferences)
+            ActivityScenario.launch(EngineManagementActivity::class.java).use { scenario ->
+                scenario.onActivity { activity ->
+                    val root = activity.findViewById<View>(R.id.engine_management_root)
+                    val toggle = root.findViewWithTag<SwitchCompat>("debug-diagnostics-switch")
+                    assertEquals("Debug diagnostics", toggle.text.toString())
+                    assertEquals(Color.WHITE, toggle.currentTextColor)
+                    assertFalse(toggle.isChecked)
+                    assertFalse(preferences.contains(key))
+                    toggle.performClick()
+                    assertTrue(toggle.isChecked)
+                    assertTrue(DebugDiagnosticsSettings.enabled(preferences))
+                }
+                scenario.recreate()
+                scenario.onActivity { activity ->
+                    val toggle = activity.findViewById<View>(R.id.engine_management_root)
+                        .findViewWithTag<SwitchCompat>("debug-diagnostics-switch")
+                    assertTrue(toggle.isChecked)
+                    toggle.performClick()
+                    assertFalse(toggle.isChecked)
+                    assertFalse(DebugDiagnosticsSettings.enabled(preferences))
+                }
+                scenario.recreate()
+                scenario.onActivity { activity ->
+                    val toggle = activity.findViewById<View>(R.id.engine_management_root)
+                        .findViewWithTag<SwitchCompat>("debug-diagnostics-switch")
+                    assertFalse(toggle.isChecked)
+                    assertTrue(preferences.contains(key))
+                }
+            }
+        } finally {
+            val edit = preferences.edit()
+            if (!originallyPresent) edit.remove(key)
+            else when (original) {
+                is Boolean -> edit.putBoolean(key, original)
+                is String -> edit.putString(key, original)
+                is Int -> edit.putInt(key, original)
+                is Long -> edit.putLong(key, original)
+                is Float -> edit.putFloat(key, original)
+                is Set<*> -> edit.putStringSet(key, original.filterIsInstance<String>().toSet())
+            }
+            assertTrue("Restore the original diagnostics preference", edit.commit())
+            AppDiagnostics.configure(preferences)
+        }
+    }
+
     @Test fun homeEngineEntryOpensManagementAndReturnsHome() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val monitor = instrumentation.addMonitor(EngineManagementActivity::class.java.name, null, false)

@@ -1,5 +1,6 @@
 package com.example.ipa_board.clipboard
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
@@ -15,6 +16,7 @@ import android.widget.*
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.ipa_board.R
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -36,6 +38,9 @@ class ClipboardPanelView(
 
     private var pendingDeleteItem: ClipboardItem? = null
     private val commitDeleteRunnable = Runnable { commitPendingDelete() }
+    var isReversed = false
+        private set
+    var onOrderChanged: (() -> Unit)? = null
 
     init {
         setBackgroundColor(Color.rgb(18, 18, 18))
@@ -137,9 +142,23 @@ class ClipboardPanelView(
     }
 
     fun refreshList() {
-        val items = repository.getItems()
-        adapter.setItems(items)
+        // New copies can evict the pending item at the history limit; do not offer a dead Undo.
+        val pending = pendingDeleteItem
+        if (pending != null && repository.getItemById(pending.id) == null) {
+            handler.removeCallbacks(commitDeleteRunnable)
+            pendingDeleteItem = null
+            undoBar.visibility = GONE
+        }
+        // Sorting and clipboard refreshes must not revive an item while its undo is pending.
+        val items = repository.getItems().filter { it.id != pendingDeleteItem?.id }
+        adapter.setItems(if (isReversed) items.reversed() else items)
         updateEmptyState()
+    }
+
+    fun toggleReversed() {
+        isReversed = !isReversed
+        refreshList()
+        onOrderChanged?.invoke()
     }
 
     private fun updateEmptyState() {
@@ -320,4 +339,47 @@ class ClipboardPanelView(
             val timeTextView: TextView
         ) : RecyclerView.ViewHolder(itemView)
     }
+}
+
+/** Same IME status-bar sort control as the kaomoji panel; order is local to this panel. */
+@SuppressLint("ViewConstructor") // Created in code with its panel; never inflated from XML.
+class ClipboardStatusView(
+    context: Context,
+    private val panelView: ClipboardPanelView,
+    titleView: TextView? = null
+) : LinearLayout(context) {
+    // The service supplies its existing status view to keep quick-paste text/clicks available.
+    val tvTitle = titleView ?: TextView(context).apply {
+        text = context.getString(R.string.clipboard_panel_title)
+        setTextColor(Color.LTGRAY)
+        textSize = 10f
+        gravity = Gravity.CENTER_VERTICAL
+    }
+    private val btnSort = TextView(context).apply {
+        contentDescription = context.getString(R.string.clipboard_reverse_order)
+        textSize = 10f
+        gravity = Gravity.CENTER
+        setPadding(dp(3), dp(1), dp(3), dp(1))
+        setOnClickListener { panelView.toggleReversed() }
+    }
+    init {
+        orientation = HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        (tvTitle.parent as? ViewGroup)?.removeView(tvTitle)
+        addView(tvTitle, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        addView(btnSort, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT).apply {
+            setMargins(dp(2), 0, dp(4), 0)
+        })
+        panelView.onOrderChanged = { updateUI() }
+        updateUI()
+    }
+    private fun updateUI() {
+        btnSort.setText(if (panelView.isReversed) R.string.clipboard_reverse_label else R.string.clipboard_order_label)
+        btnSort.setTextColor(if (panelView.isReversed) Color.WHITE else Color.LTGRAY)
+        btnSort.isSelected = panelView.isReversed
+        btnSort.stateDescription = context.getString(
+            if (panelView.isReversed) R.string.clipboard_reverse_state else R.string.clipboard_normal_state
+        )
+    }
+    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 }

@@ -1,6 +1,7 @@
 package com.example.ipa_board.ime
 
 import android.content.Context
+import com.example.ipa_board.diagnostics.*
 import com.google.android.apps.inputmethod.libs.mozc.session.MozcJNI
 import com.example.ipa_board.ime.ProtoWire.blob
 import com.example.ipa_board.ime.ProtoWire.value
@@ -11,16 +12,31 @@ internal class MozcEngine(context: Context) : QueryEngine {
     private val n = ProtoWire::number
     private val m = ProtoWire::message
     init {
-        val dir = File(context.noBackupFilesDir, "mozc-v0.1.2").apply { mkdirs() }
-        val data = File(dir, "mozc.data")
-        if (!data.exists()) {
-            val temp = File(dir, "mozc.data.tmp")
-            context.assets.open("engines/mozc.data").use { input -> temp.outputStream().use { input.copyTo(it) } }
-            check(temp.renameTo(data))
+        // DIAGNOSTICS: isolate bundled data deployment from native runtime initialization.
+        val dir = AppDiagnostics.atStage(DiagnosticComponent.MOZC, DiagnosticStage.ASSETS) {
+            File(context.noBackupFilesDir, "mozc-v0.1.2").apply {
+                check(mkdirs() || isDirectory)
+                val data = File(this, "mozc.data")
+                if (!data.exists()) {
+                    val temp = File(this, "mozc.data.tmp")
+                    context.assets.open("engines/mozc.data").use { input -> temp.outputStream().use { input.copyTo(it) } }
+                    // DIAGNOSTICS: identify a failed atomic publication without logging private paths.
+                    AppDiagnostics.atStage(DiagnosticComponent.MOZC, DiagnosticStage.PUBLISH) {
+                        check(temp.renameTo(data))
+                    }
+                }
+            }
         }
-        MozcJNI.load(dir.absolutePath, data.absolutePath)
-        // Query-only integration: never write engine history, including during replay.
-        send(n(1, 7) + m(5, n(20, 1) + n(50, 2)))
+        val data = File(dir, "mozc.data")
+        // DIAGNOSTICS: JNI owns library loading and runtime setup as one initialization operation.
+        AppDiagnostics.atStage(DiagnosticComponent.MOZC, DiagnosticStage.INITIALIZE) {
+            MozcJNI.load(dir.absolutePath, data.absolutePath)
+        }
+        // DIAGNOSTICS: report initialization protocol failures, never command bytes or input text.
+        AppDiagnostics.atStage(DiagnosticComponent.MOZC, DiagnosticStage.INITIALIZE) {
+            // Query-only integration: never write engine history, including during replay.
+            send(n(1, 7) + m(5, n(20, 1) + n(50, 2)))
+        }
     }
     private fun send(input: ByteArray): List<ProtoWire.Field> = ProtoWire.read(
         ProtoWire.read(MozcJNI.evalCommand(m(1, input))).blob(2)

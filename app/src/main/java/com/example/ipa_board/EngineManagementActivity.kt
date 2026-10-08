@@ -14,6 +14,8 @@ import androidx.appcompat.widget.SwitchCompat
 import com.example.ipa_board.ime.*
 import android.content.SharedPreferences
 import android.content.res.ColorStateList
+import com.example.ipa_board.diagnostics.AppDiagnostics
+import com.example.ipa_board.diagnostics.DebugDiagnosticsSettings
 
 /** Independent engine controls and read-only upstream version checks on expansion. */
 class EngineManagementActivity : Activity() {
@@ -22,9 +24,15 @@ class EngineManagementActivity : Activity() {
     private val latestViews = mutableMapOf<EngineInfo, TextView>()
     private val versions = EngineVersionLookup()
     private val preferences by lazy { EngineSettings.preferences(this) }
+    private var diagnosticSwitch: SwitchCompat? = null
     private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         switches.filterKeys { it.key == key }.forEach { (feature, views) ->
             views.forEach { it.isChecked = EngineSettings.enabled(preferences, feature) }
+        }
+        if (key == DebugDiagnosticsSettings.KEY_ENABLED) {
+            // DIAGNOSTICS: one removable switch; independent of every engine enable/disable choice.
+            AppDiagnostics.configure(preferences)
+            diagnosticSwitch?.isChecked = DebugDiagnosticsSettings.enabled(preferences)
         }
     }
 
@@ -37,6 +45,8 @@ class EngineManagementActivity : Activity() {
         }
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener { finish() }
         preferences.registerOnSharedPreferenceChangeListener(preferenceListener)
+        // DIAGNOSTICS: covers version checks as well as engine worker requests.
+        AppDiagnostics.configure(preferences)
 
         val root = findViewById<View>(R.id.engine_management_root)
         root.setOnApplyWindowInsetsListener { view, windowInsets ->
@@ -52,6 +62,30 @@ class EngineManagementActivity : Activity() {
         expandedCategoryIds.retainAll(categories.map { it.id }.toSet())
         val list = findViewById<LinearLayout>(R.id.engine_category_list)
         categories.forEach { category -> addCategory(list, category) }
+        if (AppDiagnostics.LOGGING_AVAILABLE) addDiagnosticsControl(list)
+    }
+
+    private fun addDiagnosticsControl(list: LinearLayout) {
+        // DIAGNOSTICS: remove this method/call and its strings to remove the optional UI entry.
+        diagnosticSwitch = SwitchCompat(this).apply {
+            tag = "debug-diagnostics-switch"
+            text = getString(R.string.debug_diagnostics_title)
+            textSize = 18f
+            setTextColor(Color.WHITE)
+            thumbTintList = ColorStateList.valueOf(Color.WHITE)
+            trackTintList = ColorStateList.valueOf(Color.DKGRAY)
+            minimumHeight = dp(56)
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            isChecked = DebugDiagnosticsSettings.enabled(preferences)
+            setOnCheckedChangeListener { _, checked -> DebugDiagnosticsSettings.setEnabled(this@EngineManagementActivity, checked) }
+        }
+        list.addView(diagnosticSwitch, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        list.addView(TextView(this).apply {
+            text = getString(R.string.debug_diagnostics_description)
+            textSize = 14f
+            setTextColor(Color.rgb(187, 187, 187))
+            setPadding(dp(16), 0, dp(16), dp(16))
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
     }
 
     override fun onDestroy() {

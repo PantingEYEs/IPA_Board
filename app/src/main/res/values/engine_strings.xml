@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="engine_management_title">Engine Management</string>
+    <!-- DIAGNOSTICS: optional debug control, removable with addDiagnosticsControl. -->
+    <string name="debug_diagnostics_title">Debug diagnostics</string>
+    <string name="debug_diagnostics_description">Off by default. Record loading stages and fixed error codes in Logcat, without input text or private data. Turning this off stops diagnostic logging; failure hints and input fallback remain available.</string>
     <string name="engine_back">Back</string>
     <string name="engine_category_expanded">Expanded</string>
     <string name="engine_category_collapsed">Collapsed</string>

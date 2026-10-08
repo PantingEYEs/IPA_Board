@@ -120,6 +120,8 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
             }
             statusContainer.addView(view, lp)
         } else {
+            // Clipboard actions may share the original status view for quick-paste behavior.
+            (status.parent as? ViewGroup)?.removeView(status)
             statusContainer.addView(status, FrameLayout.LayoutParams(-1, -1))
         }
     }
@@ -139,8 +141,9 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
 
     fun showPanel(next: Panel) {
         onStatusClick = null
+        val previous = panel
         panel = next
-        if (next != Panel.KAOMOJI) {
+        if (next != previous || (next != Panel.KAOMOJI && next != Panel.CLIPBOARD)) {
             setStatusCustomView(null)
         }
         overlay.visibility = if (next == Panel.KEYBOARD) GONE else VISIBLE

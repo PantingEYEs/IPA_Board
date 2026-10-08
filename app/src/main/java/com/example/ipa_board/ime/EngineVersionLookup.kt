@@ -3,6 +3,7 @@ package com.example.ipa_board.ime
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import com.example.ipa_board.diagnostics.*
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URI
@@ -58,7 +59,16 @@ internal class EngineVersionLookup(
         cache.values[source]?.takeIf { now - it.time < if (it.value == null) 30_000L else 300_000L }?.let {
             return@synchronized it.value
         }
-        val value = try { parse(source, metadataLoader(source)) } catch (_: Exception) { null }
+        val value = try {
+            parse(source, metadataLoader(source)).also { value ->
+                // DIAGNOSTICS: well-formed metadata without a usable version has a fixed failure code.
+                if (value == null) AppDiagnostics.signal(DiagnosticComponent.VERSION_LOOKUP, DiagnosticStage.VERSION_CHECK, DiagnosticKind.INVALID_DATA)
+            }
+        } catch (e: Exception) {
+            // DIAGNOSTICS: Report no endpoint or response body; preserve the cached unavailable result.
+            AppDiagnostics.failure(DiagnosticComponent.VERSION_LOOKUP, DiagnosticStage.VERSION_CHECK, e)
+            null
+        }
         cache.values[source] = Cached(monotonicClock(), value)
         value
     }

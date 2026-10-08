@@ -3,6 +3,7 @@ package com.example.ipa_board
 import android.content.Context
 import android.util.AtomicFile
 import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT
+import com.example.ipa_board.diagnostics.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.InputStream
@@ -182,6 +183,9 @@ object LayoutFileManager {
             atomicFile.finishWrite(output)
         } catch (e: Exception) {
             atomicFile.failWrite(output)
+            // DIAGNOSTICS: Report only the fixed save failure; preserve rollback and rethrow.
+            AppDiagnostics.configure(context)
+            AppDiagnostics.failure(DiagnosticComponent.LAYOUT, DiagnosticStage.SAVE, e)
             throw e
         }
         val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
@@ -196,6 +200,9 @@ object LayoutFileManager {
                 KeyboardLayout.fromJson(file.readText())
             } else null
         } catch (e: Exception) {
+            // DIAGNOSTICS: Report no filename or layout content; preserve the nullable fallback.
+            AppDiagnostics.configure(context)
+            AppDiagnostics.failure(DiagnosticComponent.LAYOUT, DiagnosticStage.LOAD, e)
             null
         }
     }
@@ -227,7 +234,10 @@ object LayoutFileManager {
                 if (file !in ordered) ordered.add(file)
             }
             ordered
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            // DIAGNOSTICS: Report no saved order or filenames; preserve the discovered-file fallback.
+            AppDiagnostics.configure(context)
+            AppDiagnostics.failure(DiagnosticComponent.LAYOUT, DiagnosticStage.LOAD, e)
             files
         }
     }
@@ -256,7 +266,10 @@ object LayoutFileManager {
             prefs.edit().putLong(SettingsConstants.KEY_LAYOUT_REVISION,
                 prefs.getLong(SettingsConstants.KEY_LAYOUT_REVISION, 0) + 1).apply()
             true
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            // DIAGNOSTICS: Report only the fixed mutation failure; preserve the false result.
+            AppDiagnostics.configure(context)
+            AppDiagnostics.failure(DiagnosticComponent.LAYOUT, DiagnosticStage.SAVE, e)
             false
         }
     }

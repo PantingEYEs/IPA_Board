@@ -49,6 +49,7 @@ class IpaBoardService : InputMethodService() {
     private val panelBackCallback = android.window.OnBackInvokedCallback { chrome?.showPanel(ImeChromeView.Panel.KEYBOARD) }
     private val clipboard by lazy { getSystemService(ClipboardManager::class.java) }
     private val clipboardRepository by lazy { ClipboardRepository(this) }
+    private var clipboardPanel: ClipboardPanelView? = null
 
     private data class QuickPasteState(
         val text: String,
@@ -197,6 +198,7 @@ class IpaBoardService : InputMethodService() {
         }
     }
     override fun onCreateInputView(): View {
+        clipboardPanel = null
         return ImeChromeView(this).also { view ->
             chrome = view
             view.onCalculatorToggle = {
@@ -207,6 +209,10 @@ class IpaBoardService : InputMethodService() {
             view.onLiteral = { if (composition.literal()) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
             view.onPanel = { panel ->
                 updatePanelBack(panel != ImeChromeView.Panel.KEYBOARD)
+                if (panel != ImeChromeView.Panel.CLIPBOARD) {
+                    clipboardPanel?.commitPendingDelete()
+                    clipboardPanel = null
+                }
                 when (panel) {
                     ImeChromeView.Panel.CLIPBOARD -> {
                         showClipboard()
@@ -766,12 +772,15 @@ class IpaBoardService : InputMethodService() {
     private fun showClipboard() {
         val view = chrome ?: return
         syncClipboardHistory()
-        val panelView = ClipboardPanelView(this, clipboardRepository) { item ->
+        // Reuse an open panel on new clipboard events so refreshes keep its viewing order and undo.
+        val panelView = clipboardPanel ?: ClipboardPanelView(this, clipboardRepository) { item ->
             if (composition.literal() && currentInputConnection?.commitText(item.text, 1) == true) {
                 view.showPanel(ImeChromeView.Panel.KEYBOARD)
             }
-        }
+        }.also { clipboardPanel = it }
+        panelView.refreshList()
         view.showContent("Clipboard", panelView)
+        view.setStatusCustomView(ClipboardStatusView(this, panelView, view.status))
     }
     private fun showPages() {
         val view = chrome ?: return

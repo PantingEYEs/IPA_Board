@@ -1,0 +1,8 @@
+<resources>
+    <string name="clipboard_panel_title">Clipboard</string>
+    <string name="clipboard_reverse_order">Clipboard reverse order</string>
+    <string name="clipboard_order_label" translatable="false">⇅</string>
+    <string name="clipboard_reverse_label">⇅ Rev</string>
+    <string name="clipboard_normal_state">Normal order</string>
+    <string name="clipboard_reverse_state">Reverse order</string>
+</resources>

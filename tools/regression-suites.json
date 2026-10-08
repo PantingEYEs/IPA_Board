@@ -24,7 +24,8 @@
         "com.example.ipa_board.LayoutImportContractTest",
         "com.example.ipa_board.EngineSettingsContractTest",
         "com.example.ipa_board.InstalledEmojiCatalogTest",
-        "com.example.ipa_board.EngineVersionLookupContractTest"
+        "com.example.ipa_board.EngineVersionLookupContractTest",
+        "com.example.ipa_board.DiagnosticsContractTest"
       ]
     },
     "engines": {
@@ -45,7 +46,8 @@
         "com.example.ipa_board.KeyboardWindowTest",
         "com.example.ipa_board.LayoutManagementTest",
         "com.example.ipa_board.PageGroupUiTest",
-        "com.example.ipa_board.PresentationContractTest"
+        "com.example.ipa_board.PresentationContractTest",
+        "com.example.ipa_board.ClipboardPanelOrderTest"
       ]
     },
     "e2e": {
@@ -73,6 +75,7 @@
         "com.example.ipa_board.EngineSettingsContractTest",
         "com.example.ipa_board.InstalledEmojiCatalogTest",
         "com.example.ipa_board.EngineVersionLookupContractTest",
+        "com.example.ipa_board.DiagnosticsContractTest",
         "com.example.ipa_board.MultilingualEngineTest",
         "com.example.ipa_board.ZhuyinEngineTest",
         "com.example.ipa_board.ContextRankingSettingsTest",
@@ -86,6 +89,7 @@
         "com.example.ipa_board.LayoutManagementTest",
         "com.example.ipa_board.PageGroupUiTest",
         "com.example.ipa_board.PresentationContractTest",
+        "com.example.ipa_board.ClipboardPanelOrderTest",
         "com.example.ipa_board.ImeEndToEndTest",
         "com.example.ipa_board.EnglishImeIntegrationTest",
         "com.example.ipa_board.PageGroupImeTest",

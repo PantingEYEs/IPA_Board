@@ -1,6 +1,7 @@
 package com.example.ipa_board.kaomoji
 
 import android.content.Context
+import com.example.ipa_board.diagnostics.*
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -343,7 +344,9 @@ class KaomojiRepository(
             items.addAll(loaded)
             settings?.edit()?.putBoolean("kaomoji_assets_initialized", true)?.apply()
         } catch (e: Exception) {
-            e.printStackTrace()
+            // DIAGNOSTICS: Report no path, items or tags; preserve the empty-list fallback.
+            context?.let { AppDiagnostics.configure(it) }
+            AppDiagnostics.failure(DiagnosticComponent.KAOMOJI, DiagnosticStage.LOAD, e)
         }
     }
 
@@ -351,7 +354,9 @@ class KaomojiRepository(
         try {
             configFile.writeText(serializeToJson())
         } catch (e: Exception) {
-            e.printStackTrace()
+            // DIAGNOSTICS: Report no path or serialized data; preserve best-effort persistence.
+            context?.let { AppDiagnostics.configure(it) }
+            AppDiagnostics.failure(DiagnosticComponent.KAOMOJI, DiagnosticStage.SAVE, e)
         }
     }
 

@@ -3,12 +3,16 @@ package com.example.ipa_board.ime
 import ai.onnxruntime.*
 import ai.onnxruntime.extensions.OrtxPackage
 import android.content.Context
+import com.example.ipa_board.diagnostics.*
 import org.json.JSONObject
 import kotlin.math.sqrt
 
 /** Quantized multilingual E5; sessions and the bounded RAM cache stay on the private worker. */
 internal class SemanticEngine(context: Context) : AutoCloseable {
-    private val environment = OrtEnvironment.getEnvironment()
+    // DIAGNOSTICS: include environment initialization even though it precedes the init block.
+    private val environment = AppDiagnostics.atStage(DiagnosticComponent.SEMANTIC, DiagnosticStage.INITIALIZE) {
+        OrtEnvironment.getEnvironment()
+    }
     private val tokenizer: OrtSession
     private val model: OrtSession
     private val centers: List<FloatArray>
@@ -18,23 +22,40 @@ internal class SemanticEngine(context: Context) : AutoCloseable {
 
     init {
         val dir = SemanticModelFiles.deploy(context)
-        val calibration = JSONObject(context.assets.open("engines/semantic/centering.json").bufferedReader().use { it.readText() })
-        centers = listOf("EN", "ZH", "JA").map { language ->
-            val values = calibration.getJSONArray(language)
-            FloatArray(values.length()) { values.getDouble(it).toFloat() }.also { check(it.size == 384) }
+        // DIAGNOSTICS: calibration parsing and dimensional compatibility share a fixed loading stage.
+        centers = AppDiagnostics.atStage(DiagnosticComponent.SEMANTIC, DiagnosticStage.CALIBRATION) {
+            val calibration = JSONObject(context.assets.open("engines/semantic/centering.json").bufferedReader().use { it.readText() })
+            listOf("EN", "ZH", "JA").map { language ->
+                val values = calibration.getJSONArray(language)
+                FloatArray(values.length()) { values.getDouble(it).toFloat() }.also { check(it.size == 384) }
+            }
         }
-        tokenizer = OrtSession.SessionOptions().use { options ->
-            options.setIntraOpNumThreads(1)
-            options.registerCustomOpLibrary(OrtxPackage.getLibraryPath())
-            environment.createSession(java.io.File(dir, "tokenizer.onnx").absolutePath, options)
+        // DIAGNOSTICS: tokenizer session creation is separate from model session creation.
+        tokenizer = AppDiagnostics.atStage(DiagnosticComponent.SEMANTIC, DiagnosticStage.TOKENIZER) {
+            OrtSession.SessionOptions().use { options ->
+                options.setIntraOpNumThreads(1)
+                // DIAGNOSTICS: native custom-op registration retains the most specific failure stage.
+                AppDiagnostics.atStage(DiagnosticComponent.SEMANTIC, DiagnosticStage.CUSTOM_OPS) {
+                    options.registerCustomOpLibrary(OrtxPackage.getLibraryPath())
+                }
+                environment.createSession(java.io.File(dir, "tokenizer.onnx").absolutePath, options)
+            }
         }
         try {
-            model = OrtSession.SessionOptions().use { options ->
-                options.setIntraOpNumThreads(2); options.setInterOpNumThreads(1)
-                options.setMemoryPatternOptimization(false)
-                environment.createSession(java.io.File(dir, "model.onnx").absolutePath, options)
+            // DIAGNOSTICS: model loading failures do not become generic inference failures.
+            model = AppDiagnostics.atStage(DiagnosticComponent.SEMANTIC, DiagnosticStage.MODEL) {
+                OrtSession.SessionOptions().use { options ->
+                    options.setIntraOpNumThreads(2); options.setInterOpNumThreads(1)
+                    options.setMemoryPatternOptimization(false)
+                    environment.createSession(java.io.File(dir, "model.onnx").absolutePath, options)
+                }
             }
-        } catch (e: Throwable) { tokenizer.close(); throw e }
+        } catch (failure: Throwable) {
+            try {
+                // DIAGNOSTICS: report cleanup failure, then preserve the original model-loading error.
+                AppDiagnostics.atStage(DiagnosticComponent.SEMANTIC, DiagnosticStage.CLOSE) { tokenizer.close() }
+            } finally { throw failure }
+        }
     }
 
     fun score(before: String, after: String, words: List<String>, cancelled: () -> Boolean): FloatArray? {
@@ -87,5 +108,17 @@ internal class SemanticEngine(context: Context) : AutoCloseable {
     private fun dot(a: FloatArray, b: FloatArray): Float = a.indices.sumOf { (a[it] * b[it]).toDouble() }.toFloat()
     private fun length(vector: FloatArray): Float = sqrt(dot(vector, vector)).coerceAtLeast(1e-6f)
     private fun normalize(vector: FloatArray): FloatArray { val length = length(vector); return FloatArray(vector.size) { vector[it] / length } }
-    override fun close() { cache.clear(); model.close(); tokenizer.close() }
+    override fun close() {
+        cache.clear()
+        var failure: Throwable? = null
+        try {
+            // DIAGNOSTICS: resource-release failures are distinct from inference failures.
+            AppDiagnostics.atStage(DiagnosticComponent.SEMANTIC, DiagnosticStage.CLOSE) { model.close() }
+        } catch (error: Throwable) { failure = error }
+        try {
+            // DIAGNOSTICS: always attempt tokenizer cleanup while keeping the first close failure.
+            AppDiagnostics.atStage(DiagnosticComponent.SEMANTIC, DiagnosticStage.CLOSE) { tokenizer.close() }
+        } catch (error: Throwable) { if (failure == null) failure = error }
+        failure?.let { throw it }
+    }
 }

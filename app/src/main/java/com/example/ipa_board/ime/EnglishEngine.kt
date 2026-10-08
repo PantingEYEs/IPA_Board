@@ -4,6 +4,7 @@ import android.content.Context
 import com.android.inputmethod.keyboard.ProximityInfo
 import com.android.inputmethod.latin.BinaryDictionary
 import com.android.inputmethod.latin.DicTraverseSession
+import com.example.ipa_board.diagnostics.*
 import java.io.File
 import java.util.Locale
 
@@ -15,25 +16,41 @@ internal class EnglishEngine(context: Context) : QueryEngine {
     private val proximity: Long
 
     init {
-        System.loadLibrary("jni_latinime")
-        val dir = File(context.noBackupFilesDir, "english-heliboard-4.1-v54").apply { mkdirs() }
-        val file = File(dir, "main_en-US.dict")
-        if (!file.isFile) {
-            val temp = File(dir, "dictionary.tmp")
-            context.assets.open("engines/english/main_en-US.dict").use { input ->
-                temp.outputStream().use { input.copyTo(it) }
-            }
-            check(temp.renameTo(file))
+        // DIAGNOSTICS: separate native library availability from dictionary resource loading.
+        AppDiagnostics.atStage(DiagnosticComponent.ENGLISH, DiagnosticStage.LIBRARY) {
+            System.loadLibrary("jni_latinime")
         }
-        dictionary = BinaryDictionary.openNative(file.absolutePath, 0, file.length(), false)
-        check(dictionary != 0L) { "English dictionary could not be opened" }
-        // No measured touch positions: correction uses edit distance, independent of layout JSON.
-        // Native typing traversal still requires a valid code-point map.
-        val codes = IntArray(27) { if (it < 26) 'a'.code + it else '\''.code }
-        proximity = ProximityInfo.setProximityInfoNative(2700, 100, 1, 1, 100, 100,
-            IntArray(16) { -1 }, codes.size, IntArray(27) { it * 100 }, IntArray(27),
-            IntArray(27) { 100 }, IntArray(27) { 100 }, codes, null, null, null)
-        check(proximity != 0L)
+        // DIAGNOSTICS: describe deployment failures using fixed stages, never file paths.
+        val file = AppDiagnostics.atStage(DiagnosticComponent.ENGLISH, DiagnosticStage.ASSETS) {
+            val dir = File(context.noBackupFilesDir, "english-heliboard-4.1-v54").apply { check(mkdirs() || isDirectory) }
+            File(dir, "main_en-US.dict").also { file ->
+                if (!file.isFile) {
+                    val temp = File(dir, "dictionary.tmp")
+                    context.assets.open("engines/english/main_en-US.dict").use { input ->
+                        temp.outputStream().use { input.copyTo(it) }
+                    }
+                    // DIAGNOSTICS: atomic publication is distinct from reading bundled dictionary data.
+                    AppDiagnostics.atStage(DiagnosticComponent.ENGLISH, DiagnosticStage.PUBLISH) {
+                        check(temp.renameTo(file))
+                    }
+                }
+            }
+        }
+        // DIAGNOSTICS: a missing native dictionary handle identifies the dictionary loading stage.
+        dictionary = AppDiagnostics.atStage(DiagnosticComponent.ENGLISH, DiagnosticStage.DICTIONARY) {
+            BinaryDictionary.openNative(file.absolutePath, 0, file.length(), false)
+                .also { check(it != 0L) { "English dictionary could not be opened" } }
+        }
+        // DIAGNOSTICS: distinguish native proximity-map creation from dictionary opening.
+        proximity = AppDiagnostics.atStage(DiagnosticComponent.ENGLISH, DiagnosticStage.PROXIMITY) {
+            // No measured touch positions: correction uses edit distance, independent of layout JSON.
+            // Native typing traversal still requires a valid code-point map.
+            val codes = IntArray(27) { if (it < 26) 'a'.code + it else '\''.code }
+            ProximityInfo.setProximityInfoNative(2700, 100, 1, 1, 100, 100,
+                IntArray(16) { -1 }, codes.size, IntArray(27) { it * 100 }, IntArray(27),
+                IntArray(27) { 100 }, IntArray(27) { 100 }, codes, null, null, null)
+                .also { check(it != 0L) }
+        }
     }
 
     override fun query(raw: String): List<Candidate> = query(raw, "")

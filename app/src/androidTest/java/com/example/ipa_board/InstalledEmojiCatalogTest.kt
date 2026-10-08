@@ -2,10 +2,15 @@ package com.example.ipa_board
 
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.SharedPreferences
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.example.ipa_board.diagnostics.DiagnosticComponent
+import com.example.ipa_board.diagnostics.DiagnosticStage
+import com.example.ipa_board.diagnostics.DiagnosticStageException
 import com.example.ipa_board.emoji.BundledEmojiCatalogSource
 import com.example.ipa_board.emoji.EmojiCatalogRepository
+import com.example.ipa_board.emoji.EmojiUpdateManager
 import com.example.ipa_board.emoji.InstalledEmojiCatalogSource
 import org.junit.After
 import org.junit.Assert.*
@@ -78,6 +83,57 @@ class InstalledEmojiCatalogTest {
         assertEquals(BundledEmojiCatalogSource(context).load(), repository.load())
     }
 
+    @Test fun downloadedCatalogAtomicallyReplacesTheInstalledCatalogAndCleansTemporaryData() {
+        source.installedFile.writeText(sample())
+        val replacement = sample().replace("19.0", "20.0")
+
+        val catalog = EmojiUpdateManager.installCatalog(context, replacement)
+
+        assertEquals("20.0", catalog.version)
+        assertEquals(replacement, source.installedFile.readText())
+        assertEquals(catalog, source.load())
+        assertOnlyInstalledCatalogRemains()
+    }
+
+    @Test fun invalidDownloadedCatalogKeepsTheInstalledCatalogAndCreatesNoTemporaryData() {
+        val original = sample()
+        source.installedFile.writeText(original)
+        val invalid = listOf("", "Downloaded network error page", sample().replace("# Version: 19.0", ""))
+
+        invalid.forEach { content ->
+            val error = assertThrows(DiagnosticStageException::class.java) {
+                EmojiUpdateManager.installCatalog(context, content)
+            }
+            assertEquals(DiagnosticComponent.EMOJI, error.issue.component)
+            assertEquals(DiagnosticStage.INTEGRITY, error.issue.stage)
+            assertEquals(original, source.installedFile.readText())
+            assertEquals("19.0", source.load().version)
+            assertOnlyInstalledCatalogRemains()
+        }
+    }
+
+    @Test fun failedPublicationKeepsTheExistingDirectoryAndCleansTemporaryData() {
+        assertTrue(source.installedFile.mkdir())
+        val marker = File(source.installedFile, "owned-marker.txt")
+        marker.writeText("test-owned publication obstruction")
+
+        val error = assertThrows(DiagnosticStageException::class.java) {
+            EmojiUpdateManager.installCatalog(context, sample())
+        }
+
+        assertEquals(DiagnosticComponent.EMOJI, error.issue.component)
+        assertEquals(DiagnosticStage.PUBLISH, error.issue.stage)
+        assertTrue(source.installedFile.isDirectory)
+        assertEquals("test-owned publication obstruction", marker.readText())
+        assertEquals(setOf(marker), source.installedFile.listFiles().orEmpty().toSet())
+        assertOnlyInstalledCatalogRemains()
+    }
+
+    private fun assertOnlyInstalledCatalogRemains() {
+        assertEquals("Installing must leave no temporary catalog data",
+            setOf(source.installedFile), context.filesDir.listFiles().orEmpty().toSet())
+    }
+
     private fun sample() = """
         # Version: 19.0
         # group: Smileys & Emotion
@@ -87,8 +143,17 @@ class InstalledEmojiCatalogTest {
 
     private class EmojiStorageContext(base: Context) : ContextWrapper(base), AutoCloseable {
         private val root = Files.createTempDirectory(base.cacheDir.toPath(), "emoji-installed-contract-").toFile()
+        private val preferenceNames = mutableSetOf<String>()
         override fun getApplicationContext(): Context = this
         override fun getFilesDir(): File = root
-        override fun close() { root.deleteRecursively() }
+        override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
+            val isolatedName = "${root.name}-$name"
+            preferenceNames.add(isolatedName)
+            return baseContext.getSharedPreferences(isolatedName, mode)
+        }
+        override fun close() {
+            preferenceNames.forEach { baseContext.deleteSharedPreferences(it) }
+            root.deleteRecursively()
+        }
     }
 }

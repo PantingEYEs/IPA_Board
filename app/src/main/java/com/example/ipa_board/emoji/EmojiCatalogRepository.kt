@@ -3,10 +3,13 @@ package com.example.ipa_board.emoji
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import com.example.ipa_board.diagnostics.*
 import java.io.File
 import java.io.StringReader
 import java.net.HttpURLConnection
 import java.net.URL
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.util.concurrent.Executors
 
 /** Data-source interface for providing emoji catalog data. */
@@ -40,8 +43,13 @@ class InstalledEmojiCatalogSource(private val context: Context) : EmojiCatalogSo
                 if (catalog.entries.isNotEmpty()) {
                     return catalog
                 }
-            } catch (_: Exception) {
-                // Fallback to bundled if file is corrupted
+                // DIAGNOSTICS: an empty installed catalog is invalid, not a missing optional update.
+                AppDiagnostics.configure(context)
+                AppDiagnostics.signal(DiagnosticComponent.EMOJI, DiagnosticStage.LOAD, DiagnosticKind.INVALID_DATA)
+            } catch (e: Exception) {
+                // DIAGNOSTICS: Report no installed path or data; preserve bundled offline fallback.
+                AppDiagnostics.configure(context)
+                AppDiagnostics.failure(DiagnosticComponent.EMOJI, DiagnosticStage.LOAD, e)
             }
         }
         return bundledSource.load()
@@ -77,6 +85,36 @@ class EmojiCatalogRepository(private val source: EmojiCatalogSource) {
 /** Utility manager for downloading and updating emoji catalog data from official sources. */
 object EmojiUpdateManager {
     const val DEFAULT_URL = BundledEmojiCatalogSource.LATEST_DATA_URL
+
+    @Synchronized
+    internal fun installCatalog(context: Context, text: String): EmojiCatalog {
+        AppDiagnostics.configure(context)
+        val directory = context.applicationContext.filesDir
+        val targetFile = File(directory, InstalledEmojiCatalogSource.INSTALLED_FILE_NAME)
+        val tempFile = File(directory, "${InstalledEmojiCatalogSource.INSTALLED_FILE_NAME}.tmp")
+        try {
+            // DIAGNOSTICS: Report only catalog integrity; reject invalid data before changing the installation.
+            val catalog = AppDiagnostics.atStage(DiagnosticComponent.EMOJI, DiagnosticStage.INTEGRITY) {
+                EmojiCatalogParser.parse(StringReader(text)).also {
+                    require(it.entries.isNotEmpty()) { "Downloaded catalog has no entries" }
+                }
+            }
+            // DIAGNOSTICS: Report no temporary path or data; keep the installed catalog until publication.
+            AppDiagnostics.atStage(DiagnosticComponent.EMOJI, DiagnosticStage.SAVE) {
+                tempFile.writeText(text, Charsets.UTF_8)
+            }
+            // DIAGNOSTICS: Report only atomic publication failure; preserve the existing catalog on failure.
+            AppDiagnostics.atStage(DiagnosticComponent.EMOJI, DiagnosticStage.PUBLISH) {
+                Files.move(tempFile.toPath(), targetFile.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            }
+            return catalog
+        } finally {
+            // DIAGNOSTICS: cleanup failure must not mask the original integrity/publication error.
+            try { Files.deleteIfExists(tempFile.toPath()) }
+            catch (error: Exception) { AppDiagnostics.failure(DiagnosticComponent.EMOJI, DiagnosticStage.CLEANUP, error) }
+        }
+    }
 
     fun updateEmojiCatalog(
         context: Context,
@@ -119,22 +157,13 @@ object EmojiUpdateManager {
                 val text = connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
                 connection.disconnect()
 
-                if (text.isBlank()) error("Downloaded data is empty")
-
-                val catalog = EmojiCatalogParser.parse(StringReader(text))
-                require(catalog.entries.isNotEmpty()) { "Downloaded catalog has no entries" }
-
-                // Save atomically
-                val targetFile = File(appContext.filesDir, InstalledEmojiCatalogSource.INSTALLED_FILE_NAME)
-                val tempFile = File(appContext.filesDir, "${InstalledEmojiCatalogSource.INSTALLED_FILE_NAME}.tmp")
-                tempFile.writeText(text, Charsets.UTF_8)
-                if (tempFile.exists()) {
-                    if (targetFile.exists()) targetFile.delete()
-                    tempFile.renameTo(targetFile)
-                }
-
+                val catalog = installCatalog(appContext, text)
                 EmojiCatalogRepository.getInstance(appContext).invalidate()
                 catalog
+            }.onFailure { error ->
+                // DIAGNOSTICS: Report no URL or downloaded data; preserve the failed Result callback.
+                AppDiagnostics.configure(appContext)
+                AppDiagnostics.failure(DiagnosticComponent.EMOJI, DiagnosticStage.UPDATE, error)
             }
 
             mainHandler.post {
