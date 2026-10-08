@@ -161,3 +161,16 @@ python3 tools/regression.py restore /PRIVATE/PATH/snapshot-XXXX --serial DEVICE_
 - 最终 debug 应用与测试 APK 编译通过，JVM 单元测试 105 项、流程工具主机测试 47 项全部通过，lint 0 Error、255 Warning，未新增 lint 警告。引擎资源校验及套件清单校验通过。
 - Android 15 / API 35、`arm64-v8a` 专用只读模拟器：最终 `full` 的 30 类共 174 项全部通过，0 失败、0 跳过；报告 `app/build/reports/regression/1bcf834e-714f-4de9-a35d-46ef57a2d649/summary.json` 中 `success=true`、`restored=true`。容量边界修复前的首轮 173 项也全部通过，保留报告 `app/build/reports/regression/a459adba-4973-445c-9072-1b8f1c5f9d70/summary.json` 区分构建版本。
 - 两轮均已恢复并校验原软件安装状态与私有数据，之后删除备份；最终 `pending` 为空，模拟器已关闭。未执行实体机、其他 API/ABI 或真实系统剪贴板操作。
+
+## 2026-10-08 0.0.2 发布准备验证
+
+- `versionName` 已改为 `0.0.2`，`versionCode` 保持 2；开发分支仍为 `0.0.2-dev`。README、更新日志与开发计划当前状态同步更新。
+- 离线 `testDebugUnitTest assembleRelease lintRelease` 通过；单元测试任务复用此前 105 项通过结果，release lint 为 0 Error、253 Warning。未改动输入行为，未重新运行设备回归；前述 174 项设备结果对应版本号调整前的 debug 构建。
+- 核对生成 APK 的实际 manifest：包名 `com.example.ipa_board`、版本 `0.0.2`、代码 2、最低 API 35、目标 API 36。产物为 `app/build/outputs/apk/release/app-release-unsigned.apk`，`apksigner verify` 确认缺少签名；这是未签名构建检查，不是正式发布包验收。
+- 本次未合并、打标签或发布。正式签名 release 的设备/升级验证仍须符合本页状态保护规则，不得直接安装绕过备份。文档本地链接与 30 类设备套件登记校验通过。
+
+## 2026-10-08 v0.0.2 签名包核对
+
+- 用户已手动构建签名包 `app/build/outputs/apk/release/IPA_Board_v0.0.2.apk`，实际 manifest 的版本名为 `0.0.2`、版本码为 2、最低 API 35、目标 API 36。`apksigner verify` 通过，使用 APK Signature Scheme v2；签名证书与旧 `0.0.1` 包一致。
+- APK SHA-256 为 `63b1f783b8b307854a9873f4773d42ac13e477a6b85431c6d74556cf42a2326b`。`app/release/app-release.apk` 是相同新包的副本；旧 `0.0.1` 归档 APK 已按用户要求删除。
+- 正式版本文档采用 `v0.0.2` 标签命名，README 移除发布步骤。此次仅核对主机上的包和签名，未安装、运行或进行升级测试；不得将上述签名检查及既有 debug 回归视为签名 release 设备验证通过。

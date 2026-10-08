@@ -15,7 +15,7 @@ android {
         minSdk = 35
         targetSdk = 36
         versionCode = 2
-        versionName = "0.0.2-dev"
+        versionName = "0.0.2"
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
 
         testInstrumentationRunner = "com.example.ipa_board.RegressionTestRunner"
