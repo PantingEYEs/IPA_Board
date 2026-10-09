@@ -504,7 +504,7 @@ class IpaBoardService : InputMethodService() {
 
     private fun showEmojiCategoryMenu(picker: EmojiPickerView) {
         val view = chrome ?: return
-        val popup = PopupMenu(this, view.status)
+        val popup = PopupMenu(this, view.status, Gravity.TOP)
         picker.categories.forEachIndexed { index, category ->
             popup.menu.add(0, index, index, category)
         }
@@ -824,7 +824,7 @@ class IpaBoardService : InputMethodService() {
         view.showContent(PageGroupManager.label(this, group) + " ▾", ScrollView(this).apply { addView(grid) })
         view.onStatusClick = {
             val state = PageGroupManager.state(this)
-            PopupMenu(this, view.status).apply {
+            PopupMenu(this, view.status, Gravity.TOP).apply {
                 state.groups.forEachIndexed { index, item -> menu.add(0, index, index, "$index · ${item.name}").apply {
                     isCheckable = true
                     isChecked = item.id == state.activeGroupId
