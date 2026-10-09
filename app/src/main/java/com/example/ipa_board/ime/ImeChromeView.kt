@@ -269,8 +269,8 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         setPadding(dp(4), 0, dp(4), 0)
         minHeight = dp(28)
         minimumHeight = dp(28)
-        minWidth = dp(57)
-        minimumWidth = dp(57)
+        minWidth = dp(50)
+        minimumWidth = dp(50)
         gravity = Gravity.CENTER
         setOnClickListener { click() }
     }
