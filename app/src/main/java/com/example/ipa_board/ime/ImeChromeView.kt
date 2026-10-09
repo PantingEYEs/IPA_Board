@@ -308,7 +308,16 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
             val pointerId = ev.getPointerId(pointerIndex)
 
             when (action) {
-                android.view.MotionEvent.ACTION_DOWN, android.view.MotionEvent.ACTION_POINTER_DOWN -> {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    // Start of a new touch sequence, clear previous retained paths
+                    pointerPaths.clear()
+                    currentPointers.clear()
+                    val path = android.graphics.Path()
+                    path.moveTo(ev.getX(pointerIndex), ev.getY(pointerIndex))
+                    pointerPaths[pointerId] = path
+                    currentPointers[pointerId] = android.graphics.PointF(ev.getX(pointerIndex), ev.getY(pointerIndex))
+                }
+                android.view.MotionEvent.ACTION_POINTER_DOWN -> {
                     val path = android.graphics.Path()
                     path.moveTo(ev.getX(pointerIndex), ev.getY(pointerIndex))
                     pointerPaths[pointerId] = path
@@ -322,7 +331,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
                     }
                 }
                 android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_POINTER_UP, android.view.MotionEvent.ACTION_CANCEL -> {
-                    pointerPaths.remove(pointerId)
+                    // Only remove the current pointer so the crosshair disappears, but keep the path
                     currentPointers.remove(pointerId)
                 }
             }
