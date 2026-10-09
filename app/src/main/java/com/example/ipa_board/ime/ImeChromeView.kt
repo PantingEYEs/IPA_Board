@@ -277,7 +277,6 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 
     private val pointerPaths = mutableMapOf<Int, android.graphics.Path>()
-    private val historicalPoints = mutableListOf<android.graphics.PointF>()
     private val currentPointers = mutableMapOf<Int, android.graphics.PointF>()
     private val pointerPaint = android.graphics.Paint().apply {
         color = 0xFFFFFFFF.toInt()
@@ -289,12 +288,6 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         color = 0xFFFF0000.toInt()
         style = android.graphics.Paint.Style.STROKE
         strokeWidth = resources.displayMetrics.density // 1dp
-        isAntiAlias = true
-    }
-    private val samplePointPaint = android.graphics.Paint().apply {
-        color = 0xFFFF0000.toInt() // Red for the exact sampled point on the trail
-        style = android.graphics.Paint.Style.STROKE
-        strokeWidth = 0f
         isAntiAlias = true
     }
     private val axisPaint = android.graphics.Paint().apply {
@@ -310,7 +303,6 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
             if (!value) {
                 pointerPaths.clear()
                 currentPointers.clear()
-                historicalPoints.clear()
             }
             invalidate()
         }
@@ -326,19 +318,16 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
                     // Start of a new touch sequence, clear previous retained paths
                     pointerPaths.clear()
                     currentPointers.clear()
-                    historicalPoints.clear()
                     val path = android.graphics.Path()
                     path.moveTo(ev.getX(pointerIndex), ev.getY(pointerIndex))
                     pointerPaths[pointerId] = path
                     currentPointers[pointerId] = android.graphics.PointF(ev.getX(pointerIndex), ev.getY(pointerIndex))
-                    historicalPoints.add(android.graphics.PointF(ev.getX(pointerIndex), ev.getY(pointerIndex)))
                 }
                 android.view.MotionEvent.ACTION_POINTER_DOWN -> {
                     val path = android.graphics.Path()
                     path.moveTo(ev.getX(pointerIndex), ev.getY(pointerIndex))
                     pointerPaths[pointerId] = path
                     currentPointers[pointerId] = android.graphics.PointF(ev.getX(pointerIndex), ev.getY(pointerIndex))
-                    historicalPoints.add(android.graphics.PointF(ev.getX(pointerIndex), ev.getY(pointerIndex)))
                 }
                 android.view.MotionEvent.ACTION_MOVE -> {
                     val historySize = ev.historySize
@@ -348,7 +337,6 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
                             val hx = ev.getHistoricalX(i, h)
                             val hy = ev.getHistoricalY(i, h)
                             pointerPaths[id]?.lineTo(hx, hy)
-                            historicalPoints.add(android.graphics.PointF(hx, hy))
                         }
                     }
                     for (i in 0 until ev.pointerCount) {
@@ -357,7 +345,6 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
                         val y = ev.getY(i)
                         pointerPaths[id]?.lineTo(x, y)
                         currentPointers[id]?.set(x, y)
-                        historicalPoints.add(android.graphics.PointF(x, y))
                     }
                 }
                 android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_POINTER_UP, android.view.MotionEvent.ACTION_CANCEL -> {
@@ -379,12 +366,6 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
             val crossSize = 10f * resources.displayMetrics.density
             val width = width.toFloat()
             val height = height.toFloat()
-
-            // Draw historical sample points in red
-            for (p in historicalPoints) {
-                // To draw a 1dp visible point
-                canvas.drawPoint(p.x, p.y, samplePointPaint)
-            }
 
             for (p in currentPointers.values) {
                 canvas.drawLine(0f, p.y, width, p.y, axisPaint)
