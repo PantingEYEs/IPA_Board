@@ -280,19 +280,19 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     private val currentPointers = mutableMapOf<Int, android.graphics.PointF>()
     private val pointerPaint = android.graphics.Paint().apply {
         color = 0xFFFFFFFF.toInt()
-        strokeWidth = resources.displayMetrics.density
+        strokeWidth = 0f // 0 means a hairline (1 pixel regardless of density or scaling)
         style = android.graphics.Paint.Style.STROKE
         isAntiAlias = true
     }
     private val pointPaint = android.graphics.Paint().apply {
         color = 0xFFFF0000.toInt()
         style = android.graphics.Paint.Style.FILL
-        strokeWidth = 2f * resources.displayMetrics.density
+        strokeWidth = 0f
         isAntiAlias = true
     }
     private val axisPaint = android.graphics.Paint().apply {
         color = 0xFFFFFFFF.toInt()
-        strokeWidth = resources.displayMetrics.density
+        strokeWidth = 0f
         style = android.graphics.Paint.Style.STROKE
         isAntiAlias = true
     }
