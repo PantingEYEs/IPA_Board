@@ -504,15 +504,9 @@ class IpaBoardService : InputMethodService() {
 
     private fun showEmojiCategoryMenu(picker: EmojiPickerView) {
         val view = chrome ?: return
-        val popup = PopupMenu(this, view.status, Gravity.TOP)
-        picker.categories.forEachIndexed { index, category ->
-            popup.menu.add(0, index, index, category)
+        showSingleChoicePopup(view.statusContainer, picker.categories, picker.currentCategoryIndex) { index ->
+            picker.filterCategory(index)
         }
-        popup.setOnMenuItemClickListener { item ->
-            picker.filterCategory(item.itemId)
-            true
-        }
-        popup.show()
     }
 
     private fun showKaomojiPanel() {
@@ -824,18 +818,13 @@ class IpaBoardService : InputMethodService() {
         view.showContent(PageGroupManager.label(this, group) + " ▾", ScrollView(this).apply { addView(grid) })
         view.onStatusClick = {
             val state = PageGroupManager.state(this)
-            PopupMenu(this, view.status, Gravity.TOP).apply {
-                state.groups.forEachIndexed { index, item -> menu.add(0, index, index, "$index · ${item.name}").apply {
-                    isCheckable = true
-                    isChecked = item.id == state.activeGroupId
-                } }
-                setOnMenuItemClickListener { item ->
-                    PageGroupManager.select(this@IpaBoardService, state.groups[item.itemId].id)
-                    applySettings()
-                    showPages()
-                    true
-                }
-            }.show()
+            val items = state.groups.mapIndexed { index, item -> "$index · ${item.name}" }
+            val selectedIndex = state.groups.indexOfFirst { it.id == state.activeGroupId }
+            showSingleChoicePopup(view.statusContainer, items, selectedIndex) { index ->
+                PageGroupManager.select(this@IpaBoardService, state.groups[index].id)
+                applySettings()
+                showPages()
+            }
         }
     }
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
@@ -895,6 +884,70 @@ class IpaBoardService : InputMethodService() {
         engines.close(); prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
         super.onDestroy()
     }
+
+    private fun showSingleChoicePopup(anchorView: View, items: List<String>, selectedIndex: Int, onItemSelected: (Int) -> Unit) {
+        val context = this
+        val density = resources.displayMetrics.density
+        fun dp(v: Int) = (v * density).toInt()
+
+        val root = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.parseColor("#1C1C1E"))
+            setPadding(0, dp(8), 0, dp(8))
+        }
+
+        var popup: PopupWindow? = null
+
+        items.forEachIndexed { index, itemText ->
+            val isSelected = index == selectedIndex
+            val itemContainer = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(16), dp(12), dp(16), dp(12))
+                isClickable = true
+                isFocusable = true
+                
+                addView(TextView(context).apply {
+                    text = if (isSelected) "✓" else " "
+                    setTextColor(Color.parseColor("#007AFF"))
+                    textSize = 14f
+                    layoutParams = LinearLayout.LayoutParams(dp(24), LinearLayout.LayoutParams.WRAP_CONTENT)
+                })
+
+                addView(TextView(context).apply {
+                    text = itemText
+                    setTextColor(if (isSelected) Color.WHITE else Color.parseColor("#EBEBEB"))
+                    textSize = 14f
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                })
+
+                setOnClickListener {
+                    popup?.dismiss()
+                    onItemSelected(index)
+                }
+            }
+            root.addView(itemContainer)
+        }
+
+        val scrollRoot = ScrollView(context).apply {
+            overScrollMode = View.OVER_SCROLL_NEVER
+            addView(root)
+        }
+
+        popup = PopupWindow(
+            scrollRoot,
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            true
+        ).apply {
+            isOutsideTouchable = true
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            enterTransition = android.transition.Slide(Gravity.TOP)
+            exitTransition = android.transition.Slide(Gravity.TOP)
+            showAsDropDown(anchorView)
+        }
+    }
+
 }
 
 /** Preserve the IME host layout parameter type. Also used by the layout renderer tests. */
