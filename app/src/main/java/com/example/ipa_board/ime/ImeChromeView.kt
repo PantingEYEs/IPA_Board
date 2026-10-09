@@ -17,7 +17,11 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     private val overlay = LinearLayout(context).apply { orientation = VERTICAL }
     private val candidateRow = LinearLayout(context)
     private var candidateMinimumWidth = dp(48)
-    private val expand = button("⋯", "Expand") { showPanel(if (panel == Panel.KEYBOARD) Panel.CANDIDATES else Panel.KEYBOARD) }
+    private val expand = button("⋯", "Expand") { showPanel(if (panel == Panel.KEYBOARD) Panel.CANDIDATES else Panel.KEYBOARD) }.apply {
+        minWidth = dp(36)
+        minimumWidth = dp(36)
+        setPadding(dp(4), 0, dp(4), 0)
+    }
     val statusContainer = FrameLayout(context)
     val status = TextView(context)
     private var customStatusView: View? = null
@@ -63,7 +67,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         val strip = LinearLayout(context)
         val horizontal = HorizontalScrollView(context).apply { isHorizontalScrollBarEnabled = false; addView(candidateRow) }
         strip.addView(horizontal, LayoutParams(0, dp(28), 1f))
-        strip.addView(expand, LayoutParams(LayoutParams.WRAP_CONTENT, dp(26)))//candidate drop down / return
+        strip.addView(expand, LayoutParams(LayoutParams.WRAP_CONTENT, dp(28)))//candidate drop down / return
         addView(strip)
         body.addView(keyboardHost, FrameLayout.LayoutParams(-1, -1))
         overlay.setBackgroundColor(Color.rgb(0, 0, 0))
