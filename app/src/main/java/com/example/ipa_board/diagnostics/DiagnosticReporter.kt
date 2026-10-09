@@ -3,7 +3,7 @@ package com.example.ipa_board.diagnostics
 import java.io.IOException
 
 /** DIAGNOSTICS: fixed vocabulary only. Never add input, paths, messages or Throwable to events. */
-enum class DiagnosticComponent { RIME, MOZC, ENGLISH, SEMANTIC, LAYOUT, EMOJI, KAOMOJI, SMS, VERSION_LOOKUP }
+enum class DiagnosticComponent { RIME, MOZC, ENGLISH, IPA, SEMANTIC, LAYOUT, EMOJI, KAOMOJI, SMS, VERSION_LOOKUP }
 
 enum class DiagnosticStage(val label: String, val traceLifecycle: Boolean = true) {
     BIND("service binding"), UNBIND("service release"), CONNECT("service connection"),

@@ -25,6 +25,12 @@ object EngineCatalog {
     private const val ENGLISH_VERSION = "Source: HeliBoard 4.1 · rev 9f5bb635c2e8 · en_US dictionary 54"
 
     fun categories(appVersion: String): List<EngineCategory> = listOf(
+        EngineCategory("ipa", "IPA Engines", listOf(
+            EngineInfo("IPA Engine · Phonetic graph", "Development · remote package and dictionary versions in IPA resource management",
+                detail = "Experimental IPA-to-text lookup for English, Simplified/Traditional Chinese and Japanese. No next-word prediction.",
+                feature = EngineFeature.IPA_CONVERSION,
+                offBehavior = "Off: omit IPA graph candidates; other engines and literal input remain available.")
+        )),
         EngineCategory("syllable", "Syllable Engines", listOf(
             EngineInfo("Rime · Pinyin & Zhuyin (Chinese)", "$RIME_VERSION · Luna Pinyin 0.26 · Bopomofo 3.1", detail = "Chinese conversion from Pinyin or Zhuyin symbols, with five-tone filtering and optional omitted tones. Pinyin includes schema-defined spelling and key correction.", feature = EngineFeature.CHINESE_CONVERSION, offBehavior = "Off: omit Pinyin and Zhuyin conversion candidates; literal input and Chinese prediction stay available.", versionSources = listOf(EngineVersionSource.RIME, EngineVersionSource.TRIME)),
             EngineInfo("Mozc (Japanese)", MOZC_VERSION, feature = EngineFeature.JAPANESE_CONVERSION, offBehavior = "Off: Japanese conversion candidates are omitted; literal input and prediction stay available.", versionSources = listOf(EngineVersionSource.LIBRE_JAPANESE))

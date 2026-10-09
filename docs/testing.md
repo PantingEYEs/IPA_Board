@@ -88,6 +88,8 @@ python3 tools/regression.py restore /PRIVATE/PATH/snapshot-XXXX --serial DEVICE_
 | `semantic` | 真实 E5 模型加载、光标前后文、失效结果拒绝、实时关闭/降级 | 语义模型、排序、协调器生命周期变更 |
 | `full` | 以上所有设备主套件 | 集成前、升级引擎/词库后、发布前 |
 
+IPA 接入增加 `ipa` 套件，覆盖离线下载事务、哈希/路径拒绝、引擎与词典独立切换、失败保留旧资源、真实 DEX/JNI 多语言候选及管理页异步生命周期。三个类分别登记于 platform、engines、ui，并纳入 full；真实引擎用例仅支持当前 ARM64 包，其他 ABI 的跳过必须单独报告。
+
 普通回归不访问公网。Engine Management 的最新版本展示由测试 runner 注入固定元数据，异步查询另用注入的 transport、时钟及独立 cache 验证成功缓存、失败重试、关闭页面和并发取消。真实上游服务可达性属于单独的人工检查，失败不能与产品离线可用性混为一谈。
 
 ## 本次测试清理及增补
@@ -174,3 +176,13 @@ python3 tools/regression.py restore /PRIVATE/PATH/snapshot-XXXX --serial DEVICE_
 - 用户已手动构建签名包 `app/build/outputs/apk/release/IPA_Board_v0.0.2.apk`，实际 manifest 的版本名为 `0.0.2`、版本码为 2、最低 API 35、目标 API 36。`apksigner verify` 通过，使用 APK Signature Scheme v2；签名证书与旧 `0.0.1` 包一致。
 - APK SHA-256 为 `63b1f783b8b307854a9873f4773d42ac13e477a6b85431c6d74556cf42a2326b`。`app/release/app-release.apk` 是相同新包的副本；旧 `0.0.1` 归档 APK 已按用户要求删除。
 - 正式版本文档采用 `v0.0.2` 标签命名，README 移除发布步骤。此次仅核对主机上的包和签名，未安装、运行或进行升级测试；不得将上述签名检查及既有 debug 回归视为签名 release 设备验证通过。
+
+## 2026-10-09 IPA 接入验证
+
+- 开发工作树基于 `bed596b`（0.0.3-dev）；debug 编译、设备测试 APK 编译和 lint 通过，JVM 110 项、流程工具主机测试 47 项通过。lint 为 0 Error、257 Warning；93 项引擎资源哈希与 E5 重组校验通过。
+- Android 15 / API 35、ARM64 专用只读模拟器：最终 full 的 33 类、184 项通过，0 失败、0 跳过；报告为 `app/build/reports/regression/7ab052f2-97a0-4f23-bb68-d9d5b257ce4d/summary.json`，success=true、restored=true。验证真实 IPA 中英日候选、Unicode 混输、旧引擎打开新二进制词典、旧 mmap 继续可查询，以及独立资源更新、损坏/不兼容/断网回退和管理页生命周期。
+- 首轮 ipa 的 10 项中 6 项通过、4 项失败；事务测试发现 `/data/user/0` 与 `/data/data` 的路径身份差异。统一资源根目录为 canonical path 后完整回归通过，保留首轮报告 `21ce8bbb-6aa3-497e-82d0-5ee9bc201f83`，未删断言或增加等待时间。两轮均经保护工具恢复原 APK 与私有数据，校验后删除备份；pending 为空。
+- 未执行实体机、其他 API、x86_64 IPA 包、16KB 页设备或签名 release 运行；常规回归使用注入网络，真实上游更新可达性单独检查。
+
+- 完整回归后，真实联网检查发现公共 GitHub API 限流，版本检查改为直接读取仓库 board-update.json，并按 artifactCommit 固定下载产物；兼容性探测增加实际非空 JNI 查询。重新编译、110 项 JVM 与 lint 通过，最后 ipa 套件 10 项通过、0 失败/跳过，报告 `96f325f6-592f-4c69-8b20-8f56530dfc9c` 的 success/restored 均为 true，备份已删除。前一轮清单调整复测也通过，报告 `77e51354-0cfb-40cc-9e4d-9e25ef8cf523`；184 项完整结果对应这两项最终调整前的构建。
+- 上游开发分支已发布产物提交 `af73155` 与清单提交 `b46a1b9`。通过电脑已有代理只读验证真实远程清单及 DEX、JNI、词典的长度和 SHA-256，三者均匹配；这是主机联网验证，不是手机公网更新测试。

@@ -25,13 +25,15 @@
         "com.example.ipa_board.EngineSettingsContractTest",
         "com.example.ipa_board.InstalledEmojiCatalogTest",
         "com.example.ipa_board.EngineVersionLookupContractTest",
-        "com.example.ipa_board.DiagnosticsContractTest"
+        "com.example.ipa_board.DiagnosticsContractTest",
+        "com.example.ipa_board.IpaResourceManagerTest"
       ]
     },
     "engines": {
       "classes": [
         "com.example.ipa_board.MultilingualEngineTest",
-        "com.example.ipa_board.ZhuyinEngineTest"
+        "com.example.ipa_board.ZhuyinEngineTest",
+        "com.example.ipa_board.IpaEngineRuntimeTest"
       ]
     },
     "ui": {
@@ -47,7 +49,8 @@
         "com.example.ipa_board.LayoutManagementTest",
         "com.example.ipa_board.PageGroupUiTest",
         "com.example.ipa_board.PresentationContractTest",
-        "com.example.ipa_board.ClipboardPanelOrderTest"
+        "com.example.ipa_board.ClipboardPanelOrderTest",
+        "com.example.ipa_board.IpaEngineManagementUiTest"
       ]
     },
     "e2e": {
@@ -93,7 +96,17 @@
         "com.example.ipa_board.ImeEndToEndTest",
         "com.example.ipa_board.EnglishImeIntegrationTest",
         "com.example.ipa_board.PageGroupImeTest",
-        "com.example.ipa_board.SemanticContextIntegrationTest"
+        "com.example.ipa_board.SemanticContextIntegrationTest",
+        "com.example.ipa_board.IpaResourceManagerTest",
+        "com.example.ipa_board.IpaEngineRuntimeTest",
+        "com.example.ipa_board.IpaEngineManagementUiTest"
+      ]
+    },
+    "ipa": {
+      "classes": [
+        "com.example.ipa_board.IpaResourceManagerTest",
+        "com.example.ipa_board.IpaEngineRuntimeTest",
+        "com.example.ipa_board.IpaEngineManagementUiTest"
       ]
     }
   }

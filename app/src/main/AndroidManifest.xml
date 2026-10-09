@@ -20,6 +20,8 @@
         <service android:name=".ime.MozcService" android:exported="false" android:process=":mozc" />
         <service android:name=".ime.EnglishService" android:exported="false" android:process=":english" />
         <service android:name=".ime.SemanticService" android:exported="false" android:process=":semantic" />
+        <service android:name=".ipa.IpaService" android:exported="false" android:process=":ipa" />
+        <service android:name=".ipa.IpaValidationService" android:exported="false" android:process=":ipa_check" />
 
         <service
             android:name=".IpaBoardService"
@@ -63,6 +65,12 @@
         <activity
             android:name=".EngineManagementActivity"
             android:label="Engine Management"
+            android:theme="@style/Theme.IPA_Board.NoActionBar"
+            android:exported="false" />
+
+        <activity
+            android:name=".IpaEngineManagementActivity"
+            android:label="@string/ipa_management_title"
             android:theme="@style/Theme.IPA_Board.NoActionBar"
             android:exported="false" />
 

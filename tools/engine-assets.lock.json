@@ -51,6 +51,12 @@
       "file": "sentencepiece.bpe.model",
       "url": "https://huggingface.co/intfloat/multilingual-e5-small/resolve/614241f622f53c4eeff9890bdc4f31cfecc418b3/sentencepiece.bpe.model",
       "sha256": "cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865"
+    },
+    {
+      "file": "ipa-engine-v0.0.1-dev-android-arm64-v8a.aar",
+      "url": "https://raw.githubusercontent.com/PantingEYEs/IPA_Engine/53eed9518f932934a28aceb4e03a453d545f80b8/pre-release/v0.0.1-dev/ipa-engine-v0.0.1-dev-android-arm64-v8a.aar",
+      "sha256": "b22396473a316750617b28cbf611d823aa7ef8c92133052ddea92e6d3f70f887",
+      "source_revision": "53eed9518f932934a28aceb4e03a453d545f80b8"
     }
   ],
   "files": [
@@ -488,6 +494,36 @@
       "path": "app/src/main/assets/licenses/rime-bopomofo-source.txt",
       "sha256": "dbcba436dee5ade7b0e51ec85f7dbc9f0ffac0931526306df278c6c4c4c6f23f",
       "source": "Rime Bopomofo license/source notice"
+    },
+    {
+      "path": "app/src/main/assets/engines/ipa/bundled/classes.dex",
+      "sha256": "b3992e6930ffc8c032353b452051101893993b921008cefb9ff49425ac7dbb0e",
+      "bytes": 14496
+    },
+    {
+      "path": "app/src/main/assets/engines/ipa/bundled/client.json",
+      "sha256": "909a3e0b3bc70a9bd2d67216a612ffb3ea2311ab936adbd53850cd3c942c3aa7",
+      "bytes": 785
+    },
+    {
+      "path": "app/src/main/assets/engines/ipa/bundled/lexicon.ipad",
+      "sha256": "382123e8cd1895400d3cc70f928ebf17010842120e01ffb37144a00a696d2bd9",
+      "bytes": 28986769
+    },
+    {
+      "path": "app/src/main/assets/engines/ipa/bundled/lexicon.manifest.json",
+      "sha256": "c8ccaedf791dd84b1728e98473bff71298b9f494432cbdb24e3ec7f86fda559a",
+      "bytes": 16192
+    },
+    {
+      "path": "app/src/main/assets/engines/ipa/bundled/libipa_graph_android.so",
+      "sha256": "bd30ef166d839556790dd93ee60c706cd81f4eaa9d0c628eba970f1dce7ea8ae",
+      "bytes": 789264
+    },
+    {
+      "path": "app/src/main/assets/licenses/IPA-Engine-THIRD_PARTY_NOTICES.json",
+      "sha256": "d5594d4c8bea56c16abad4c6c99d31b357fd6d8efcad962638931221d0e34c52",
+      "bytes": 14089
     }
   ]
 }

@@ -1,6 +1,7 @@
 package com.example.ipa_board
 
 import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
@@ -8,6 +9,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowInsets
 import android.widget.ImageButton
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
@@ -62,7 +64,31 @@ class EngineManagementActivity : Activity() {
         expandedCategoryIds.retainAll(categories.map { it.id }.toSet())
         val list = findViewById<LinearLayout>(R.id.engine_category_list)
         categories.forEach { category -> addCategory(list, category) }
+        addIpaResourceEntry(list)
         if (AppDiagnostics.LOGGING_AVAILABLE) addDiagnosticsControl(list)
+    }
+
+    private fun addIpaResourceEntry(list: LinearLayout) {
+        list.addView(Button(this).apply {
+            tag = IpaEngineManagementActivity.TEST_TAG_ENTRY
+            text = getString(R.string.ipa_management_entry)
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            backgroundTintList = ColorStateList.valueOf(Color.rgb(51, 51, 51))
+            isAllCaps = false
+            minimumHeight = dp(48)
+            setOnClickListener {
+                startActivity(Intent(this@EngineManagementActivity, IpaEngineManagementActivity::class.java))
+            }
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+            setMargins(dp(16), dp(12), dp(16), 0)
+        })
+        list.addView(TextView(this).apply {
+            text = getString(R.string.ipa_management_entry_description)
+            textSize = 14f
+            setTextColor(Color.rgb(187, 187, 187))
+            setPadding(dp(16), 0, dp(16), dp(16))
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
     }
 
     private fun addDiagnosticsControl(list: LinearLayout) {

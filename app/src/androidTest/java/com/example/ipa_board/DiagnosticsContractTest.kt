@@ -365,7 +365,7 @@ class DiagnosticsContractTest {
                 }
                 coordinator!!.start()
                 coordinator!!.query(27L, "test-owned-input")
-                assertEquals(3, context.bindAttempts.size)
+                assertEquals(4, context.bindAttempts.size)
                 assertTrue(states.isNotEmpty())
                 val result = states.last()
                 assertEquals(27L, result.revision)
