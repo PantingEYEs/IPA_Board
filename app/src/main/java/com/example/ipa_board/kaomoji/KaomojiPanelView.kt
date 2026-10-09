@@ -2,7 +2,6 @@ package com.example.ipa_board.kaomoji
 
 import android.content.Context
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -224,52 +223,11 @@ class KaomojiStatusView(
         }
     }
 
-    private val colorContainer = LinearLayout(context).apply {
-        orientation = HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-    }
-
-    private val colorDots = listOf(
-        "Red" to "#A85555",
-        "Orange" to "#A3622D",
-        "Yellow" to "#998436",
-        "Green" to "#4E8058",
-        "Cyan" to "#3F7E85",
-        "Blue" to "#466580",
-        "Purple" to "#784E82"
-    )
-
-    private val dotViews = mutableMapOf<String, View>()
-
     init {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
 
-        addView(tvTitle, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
-
-        val scroll = HorizontalScrollView(context).apply {
-            isHorizontalScrollBarEnabled = false
-            overScrollMode = OVER_SCROLL_NEVER
-        }
-
-        colorDots.forEach { (colorName, hexColor) ->
-            val dot = View(context).apply {
-                val size = dp(14)
-                layoutParams = LayoutParams(size, size).apply {
-                    setMargins(dp(3), 0, dp(3), 0)
-                }
-                setOnClickListener {
-                    panelView.toggleColorTag(colorName)
-                }
-            }
-            dotViews[colorName] = dot
-            colorContainer.addView(dot)
-        }
-
-        scroll.addView(colorContainer, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
-        addView(scroll, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply {
-            setMargins(dp(4), 0, dp(2), 0)
-        })
+        addView(tvTitle, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
 
         addView(btnSort, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT).apply {
             setMargins(dp(2), 0, dp(4), 0)
@@ -295,20 +253,6 @@ class KaomojiStatusView(
             else -> "顔文字 · All ▾"
         }
         tvTitle.text = titleText
-
-        colorDots.forEach { (colorName, hexColor) ->
-            val dot = dotViews[colorName] ?: return@forEach
-            val isSelected = panelView.isColorTagSelected(colorName)
-            val drawable = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(Color.parseColor(hexColor))
-                if (isSelected) {
-                    setStroke(dp(2), Color.WHITE)
-                }
-            }
-            dot.background = drawable
-            dot.alpha = if (isSelected) 1.0f else 0.45f
-        }
 
         if (panelView.isReversed) {
             btnSort.setTextColor(Color.WHITE)
