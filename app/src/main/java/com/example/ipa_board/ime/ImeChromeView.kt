@@ -18,8 +18,8 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     private val candidateRow = LinearLayout(context)
     private var candidateMinimumWidth = dp(48)
     private val expand = button("⋯", "Expand") { showPanel(if (panel == Panel.KEYBOARD) Panel.CANDIDATES else Panel.KEYBOARD) }.apply {
-        minWidth = dp(36)
-        minimumWidth = dp(36)
+        minWidth = dp(57)
+        minimumWidth = dp(57)
         setPadding(dp(4), 0, dp(4), 0)
     }
     val statusContainer = FrameLayout(context)
@@ -269,8 +269,8 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         setPadding(dp(4), 0, dp(4), 0)
         minHeight = dp(28)
         minimumHeight = dp(28)
-        minWidth = dp(32)
-        minimumWidth = dp(32)
+        minWidth = dp(57)
+        minimumWidth = dp(57)
         gravity = Gravity.CENTER
         setOnClickListener { click() }
     }
