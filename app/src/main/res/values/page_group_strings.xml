@@ -15,4 +15,5 @@
     <string name="ungrouped_preview">%1$s · outside this group; preview uses this group’s appearance</string>
     <string name="empty_group_ime">No pages · temporary default template</string>
     <string name="show_keyboard_grid">Show Keyboard Grid</string>
+    <string name="show_pointer_location">Show Pointer Location</string>
 </resources>

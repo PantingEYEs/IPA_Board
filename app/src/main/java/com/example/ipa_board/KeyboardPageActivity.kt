@@ -74,6 +74,12 @@ class KeyboardPageActivity : Activity() {
         spLayouts.isSaveEnabled = false
         showGrid = findViewById(R.id.cb_show_grid)
         showGrid.isSaveEnabled = false
+        val showPointerLocation = findViewById<CheckBox>(R.id.cb_show_pointer_location)
+        val prefs = getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        showPointerLocation.isChecked = prefs.getBoolean("show_pointer_location", false)
+        showPointerLocation.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("show_pointer_location", isChecked).apply()
+        }
         allPages = findViewById(R.id.cb_all_pages)
         allPages.isChecked = savedInstanceState?.getBoolean("all_pages") ?: false
         allPages.setOnCheckedChangeListener { _, _ -> updateLayoutSpinner(); refreshPreview() }

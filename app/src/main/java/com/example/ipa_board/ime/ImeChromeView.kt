@@ -275,4 +275,76 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         setOnClickListener { click() }
     }
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+
+    private val pointerPaths = mutableMapOf<Int, android.graphics.Path>()
+    private val currentPointers = mutableMapOf<Int, android.graphics.PointF>()
+    private val pointerPaint = android.graphics.Paint().apply {
+        color = 0xAA00FFFF.toInt()
+        strokeWidth = 3f * resources.displayMetrics.density
+        style = android.graphics.Paint.Style.STROKE
+        isAntiAlias = true
+    }
+    private val pointPaint = android.graphics.Paint().apply {
+        color = 0xFFFF0000.toInt()
+        style = android.graphics.Paint.Style.FILL
+        strokeWidth = 2f * resources.displayMetrics.density
+        isAntiAlias = true
+    }
+
+    var showPointerLocation = false
+        set(value) {
+            field = value
+            if (!value) {
+                pointerPaths.clear()
+                currentPointers.clear()
+            }
+            invalidate()
+        }
+
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+        if (showPointerLocation) {
+            val action = ev.actionMasked
+            val pointerIndex = ev.actionIndex
+            val pointerId = ev.getPointerId(pointerIndex)
+
+            when (action) {
+                android.view.MotionEvent.ACTION_DOWN, android.view.MotionEvent.ACTION_POINTER_DOWN -> {
+                    val path = android.graphics.Path()
+                    path.moveTo(ev.getX(pointerIndex), ev.getY(pointerIndex))
+                    pointerPaths[pointerId] = path
+                    currentPointers[pointerId] = android.graphics.PointF(ev.getX(pointerIndex), ev.getY(pointerIndex))
+                }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    for (i in 0 until ev.pointerCount) {
+                        val id = ev.getPointerId(i)
+                        pointerPaths[id]?.lineTo(ev.getX(i), ev.getY(i))
+                        currentPointers[id]?.set(ev.getX(i), ev.getY(i))
+                    }
+                }
+                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_POINTER_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                    pointerPaths.remove(pointerId)
+                    currentPointers.remove(pointerId)
+                }
+            }
+            invalidate()
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
+    override fun dispatchDraw(canvas: android.graphics.Canvas) {
+        super.dispatchDraw(canvas)
+        if (showPointerLocation) {
+            for (path in pointerPaths.values) {
+                canvas.drawPath(path, pointerPaint)
+            }
+            val radius = 4f * resources.displayMetrics.density
+            val crossSize = 10f * resources.displayMetrics.density
+            for (p in currentPointers.values) {
+                canvas.drawCircle(p.x, p.y, radius, pointPaint)
+                canvas.drawLine(p.x - crossSize, p.y, p.x + crossSize, p.y, pointPaint)
+                canvas.drawLine(p.x, p.y - crossSize, p.x, p.y + crossSize, pointPaint)
+            }
+        }
+    }
+
 }
