@@ -754,14 +754,21 @@ class IpaBoardService : InputMethodService() {
 
         updatePopupUI()
 
+        val scrollRoot = ScrollView(context).apply {
+            overScrollMode = View.OVER_SCROLL_NEVER
+            addView(root)
+        }
+
         val popup = PopupWindow(
-            root,
+            scrollRoot,
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT,
             true
         ).apply {
             isOutsideTouchable = true
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            enterTransition = android.transition.Slide(Gravity.TOP)
+            exitTransition = android.transition.Slide(Gravity.TOP)
         }
 
         popup.showAsDropDown(anchorView)
