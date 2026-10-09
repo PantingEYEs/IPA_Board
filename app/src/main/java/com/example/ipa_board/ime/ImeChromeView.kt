@@ -294,7 +294,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     private val samplePointPaint = android.graphics.Paint().apply {
         color = 0xFFFF0000.toInt() // Red for the exact sampled point on the trail
         style = android.graphics.Paint.Style.STROKE
-        strokeWidth = resources.displayMetrics.density // 1dp
+        strokeWidth = 0f
         isAntiAlias = true
     }
     private val axisPaint = android.graphics.Paint().apply {
@@ -344,7 +344,11 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
                     val historySize = ev.historySize
                     for (h in 0 until historySize) {
                         for (i in 0 until ev.pointerCount) {
-                            historicalPoints.add(android.graphics.PointF(ev.getHistoricalX(i, h), ev.getHistoricalY(i, h)))
+                            val id = ev.getPointerId(i)
+                            val hx = ev.getHistoricalX(i, h)
+                            val hy = ev.getHistoricalY(i, h)
+                            pointerPaths[id]?.lineTo(hx, hy)
+                            historicalPoints.add(android.graphics.PointF(hx, hy))
                         }
                     }
                     for (i in 0 until ev.pointerCount) {
