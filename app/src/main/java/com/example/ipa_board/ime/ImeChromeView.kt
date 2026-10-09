@@ -279,8 +279,8 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     private val pointerPaths = mutableMapOf<Int, android.graphics.Path>()
     private val currentPointers = mutableMapOf<Int, android.graphics.PointF>()
     private val pointerPaint = android.graphics.Paint().apply {
-        color = 0xAA00FFFF.toInt()
-        strokeWidth = 3f * resources.displayMetrics.density
+        color = 0xFFFFFFFF.toInt()
+        strokeWidth = resources.displayMetrics.density
         style = android.graphics.Paint.Style.STROKE
         isAntiAlias = true
     }
@@ -288,6 +288,12 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         color = 0xFFFF0000.toInt()
         style = android.graphics.Paint.Style.FILL
         strokeWidth = 2f * resources.displayMetrics.density
+        isAntiAlias = true
+    }
+    private val axisPaint = android.graphics.Paint().apply {
+        color = 0xFFFFFFFF.toInt()
+        strokeWidth = resources.displayMetrics.density
+        style = android.graphics.Paint.Style.STROKE
         isAntiAlias = true
     }
 
@@ -348,7 +354,11 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
             }
             val radius = 4f * resources.displayMetrics.density
             val crossSize = 10f * resources.displayMetrics.density
+            val width = width.toFloat()
+            val height = height.toFloat()
             for (p in currentPointers.values) {
+                canvas.drawLine(0f, p.y, width, p.y, axisPaint)
+                canvas.drawLine(p.x, 0f, p.x, height, axisPaint)
                 canvas.drawCircle(p.x, p.y, radius, pointPaint)
                 canvas.drawLine(p.x - crossSize, p.y, p.x + crossSize, p.y, pointPaint)
                 canvas.drawLine(p.x, p.y - crossSize, p.x, p.y + crossSize, pointPaint)
