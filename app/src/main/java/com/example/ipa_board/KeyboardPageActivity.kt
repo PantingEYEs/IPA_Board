@@ -38,6 +38,7 @@ class KeyboardPageActivity : Activity() {
     private lateinit var spGroups: Spinner
     private lateinit var allPages: CheckBox
     private lateinit var showGrid: CheckBox
+    private lateinit var showPointerLocation: CheckBox
     private var editingFilename: String? = null
     private var displayedGroupId: String? = null
 
@@ -74,12 +75,8 @@ class KeyboardPageActivity : Activity() {
         spLayouts.isSaveEnabled = false
         showGrid = findViewById(R.id.cb_show_grid)
         showGrid.isSaveEnabled = false
-        val showPointerLocation = findViewById<CheckBox>(R.id.cb_show_pointer_location)
-        val prefs = getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
-        showPointerLocation.isChecked = prefs.getBoolean("show_pointer_location", false)
-        showPointerLocation.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit().putBoolean("show_pointer_location", isChecked).apply()
-        }
+        showPointerLocation = findViewById(R.id.cb_show_pointer_location)
+        showPointerLocation.isSaveEnabled = false
         allPages = findViewById(R.id.cb_all_pages)
         allPages.isChecked = savedInstanceState?.getBoolean("all_pages") ?: false
         allPages.setOnCheckedChangeListener { _, _ -> updateLayoutSpinner(); refreshPreview() }
@@ -254,6 +251,12 @@ class KeyboardPageActivity : Activity() {
         showGrid.isChecked = state.active.appearance.showGrid
         showGrid.setOnCheckedChangeListener { _, checked ->
             updateAppearance { it.copy(showGrid = checked) }
+            refreshPreview()
+        }
+        showPointerLocation.setOnCheckedChangeListener(null)
+        showPointerLocation.isChecked = state.active.appearance.showPointerLocation
+        showPointerLocation.setOnCheckedChangeListener { _, checked ->
+            updateAppearance { it.copy(showPointerLocation = checked) }
             refreshPreview()
         }
         refreshColorSliders()

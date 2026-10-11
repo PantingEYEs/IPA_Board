@@ -303,7 +303,7 @@ class IpaBoardService : InputMethodService() {
         val height = (appearance.heightDp.coerceIn(100, availableDp) * density).toInt()
         view.setKeyboardHeight(height)
         view.setCalculatorEnabled(calculatorEnabled())
-        view.showPointerLocation = prefs.getBoolean("show_pointer_location", false)
+        view.showPointerLocation = appearance.showPointerLocation
         view.setWidthSwapEnabled(widthSwapEnabled)
         view.keyboardHost.setBackgroundColor(Color.parseColor(appearance.backgroundColor))
         val layout = LayoutFileManager.activeLayout(this)

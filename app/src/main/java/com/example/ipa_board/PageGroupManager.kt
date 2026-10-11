@@ -11,7 +11,8 @@ data class GroupAppearance(
     val symbolColor: String = SettingsConstants.DEFAULT_SYMBOL_COLOR_HEX,
     val heightDp: Int = SettingsConstants.DEFAULT_KEYBOARD_HEIGHT,
     val fontSizeSp: Int = SettingsConstants.DEFAULT_KEYBOARD_FONT_SIZE,
-    val showGrid: Boolean = true
+    val showGrid: Boolean = true,
+    val showPointerLocation: Boolean = false
 ) {
     fun validated(): GroupAppearance {
         val colors = Regex("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$")
@@ -22,9 +23,11 @@ data class GroupAppearance(
     }
     fun toJson() = JSONObject().put("backgroundColor", backgroundColor).put("symbolColor", symbolColor)
         .put("heightDp", heightDp).put("fontSizeSp", fontSizeSp).put("showGrid", showGrid)
+        .put("showPointerLocation", showPointerLocation)
     companion object {
         fun fromJson(json: JSONObject): GroupAppearance = GroupAppearance(json.getString("backgroundColor"),
-            json.getString("symbolColor"), json.getInt("heightDp"), json.getInt("fontSizeSp"), json.optBoolean("showGrid", true)).validated()
+            json.getString("symbolColor"), json.getInt("heightDp"), json.getInt("fontSizeSp"),
+            json.optBoolean("showGrid", true), json.optBoolean("showPointerLocation", false)).validated()
     }
 }
 
