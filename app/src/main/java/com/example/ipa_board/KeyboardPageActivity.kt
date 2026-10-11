@@ -27,6 +27,10 @@ import android.widget.Toast
 import androidx.core.graphics.ColorUtils
 import org.json.JSONObject
 
+import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayoutMediator
+
 class KeyboardPageActivity : Activity() {
 
     private lateinit var previewContainer: ViewGroup
@@ -50,6 +54,25 @@ class KeyboardPageActivity : Activity() {
     private lateinit var tvSaturationLabel: TextView
     private lateinit var tvLightnessLabel: TextView
 
+    private lateinit var tabLayout: TabLayout
+    private lateinit var viewPager: ViewPager2
+    private lateinit var groupSettingsView: View
+    private lateinit var pageSettingsView: View
+
+    override fun <T : View?> findViewById(id: Int): T {
+        val view = super.findViewById<T>(id)
+        if (view != null) return view
+        if (::groupSettingsView.isInitialized) {
+            val v = groupSettingsView.findViewById<T>(id)
+            if (v != null) return v
+        }
+        if (::pageSettingsView.isInitialized) {
+            val v = pageSettingsView.findViewById<T>(id)
+            if (v != null) return v
+        }
+        return view
+    }
+
     private val MIN_HEIGHT_DP = 150
     private val IMPORT_REQUEST_CODE = 123
     private val EXPORT_REQUEST_CODE = 124
@@ -64,35 +87,56 @@ class KeyboardPageActivity : Activity() {
         clearedLayout = lastNonConfigurationInstance as? ClearedLayout
         setContentView(R.layout.activity_keyboard_page)
 
+        val rootLayout = findViewById<View>(R.id.root_layout)
+        rootLayout.setOnApplyWindowInsetsListener { view, windowInsets ->
+            val insets = windowInsets.getInsets(
+                android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()
+            )
+            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)
+            windowInsets
+        }
+        rootLayout.requestApplyInsets()
+
         LayoutFileManager.initDefaultLayout(this)
 
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener { finish() }
 
         previewContainer = findViewById(R.id.keyboard_container)
-        spLayouts = findViewById(R.id.sp_layouts)
-        spGroups = findViewById(R.id.sp_page_groups)
+        tabLayout = findViewById(R.id.tab_layout)
+        viewPager = findViewById(R.id.view_pager)
+
+        groupSettingsView = layoutInflater.inflate(R.layout.layout_group_settings, null)
+        pageSettingsView = layoutInflater.inflate(R.layout.layout_page_settings, null)
+
+        viewPager.adapter = SettingsPagerAdapter(listOf(groupSettingsView, pageSettingsView))
+        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+            tab.text = if (position == 0) "Group Settings" else "Page Settings"
+        }.attach()
+
+        spLayouts = pageSettingsView.findViewById(R.id.sp_layouts)
+        spGroups = groupSettingsView.findViewById(R.id.sp_page_groups)
         spGroups.isSaveEnabled = false
         spLayouts.isSaveEnabled = false
-        showGrid = findViewById(R.id.cb_show_grid)
+        showGrid = groupSettingsView.findViewById(R.id.cb_show_grid)
         showGrid.isSaveEnabled = false
-        showPointerLocation = findViewById(R.id.cb_show_pointer_location)
+        showPointerLocation = groupSettingsView.findViewById(R.id.cb_show_pointer_location)
         showPointerLocation.isSaveEnabled = false
-        allPages = findViewById(R.id.cb_all_pages)
+        allPages = groupSettingsView.findViewById(R.id.cb_all_pages)
         allPages.isChecked = savedInstanceState?.getBoolean("all_pages") ?: false
         allPages.setOnCheckedChangeListener { _, _ -> updateLayoutSpinner(); refreshPreview() }
-        tvHeightValue = findViewById(R.id.tv_height_value)
-        sbHeight = findViewById(R.id.sb_height)
+        tvHeightValue = groupSettingsView.findViewById(R.id.tv_height_value)
+        sbHeight = groupSettingsView.findViewById(R.id.sb_height)
 
-        rgColorTarget = findViewById(R.id.rg_color_target)
-        sbHue = findViewById(R.id.sb_hue)
-        sbSaturation = findViewById(R.id.sb_saturation)
-        sbLightness = findViewById(R.id.sb_lightness)
-        tvHueLabel = findViewById(R.id.tv_hue_label)
-        tvSaturationLabel = findViewById(R.id.tv_saturation_label)
-        tvLightnessLabel = findViewById(R.id.tv_lightness_label)
+        rgColorTarget = groupSettingsView.findViewById(R.id.rg_color_target)
+        sbHue = groupSettingsView.findViewById(R.id.sb_hue)
+        sbSaturation = groupSettingsView.findViewById(R.id.sb_saturation)
+        sbLightness = groupSettingsView.findViewById(R.id.sb_lightness)
+        tvHueLabel = groupSettingsView.findViewById(R.id.tv_hue_label)
+        tvSaturationLabel = groupSettingsView.findViewById(R.id.tv_saturation_label)
+        tvLightnessLabel = groupSettingsView.findViewById(R.id.tv_lightness_label)
 
-        val btnImport = findViewById<Button>(R.id.btn_import)
-        val btnExport = findViewById<Button>(R.id.btn_export)
+        val btnImport = pageSettingsView.findViewById<Button>(R.id.btn_import)
+        val btnExport = pageSettingsView.findViewById<Button>(R.id.btn_export)
 
         // 1. Color Setup (HSL)
         setupColorControls()
@@ -114,8 +158,8 @@ class KeyboardPageActivity : Activity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        val fontSizeSlider = findViewById<SeekBar>(R.id.sb_font_size)
-        val fontSizeValue = findViewById<TextView>(R.id.tv_font_size_value)
+        val fontSizeSlider = groupSettingsView.findViewById<SeekBar>(R.id.sb_font_size)
+        val fontSizeValue = groupSettingsView.findViewById<TextView>(R.id.tv_font_size_value)
         val currentFontSize = PageGroupManager.active(this).appearance.fontSizeSp
         fontSizeSlider.max = SettingsConstants.MAX_KEYBOARD_FONT_SIZE - SettingsConstants.MIN_KEYBOARD_FONT_SIZE
         fontSizeSlider.progress = currentFontSize - SettingsConstants.MIN_KEYBOARD_FONT_SIZE
@@ -141,15 +185,15 @@ class KeyboardPageActivity : Activity() {
         // 4. Action Buttons
         btnImport.setOnClickListener { startImport() }
         btnExport.setOnClickListener { startExport() }
-        findViewById<Button>(R.id.btn_rename_layout).setOnClickListener { showRenameLayoutDialog() }
-        findViewById<Button>(R.id.btn_reorder_pages).setOnClickListener { showReorderPagesDialog() }
-        findViewById<Button>(R.id.btn_new_layout).setOnClickListener { showNewLayoutDialog() }
-        findViewById<Button>(R.id.btn_delete_layout).setOnClickListener { deleteCurrentLayout() }
-        findViewById<Button>(R.id.btn_clear_layout).setOnClickListener { clearCurrentLayout() }
-        findViewById<Button>(R.id.btn_undo_clear).setOnClickListener { undoClear() }
-        findViewById<Button>(R.id.btn_new_group).setOnClickListener { showGroupNameDialog(false) }
-        findViewById<Button>(R.id.btn_rename_group).setOnClickListener { showGroupNameDialog(true) }
-        findViewById<Button>(R.id.btn_delete_group).setOnClickListener {
+        pageSettingsView.findViewById<Button>(R.id.btn_rename_layout).setOnClickListener { showRenameLayoutDialog() }
+        pageSettingsView.findViewById<Button>(R.id.btn_reorder_pages).setOnClickListener { showReorderPagesDialog() }
+        pageSettingsView.findViewById<Button>(R.id.btn_new_layout).setOnClickListener { showNewLayoutDialog() }
+        pageSettingsView.findViewById<Button>(R.id.btn_delete_layout).setOnClickListener { deleteCurrentLayout() }
+        pageSettingsView.findViewById<Button>(R.id.btn_clear_layout).setOnClickListener { clearCurrentLayout() }
+        pageSettingsView.findViewById<Button>(R.id.btn_undo_clear).setOnClickListener { undoClear() }
+        groupSettingsView.findViewById<Button>(R.id.btn_new_group).setOnClickListener { showGroupNameDialog(false) }
+        groupSettingsView.findViewById<Button>(R.id.btn_rename_group).setOnClickListener { showGroupNameDialog(true) }
+        groupSettingsView.findViewById<Button>(R.id.btn_delete_group).setOnClickListener {
             val group = PageGroupManager.active(this)
             AlertDialog.Builder(this).setTitle(R.string.delete_page_group)
                 .setMessage(getString(R.string.delete_group_message, PageGroupManager.label(this, group)))
@@ -159,8 +203,8 @@ class KeyboardPageActivity : Activity() {
                     refreshGroupUi()
                 }.show()
         }
-        findViewById<Button>(R.id.btn_reorder_groups).setOnClickListener { showReorderGroupsDialog() }
-        findViewById<Button>(R.id.btn_group_pages).setOnClickListener { showGroupPagesDialog() }
+        groupSettingsView.findViewById<Button>(R.id.btn_reorder_groups).setOnClickListener { showReorderGroupsDialog() }
+        groupSettingsView.findViewById<Button>(R.id.btn_group_pages).setOnClickListener { showGroupPagesDialog() }
         refreshPreview()
     }
 
@@ -365,9 +409,15 @@ class KeyboardPageActivity : Activity() {
 
     private fun updateLayoutSpinner() {
         val files = if (allPages.isChecked) LayoutFileManager.getLayoutOrder(this) else PageGroupManager.pages(this)
-        val displayNames = files.map { it.removeSuffix(".json") }
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, displayNames)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        val displayNames = files.map { filename ->
+            val displayName = filename.removeSuffix(".json")
+            if (filename !in PageGroupManager.pages(this)) {
+                getString(R.string.ungrouped_preview, displayName)
+            } else {
+                displayName
+            }
+        }
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, displayNames)
         spLayouts.onItemSelectedListener = null
         spLayouts.adapter = adapter
 
@@ -482,12 +532,6 @@ class KeyboardPageActivity : Activity() {
         previewContainer.setBackgroundColor(bgColor)
 
         val layout = layoutFile?.let { LayoutFileManager.loadLayout(this, it) } ?: SettingsConstants.DEFAULT_LAYOUT
-        val displayName = if (hasPage) layoutFile!!.removeSuffix(".json") else ""
-        findViewById<TextView>(R.id.tv_layout_name).text = when {
-            !hasPage -> getString(R.string.empty_group_hint)
-            layoutFile !in PageGroupManager.pages(this) -> getString(R.string.ungrouped_preview, displayName)
-            else -> getString(R.string.current_page_name, displayName)
-        }
         if (clearedLayout?.filename != layoutFile) clearedLayout = null
         findViewById<Button>(R.id.btn_undo_clear).visibility = if (clearedLayout != null) View.VISIBLE else View.GONE
         KeyboardRenderer.render(this, previewContainer, layout, heightPx, symbolColor,

@@ -42,6 +42,16 @@ class ClipboardManagerActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_clipboard_manager)
 
+        val root = findViewById<View>(R.id.clipboard_root)
+        root.setOnApplyWindowInsetsListener { view, windowInsets ->
+            val insets = windowInsets.getInsets(
+                android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()
+            )
+            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)
+            windowInsets
+        }
+        root.requestApplyInsets()
+
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener { finish() }
 
         swQuickPaste = findViewById(R.id.sw_quick_paste)

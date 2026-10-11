@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/keyboard_page"
+            android:textColor="@color/management_text"
+            android:textSize="@dimen/management_section_size" />
+
+        <Spinner
+            android:id="@+id/sp_layouts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@color/management_text" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/btn_new_layout"
+                style="@style/ManagementButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/new_layout"
+                android:textSize="@dimen/management_caption_size" />
+
+            <Button style="@style/ManagementButton"
+                android:id="@+id/btn_rename_layout"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/rename_layout" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <Button style="@style/ManagementButton"
+                android:id="@+id/btn_import"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/import_pages"
+                android:textSize="@dimen/management_caption_size" />
+
+            <Button style="@style/ManagementButton"
+                android:id="@+id/btn_export"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/export_pages"
+                android:textSize="@dimen/management_caption_size" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <Button style="@style/ManagementButton"
+                android:id="@+id/btn_delete_layout"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/delete_layout" />
+
+            <Button style="@style/ManagementButton"
+                android:id="@+id/btn_reorder_pages"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/reorder_pages" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btn_clear_layout"
+            style="@style/ManagementButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/clear_keys"
+            android:textSize="@dimen/management_caption_size" />
+
+        <Button style="@style/ManagementButton"
+            android:id="@+id/btn_undo_clear"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:text="@string/undo_clear"
+            android:visibility="gone" />
+    </LinearLayout>
+</ScrollView>

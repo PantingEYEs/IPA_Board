@@ -49,9 +49,9 @@ class LayoutManagementTest {
                 assertNull(LayoutFileManager.loadLayout(fixture.context, filename))
                 assertEquals(original.copy(name = newName), LayoutFileManager.loadLayout(fixture.context, newFilename))
                 assertEquals(newFilename, fixture.activeFilename())
-                onView(withId(R.id.tv_layout_name)).check(matches(withText(newName)))
+                onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(newName)))
                 scenario.recreate()
-                onView(withId(R.id.tv_layout_name)).check(matches(withText(newName)))
+                onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(newName)))
                 assertEquals(newFilename, fixture.activeFilename())
             }
         }

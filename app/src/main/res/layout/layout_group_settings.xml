@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/page_group"
+            android:textColor="@color/management_text"
+            android:textSize="@dimen/management_section_size" />
+
+        <Spinner
+            android:id="@+id/sp_page_groups"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@color/management_text" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button style="@style/ManagementButton"
+                android:id="@+id/btn_new_group"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/new_page_group"
+                android:textSize="@dimen/management_caption_size" />
+
+            <Button style="@style/ManagementButton"
+                android:id="@+id/btn_rename_group"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/rename_page_group"
+                android:textSize="@dimen/management_caption_size" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button style="@style/ManagementButton"
+                android:id="@+id/btn_delete_group"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/delete_page_group"
+                android:textSize="@dimen/management_caption_size" />
+
+            <Button style="@style/ManagementButton"
+                android:id="@+id/btn_reorder_groups"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/reorder_page_groups"
+                android:textSize="@dimen/management_caption_size" />
+        </LinearLayout>
+
+        <TextView android:id="@+id/tv_group_summary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/management_text_secondary"
+            android:textSize="@dimen/management_caption_size" />
+
+        <Button style="@style/ManagementButton"
+            android:id="@+id/btn_group_pages"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/page_group_members" />
+
+        <CheckBox android:id="@+id/cb_all_pages"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/show_all_keyboard_pages"
+            android:textColor="@color/management_text"
+            android:layout_marginBottom="12dp"
+            android:textSize="@dimen/management_body_size" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#444444"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView android:id="@+id/tv_group_appearance" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textColor="@color/management_text" android:textSize="@dimen/management_section_size" android:layout_marginBottom="12dp" />
+
+        <!-- Height Settings -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_marginBottom="8dp"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/height"
+                    android:textColor="@color/management_text_secondary"
+                    android:textSize="@dimen/management_caption_size"/>
+                <TextView
+                    android:id="@+id/tv_height_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="210dp"
+                    android:textColor="@color/management_text"
+                    android:textSize="@dimen/management_caption_size"/>
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/sb_height"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="300"
+                android:progress="60"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_marginBottom="8dp"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/font_size"
+                    android:textColor="@color/management_text_secondary"
+                    android:textSize="@dimen/management_caption_size" />
+                <TextView
+                    android:id="@+id/tv_font_size_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/management_text"
+                    android:textSize="@dimen/management_caption_size" />
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/sb_font_size"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:contentDescription="@string/keyboard_font_size"/>
+        </LinearLayout>
+
+        <CheckBox
+            android:id="@+id/cb_show_grid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/show_keyboard_grid"
+            android:textColor="@color/management_text_secondary"
+            android:layout_marginBottom="12dp"
+            android:textSize="@dimen/management_caption_size" />
+
+        <CheckBox
+            android:id="@+id/cb_show_pointer_location"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/show_pointer_location"
+            android:textColor="@color/management_text_secondary"
+            android:layout_marginBottom="12dp"
+            android:textSize="@dimen/management_caption_size" />
+
+        <!-- Color Target Selection -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="250dp"
+            android:layout_marginBottom="8dp"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/color_target"
+                android:textColor="@color/management_text_secondary"
+                android:textSize="@dimen/management_caption_size"
+                android:layout_marginBottom="8dp"/>
+
+            <RadioGroup
+                android:id="@+id/rg_color_target"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+                <RadioButton
+                    android:id="@+id/rb_target_bg"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/background"
+                    android:textColor="@color/management_text"
+                    android:checked="true"/>
+                <RadioButton
+                    android:id="@+id/rb_target_symbol"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/symbol"
+                    android:textColor="@color/management_text"/>
+            </RadioGroup>
+
+            <!-- HSL Sliders -->
+            <TextView
+                android:id="@+id/tv_hue_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Hue: 0"
+                android:textColor="@color/management_text_secondary"
+                android:textSize="@dimen/management_caption_size"
+                android:layout_marginBottom="4dp"/>
+            <SeekBar
+                android:id="@+id/sb_hue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="360"
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:id="@+id/tv_saturation_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Saturation: 0%"
+                android:textColor="@color/management_text_secondary"
+                android:textSize="@dimen/management_caption_size"
+                android:layout_marginBottom="4dp"/>
+            <SeekBar
+                android:id="@+id/sb_saturation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:id="@+id/tv_lightness_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Lightness: 0%"
+                android:textColor="@color/management_text_secondary"
+                android:textSize="@dimen/management_caption_size"
+                android:layout_marginBottom="4dp"/>
+            <SeekBar
+                android:id="@+id/sb_lightness"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:layout_marginBottom="24dp"/>
+        </LinearLayout>
+
+
+    </LinearLayout>
+</ScrollView>

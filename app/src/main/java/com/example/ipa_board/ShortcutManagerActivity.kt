@@ -21,6 +21,16 @@ class ShortcutManagerActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_shortcut)
 
+        val root = findViewById<android.view.View>(R.id.shortcut_root)
+        root.setOnApplyWindowInsetsListener { view, windowInsets ->
+            val insets = windowInsets.getInsets(
+                android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()
+            )
+            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)
+            windowInsets
+        }
+        root.requestApplyInsets()
+
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener { finish() }
 
         findViewById<Button>(R.id.btn_manage_shift_shortcuts).setOnClickListener {

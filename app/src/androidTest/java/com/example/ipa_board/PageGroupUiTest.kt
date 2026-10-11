@@ -65,7 +65,7 @@ class PageGroupUiTest {
                 scenario.onActivity { activity ->
                     assertTrue(activity.findViewById<CheckBox>(R.id.cb_all_pages).isChecked)
                     assertTrue(activity.findViewById<Button>(R.id.btn_rename_layout).isEnabled)
-                    assertTrue(activity.findViewById<TextView>(R.id.tv_layout_name).text.contains("outside this group"))
+                    assertTrue(activity.findViewById<Spinner>(R.id.sp_layouts).selectedItem.toString().contains("outside this group"))
                 }
                 assertNull(PageGroupManager.activeFilename(context))
                 assertEquals(SettingsConstants.DEFAULT_LAYOUT, LayoutFileManager.activeLayout(context))
