@@ -199,6 +199,14 @@
             android:textColor="@color/management_text"
             android:layout_marginBottom="12dp" android:textSize="@dimen/management_body_size" />
 
+        <CheckBox
+            android:id="@+id/cb_show_pointer_location"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/show_pointer_location"
+            android:textColor="@color/management_text"
+            android:layout_marginBottom="12dp" android:textSize="@dimen/management_body_size" />
+
         <!-- Color Target Selection -->
         <TextView
             android:layout_width="wrap_content"

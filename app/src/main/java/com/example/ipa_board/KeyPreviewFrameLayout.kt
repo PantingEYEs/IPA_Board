@@ -113,6 +113,7 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
                 }
             }
             MotionEvent.ACTION_MOVE -> {
+                popup?.contentView?.invalidate()
                 val index = event.findPointerIndex(pointerId)
                 if (index >= 0) {
                     currentTouchRawX = event.rawX
@@ -227,7 +228,50 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
         if (!isAttachedToWindow || windowToken == null) return
         popup?.dismiss()
         val density = resources.displayMetrics.density
-        val label = TextView(context).apply {
+
+        var parentView = parent
+        var chromeView: com.example.ipa_board.ime.ImeChromeView? = null
+        while (parentView != null) {
+            if (parentView is com.example.ipa_board.ime.ImeChromeView) {
+                chromeView = parentView
+                break
+            }
+            parentView = parentView.parent
+        }
+
+        @android.annotation.SuppressLint("AppCompatCustomView")
+        val label = object : TextView(context) {
+            override fun dispatchDraw(canvas: android.graphics.Canvas) {
+                super.dispatchDraw(canvas)
+                
+                if (chromeView?.showPointerLocation == true) {
+                    val loc = IntArray(2)
+                    getLocationOnScreen(loc)
+                    val chromeLoc = IntArray(2)
+                    chromeView.getLocationOnScreen(chromeLoc)
+                    
+                    canvas.save()
+                    canvas.translate(chromeLoc[0] - loc[0].toFloat(), chromeLoc[1] - loc[1].toFloat())
+                    
+                    for (path in chromeView.pointerPaths.values) {
+                        canvas.drawPath(path, chromeView.pointerPaint)
+                    }
+                    
+                    val chromeWidth = chromeView.width.toFloat()
+                    val chromeHeight = chromeView.height.toFloat()
+                    val crossSize = 10f * density
+
+                    for (p in chromeView.currentPointers.values) {
+                        canvas.drawLine(0f, p.y, chromeWidth, p.y, chromeView.axisPaint)
+                        canvas.drawLine(p.x, 0f, p.x, chromeHeight, chromeView.axisPaint)
+                        canvas.drawLine(p.x - crossSize, p.y, p.x + crossSize, p.y, chromeView.pointPaint)
+                        canvas.drawLine(p.x, p.y - crossSize, p.x, p.y + crossSize, chromeView.pointPaint)
+                    }
+                    
+                    canvas.restore()
+                }
+            }
+        }.apply {
             text = value
             setTextColor(Color.BLACK)
             setBackgroundColor(Color.WHITE)
