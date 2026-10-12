@@ -3,9 +3,15 @@
 ## 0.0.3（开发中，未发布）
 
 - 开发版本设为 `0.0.3-dev`，`versionCode = 3`，开发分支从 `v0.0.2` 的 `main` 创建。
-- 制定 Issue 驱动开发、鸿蒙 4.2.0.x 兼容、无候选故障与日志管理、仪表盘、按键盘页绑定引擎、计算器完善、可编辑多功能栏及 IPA 键盘与自研基础引擎的计划。规划阶段列为待开发项目，IPA 试接入进展见下方；见 [开发计划](docs/0.0.3-development-plan.md)。
+- 制定 Issue 驱动开发、鸿蒙 4.2.0.x 兼容、无候选故障与日志管理、仪表盘、按键盘页绑定引擎、计算器完善、可编辑多功能栏及 IPA 键盘与自研基础引擎的计划；见 [开发计划](docs/0.0.3-development-plan.md)。
 
-- 实验接入 IPA_Engine，支持 ARM64 的 IPA → 中英日文字候选及独立开关；新增资源管理页，可从仓库分别更新 DEX/JNI 引擎和预先编译的压缩二进制词典。客户端不编译词库；更新先校验与隔离验证，失败保留旧资源，成功切换后拒绝旧候选并移除旧词典。
+### 新增与改进
+
+- **页面分组外观绑定与 7 目标调色器**：页面分组（Page Group）外观配置新增对**按键预览浮窗颜色**（背景色与符号色）、**指针位置颜色**（轨迹线、坐标线、准星）及**指针位置差值/反转混合模式**（`Apply Difference Blending for Pointer Location`）的绑定与持久化保存。管理页（Group Settings）调色组件升级为 7 选项下拉菜单，支持对 7 种 Target 进行独立的 HSL 颜色自定义。
+- **指针位置差值混合模式**：开启“Apply Difference Blending for Pointer Location”后，轨迹线与坐标线在经过不同颜色区域（如按键浮窗、按键表面）时自动应用 `BlendMode.DIFFERENCE` 进行颜色取反反转，确保高对比度可见性。
+- **管理页与输入法弹窗 UI 重构**：统一页面选择（Page Selector）与分组选择（Group Selector）Spinner 的外观与 Padding 样式；颜文字与键盘页组切换菜单升级为自研下滑式 `PopupWindow`，带有圆角底色与选中标记（Checkmark）。
+- **触摸轨迹与指针位置调试叠加层（Pointer Location Overlay）**：键盘组配置新增 `Show Pointer Location` 开关，支持在输入法视图及预览浮窗上实时绘制 Hairline 轨迹线、全屏坐标轴线及高精准星，并完整记录 ACTION_MOVE 历史触控采样点（Historical Touch Sampling Points）。
+- **实验接入 IPA_Engine**：支持 ARM64 的 IPA → 中英日文字候选及独立开关；新增资源管理页，可从仓库分别更新 DEX/JNI 引擎和预先编译的压缩二进制词典。更新先校验与隔离验证，失败保留旧资源，成功切换后拒绝旧候选并移除旧词典。
 
 ## 0.0.2（2026-10-08）
 
