@@ -236,4 +236,30 @@ class CompositionControllerTest {
             assertEquals("hello world ", editor.text.toString())
         }
     }
+
+    @Test fun finishDeactivatesControllerAndStartReactivatesIt() {
+        instrumentation.runOnMainSync {
+            val editor = EditText(instrumentation.targetContext)
+            val ic = editor.onCreateInputConnection(EditorInfo())!!
+            val controller = CompositionController({ ic }, { _, _ -> }, {})
+            controller.start()
+            controller.input("a")
+            val candidate = Candidate("a", "EN", kind = CandidateKind.COMPLETION)
+            controller.acceptResults(controller.revision, listOf(candidate))
+            assertEquals(1, controller.candidates.size)
+
+            controller.finish()
+            controller.input("b")
+            val candidateB = Candidate("b", "EN", kind = CandidateKind.COMPLETION)
+            controller.acceptResults(controller.revision, listOf(candidateB))
+            assertTrue("Inactive controller must reject candidate results", controller.candidates.isEmpty())
+
+            controller.start()
+            controller.input("c")
+            val candidateC = Candidate("c", "EN", kind = CandidateKind.COMPLETION)
+            controller.acceptResults(controller.revision, listOf(candidateC))
+            assertEquals(1, controller.candidates.size)
+            assertEquals("c", controller.candidates.first().text)
+        }
+    }
 }
