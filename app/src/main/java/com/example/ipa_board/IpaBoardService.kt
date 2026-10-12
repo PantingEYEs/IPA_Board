@@ -18,6 +18,7 @@ import android.view.inputmethod.EditorInfo
 import android.widget.*
 import com.example.ipa_board.ime.*
 import com.example.ipa_board.emoji.*
+import com.example.ipa_board.diagnostics.*
 import com.example.ipa_board.kaomoji.*
 import com.example.ipa_board.clipboard.*
 import com.example.ipa_board.calculator.*
@@ -843,6 +844,7 @@ class IpaBoardService : InputMethodService() {
     }
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT)
         inputController.reset()
         val type = attribute?.inputType ?: 0
         val variation = type and InputType.TYPE_MASK_VARIATION
@@ -855,11 +857,14 @@ class IpaBoardService : InputMethodService() {
     }
     override fun onStartInputView(editorInfo: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(editorInfo, restarting)
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT_VIEW)
         clipboard.addPrimaryClipChangedListener(clipboardListener)
+        composition.start()
         applySettings()
     }
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.SELECTION_CHANGE)
         composition.externalSelection(newSelStart, newSelEnd, candidatesEnd)
     }
     override fun onEvaluateFullscreenMode() = false
@@ -882,12 +887,16 @@ class IpaBoardService : InputMethodService() {
         return super.onKeyUp(keyCode, event)
     }
     override fun onFinishInputView(finishingInput: Boolean) {
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT_VIEW)
         clipboard.removePrimaryClipChangedListener(clipboardListener)
         chrome?.showPanel(ImeChromeView.Panel.KEYBOARD)
         composition.finish(); engines.suspendSemantic(); inputController.reset()
         super.onFinishInputView(finishingInput)
     }
-    override fun onFinishInput() { composition.finish(); engines.suspendSemantic(); inputController.reset(); super.onFinishInput() }
+    override fun onFinishInput() {
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT)
+        composition.finish(); engines.suspendSemantic(); inputController.reset(); super.onFinishInput()
+    }
     override fun onDestroy() {
         emojiClosed = true
         emojiRequest++

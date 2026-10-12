@@ -27,6 +27,7 @@ class EngineManagementActivity : Activity() {
     private val versions = EngineVersionLookup()
     private val preferences by lazy { EngineSettings.preferences(this) }
     private var diagnosticSwitch: SwitchCompat? = null
+    private var logSizeText: TextView? = null
     private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         switches.filterKeys { it.key == key }.forEach { (feature, views) ->
             views.forEach { it.isChecked = EngineSettings.enabled(preferences, feature) }
@@ -35,6 +36,7 @@ class EngineManagementActivity : Activity() {
             // DIAGNOSTICS: one removable switch; independent of every engine enable/disable choice.
             AppDiagnostics.configure(preferences)
             diagnosticSwitch?.isChecked = DebugDiagnosticsSettings.enabled(preferences)
+            refreshLogSizeDisplay()
         }
     }
 
@@ -103,15 +105,103 @@ class EngineManagementActivity : Activity() {
             minimumHeight = dp(56)
             setPadding(dp(16), dp(12), dp(16), dp(12))
             isChecked = DebugDiagnosticsSettings.enabled(preferences)
-            setOnCheckedChangeListener { _, checked -> DebugDiagnosticsSettings.setEnabled(this@EngineManagementActivity, checked) }
+            setOnCheckedChangeListener { _, checked ->
+                DebugDiagnosticsSettings.setEnabled(this@EngineManagementActivity, checked)
+                refreshLogSizeDisplay()
+            }
         }
         list.addView(diagnosticSwitch, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         list.addView(TextView(this).apply {
             text = getString(R.string.debug_diagnostics_description)
             textSize = 14f
             setTextColor(Color.rgb(187, 187, 187))
-            setPadding(dp(16), 0, dp(16), dp(16))
+            setPadding(dp(16), 0, dp(16), dp(8))
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+
+        logSizeText = TextView(this).apply {
+            tag = "debug-diagnostics-log-size"
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            setPadding(dp(16), 0, dp(16), dp(8))
+        }
+        refreshLogSizeDisplay()
+        list.addView(logSizeText, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+
+        val buttonContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(dp(16), 0, dp(16), dp(16))
+        }
+
+        val btnExport = Button(this).apply {
+            tag = "debug-diagnostics-export"
+            text = getString(R.string.diagnostics_export_log)
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            backgroundTintList = ColorStateList.valueOf(Color.rgb(51, 51, 51))
+            isAllCaps = false
+            minimumHeight = dp(44)
+            setOnClickListener {
+                val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TITLE, "diagnostics.log")
+                }
+                startActivityForResult(intent, EXPORT_LOG_REQUEST_CODE)
+            }
+        }
+        buttonContainer.addView(btnExport, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+            setMargins(0, 0, dp(8), 0)
+        })
+
+        val btnClear = Button(this).apply {
+            tag = "debug-diagnostics-clear"
+            text = getString(R.string.diagnostics_clear_log)
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            backgroundTintList = ColorStateList.valueOf(Color.rgb(51, 51, 51))
+            isAllCaps = false
+            minimumHeight = dp(44)
+            setOnClickListener {
+                AppDiagnostics.clearLogFile(this@EngineManagementActivity)
+                refreshLogSizeDisplay()
+                android.widget.Toast.makeText(this@EngineManagementActivity, R.string.diagnostics_log_cleared, android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+        buttonContainer.addView(btnClear, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+            setMargins(dp(8), 0, 0, 0)
+        })
+
+        list.addView(buttonContainer, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+    }
+
+    private fun refreshLogSizeDisplay() {
+        val bytes = AppDiagnostics.getLogFileSize(this)
+        logSizeText?.text = getString(R.string.diagnostics_log_size, formatFileSize(bytes))
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshLogSizeDisplay()
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == EXPORT_LOG_REQUEST_CODE && resultCode == RESULT_OK) {
+            data?.data?.let { uri ->
+                val success = AppDiagnostics.exportLogFile(this, uri)
+                if (success) {
+                    android.widget.Toast.makeText(this, R.string.diagnostics_log_exported, android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun formatFileSize(bytes: Long): String = when {
+        bytes <= 0 -> "0 B"
+        bytes < 1024 -> "$bytes B"
+        bytes < 1024 * 1024 -> String.format(java.util.Locale.US, "%.1f KB", bytes / 1024.0)
+        else -> String.format(java.util.Locale.US, "%.2f MB", bytes / (1024.0 * 1024.0))
     }
 
     override fun onDestroy() {
@@ -281,5 +371,6 @@ class EngineManagementActivity : Activity() {
 
     companion object {
         private const val STATE_EXPANDED_CATEGORIES = "expanded_engine_categories"
+        private const val EXPORT_LOG_REQUEST_CODE = 2001
     }
 }

@@ -69,4 +69,9 @@
     <string name="color_target_pointer_axis">Pointer Axes</string>
     <string name="color_target_pointer_crosshair">Pointer Crosshair</string>
     <string name="use_pointer_difference_blend">Apply Difference Blending for Pointer Location</string>
+    <string name="diagnostics_log_size">Log file size: %1$s</string>
+    <string name="diagnostics_export_log">Export Log</string>
+    <string name="diagnostics_clear_log">Clear Log</string>
+    <string name="diagnostics_log_exported">Log file exported successfully</string>
+    <string name="diagnostics_log_cleared">Log file cleared</string>
 </resources>
