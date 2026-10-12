@@ -304,6 +304,10 @@ class IpaBoardService : InputMethodService() {
         view.setKeyboardHeight(height)
         view.setCalculatorEnabled(calculatorEnabled())
         view.showPointerLocation = appearance.showPointerLocation
+        val pathColor = try { Color.parseColor(appearance.pointerPathColor) } catch (_: Exception) { Color.WHITE }
+        val axisColor = try { Color.parseColor(appearance.pointerAxisColor) } catch (_: Exception) { Color.WHITE }
+        val crosshairColor = try { Color.parseColor(appearance.pointerCrosshairColor) } catch (_: Exception) { Color.RED }
+        view.setPointerColors(pathColor, axisColor, crosshairColor)
         view.setWidthSwapEnabled(widthSwapEnabled)
         view.keyboardHost.setBackgroundColor(Color.parseColor(appearance.backgroundColor))
         val layout = LayoutFileManager.activeLayout(this)

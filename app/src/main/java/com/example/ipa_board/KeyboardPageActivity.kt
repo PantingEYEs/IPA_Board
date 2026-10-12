@@ -43,6 +43,7 @@ class KeyboardPageActivity : Activity() {
     private lateinit var allPages: CheckBox
     private lateinit var showGrid: CheckBox
     private lateinit var showPointerLocation: CheckBox
+    private lateinit var usePointerDifferenceBlend: CheckBox
     private var editingFilename: String? = null
     private var displayedGroupId: String? = null
 
@@ -121,6 +122,8 @@ class KeyboardPageActivity : Activity() {
         showGrid.isSaveEnabled = false
         showPointerLocation = groupSettingsView.findViewById(R.id.cb_show_pointer_location)
         showPointerLocation.isSaveEnabled = false
+        usePointerDifferenceBlend = groupSettingsView.findViewById(R.id.cb_use_pointer_difference_blend)
+        usePointerDifferenceBlend.isSaveEnabled = false
         allPages = groupSettingsView.findViewById(R.id.cb_all_pages)
         allPages.isChecked = savedInstanceState?.getBoolean("all_pages") ?: false
         allPages.setOnCheckedChangeListener { _, _ -> updateLayoutSpinner(); refreshPreview() }
@@ -261,6 +264,9 @@ class KeyboardPageActivity : Activity() {
             1 -> appearance.symbolColor
             2 -> appearance.popupBackgroundColor
             3 -> appearance.popupSymbolColor
+            4 -> appearance.pointerPathColor
+            5 -> appearance.pointerAxisColor
+            6 -> appearance.pointerCrosshairColor
             else -> appearance.backgroundColor
         }
         val hsl = FloatArray(3)
@@ -308,6 +314,12 @@ class KeyboardPageActivity : Activity() {
         showPointerLocation.isChecked = state.active.appearance.showPointerLocation
         showPointerLocation.setOnCheckedChangeListener { _, checked ->
             updateAppearance { it.copy(showPointerLocation = checked) }
+            refreshPreview()
+        }
+        usePointerDifferenceBlend.setOnCheckedChangeListener(null)
+        usePointerDifferenceBlend.isChecked = state.active.appearance.usePointerDifferenceBlend
+        usePointerDifferenceBlend.setOnCheckedChangeListener { _, checked ->
+            updateAppearance { it.copy(usePointerDifferenceBlend = checked) }
             refreshPreview()
         }
         refreshColorSliders()
@@ -382,7 +394,10 @@ class KeyboardPageActivity : Activity() {
             getString(R.string.color_target_keyboard_bg),
             getString(R.string.color_target_keyboard_symbol),
             getString(R.string.color_target_popup_bg),
-            getString(R.string.color_target_popup_symbol)
+            getString(R.string.color_target_popup_symbol),
+            getString(R.string.color_target_pointer_path),
+            getString(R.string.color_target_pointer_axis),
+            getString(R.string.color_target_pointer_crosshair)
         )
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, targets)
         spColorTarget.adapter = adapter
@@ -409,6 +424,9 @@ class KeyboardPageActivity : Activity() {
                             1 -> it.copy(symbolColor = hex)
                             2 -> it.copy(popupBackgroundColor = hex)
                             3 -> it.copy(popupSymbolColor = hex)
+                            4 -> it.copy(pointerPathColor = hex)
+                            5 -> it.copy(pointerAxisColor = hex)
+                            6 -> it.copy(pointerCrosshairColor = hex)
                             else -> it
                         }
                     }

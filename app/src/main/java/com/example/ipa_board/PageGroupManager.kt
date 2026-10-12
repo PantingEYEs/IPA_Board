@@ -11,33 +11,46 @@ data class GroupAppearance(
     val symbolColor: String = SettingsConstants.DEFAULT_SYMBOL_COLOR_HEX,
     val popupBackgroundColor: String = SettingsConstants.DEFAULT_POPUP_BG_COLOR_HEX,
     val popupSymbolColor: String = SettingsConstants.DEFAULT_POPUP_SYMBOL_COLOR_HEX,
+    val pointerPathColor: String = SettingsConstants.DEFAULT_POINTER_PATH_COLOR_HEX,
+    val pointerAxisColor: String = SettingsConstants.DEFAULT_POINTER_AXIS_COLOR_HEX,
+    val pointerCrosshairColor: String = SettingsConstants.DEFAULT_POINTER_CROSSHAIR_COLOR_HEX,
     val heightDp: Int = SettingsConstants.DEFAULT_KEYBOARD_HEIGHT,
     val fontSizeSp: Int = SettingsConstants.DEFAULT_KEYBOARD_FONT_SIZE,
     val showGrid: Boolean = true,
-    val showPointerLocation: Boolean = false
+    val showPointerLocation: Boolean = false,
+    val usePointerDifferenceBlend: Boolean = false
 ) {
     fun validated(): GroupAppearance {
         val colors = Regex("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$")
         require(colors.matches(backgroundColor) && colors.matches(symbolColor) &&
-            colors.matches(popupBackgroundColor) && colors.matches(popupSymbolColor)) { "Invalid colors" }
+            colors.matches(popupBackgroundColor) && colors.matches(popupSymbolColor) &&
+            colors.matches(pointerPathColor) && colors.matches(pointerAxisColor) &&
+            colors.matches(pointerCrosshairColor)) { "Invalid colors" }
         require(heightDp in 150..450) { "Invalid keyboard height" }
         require(fontSizeSp in SettingsConstants.MIN_KEYBOARD_FONT_SIZE..SettingsConstants.MAX_KEYBOARD_FONT_SIZE) { "Invalid font size" }
         return this
     }
     fun toJson() = JSONObject().put("backgroundColor", backgroundColor).put("symbolColor", symbolColor)
         .put("popupBackgroundColor", popupBackgroundColor).put("popupSymbolColor", popupSymbolColor)
+        .put("pointerPathColor", pointerPathColor).put("pointerAxisColor", pointerAxisColor)
+        .put("pointerCrosshairColor", pointerCrosshairColor)
         .put("heightDp", heightDp).put("fontSizeSp", fontSizeSp).put("showGrid", showGrid)
         .put("showPointerLocation", showPointerLocation)
+        .put("usePointerDifferenceBlend", usePointerDifferenceBlend)
     companion object {
         fun fromJson(json: JSONObject): GroupAppearance = GroupAppearance(
-            json.getString("backgroundColor"),
-            json.getString("symbolColor"),
-            json.optString("popupBackgroundColor", SettingsConstants.DEFAULT_POPUP_BG_COLOR_HEX),
-            json.optString("popupSymbolColor", SettingsConstants.DEFAULT_POPUP_SYMBOL_COLOR_HEX),
-            json.getInt("heightDp"),
-            json.getInt("fontSizeSp"),
-            json.optBoolean("showGrid", true),
-            json.optBoolean("showPointerLocation", false)
+            backgroundColor = json.getString("backgroundColor"),
+            symbolColor = json.getString("symbolColor"),
+            popupBackgroundColor = json.optString("popupBackgroundColor", SettingsConstants.DEFAULT_POPUP_BG_COLOR_HEX),
+            popupSymbolColor = json.optString("popupSymbolColor", SettingsConstants.DEFAULT_POPUP_SYMBOL_COLOR_HEX),
+            pointerPathColor = json.optString("pointerPathColor", SettingsConstants.DEFAULT_POINTER_PATH_COLOR_HEX),
+            pointerAxisColor = json.optString("pointerAxisColor", SettingsConstants.DEFAULT_POINTER_AXIS_COLOR_HEX),
+            pointerCrosshairColor = json.optString("pointerCrosshairColor", SettingsConstants.DEFAULT_POINTER_CROSSHAIR_COLOR_HEX),
+            heightDp = json.getInt("heightDp"),
+            fontSizeSp = json.getInt("fontSizeSp"),
+            showGrid = json.optBoolean("showGrid", true),
+            showPointerLocation = json.optBoolean("showPointerLocation", false),
+            usePointerDifferenceBlend = json.optBoolean("usePointerDifferenceBlend", false)
         ).validated()
     }
 }

@@ -82,20 +82,28 @@ class PageGroupTest {
         assertFalse(json.has("pageGroups"))
     }
 
-    @Test fun groupAppearanceSupportsPopupColors() {
+    @Test fun groupAppearanceSupportsPopupAndPointerColors() {
         val appearance = GroupAppearance(
             backgroundColor = "#112233",
             symbolColor = "#445566",
             popupBackgroundColor = "#778899",
             popupSymbolColor = "#AABBCC",
+            pointerPathColor = "#111111",
+            pointerAxisColor = "#222222",
+            pointerCrosshairColor = "#333333",
             heightDp = 220,
-            fontSizeSp = 18
+            fontSizeSp = 18,
+            usePointerDifferenceBlend = true
         )
         val json = appearance.toJson()
         val restored = GroupAppearance.fromJson(json)
         assertEquals(appearance, restored)
         assertEquals("#778899", restored.popupBackgroundColor)
         assertEquals("#AABBCC", restored.popupSymbolColor)
+        assertEquals("#111111", restored.pointerPathColor)
+        assertEquals("#222222", restored.pointerAxisColor)
+        assertEquals("#333333", restored.pointerCrosshairColor)
+        assertTrue(restored.usePointerDifferenceBlend)
     }
 
     @Test fun groupDeletionKeepsFilesAndLastGroupCannotBeDeleted() {
