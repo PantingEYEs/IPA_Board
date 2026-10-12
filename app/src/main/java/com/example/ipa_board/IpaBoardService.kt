@@ -307,7 +307,7 @@ class IpaBoardService : InputMethodService() {
         val pathColor = try { Color.parseColor(appearance.pointerPathColor) } catch (_: Exception) { Color.WHITE }
         val axisColor = try { Color.parseColor(appearance.pointerAxisColor) } catch (_: Exception) { Color.WHITE }
         val crosshairColor = try { Color.parseColor(appearance.pointerCrosshairColor) } catch (_: Exception) { Color.RED }
-        view.setPointerColors(pathColor, axisColor, crosshairColor)
+        view.setPointerColors(pathColor, axisColor, crosshairColor, appearance.usePointerDifferenceBlend)
         view.setWidthSwapEnabled(widthSwapEnabled)
         view.keyboardHost.setBackgroundColor(Color.parseColor(appearance.backgroundColor))
         val layout = LayoutFileManager.activeLayout(this)
