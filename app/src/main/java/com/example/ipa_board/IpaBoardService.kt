@@ -307,8 +307,12 @@ class IpaBoardService : InputMethodService() {
         view.setWidthSwapEnabled(widthSwapEnabled)
         view.keyboardHost.setBackgroundColor(Color.parseColor(appearance.backgroundColor))
         val layout = LayoutFileManager.activeLayout(this)
+        val popupBgColor = try { Color.parseColor(appearance.popupBackgroundColor) } catch (_: Exception) { Color.WHITE }
+        val popupSymbolColor = try { Color.parseColor(appearance.popupSymbolColor) } catch (_: Exception) { Color.BLACK }
         KeyboardRenderer.render(this, view.keyboardHost, layout, height, Color.parseColor(appearance.symbolColor),
-            inputController.shiftEnabled, inputController.ctrlEnabled,
+            popupBgColor = popupBgColor,
+            popupSymbolColor = popupSymbolColor,
+            shiftEnabled = inputController.shiftEnabled, ctrlEnabled = inputController.ctrlEnabled,
             showKeyPreview = true,
             fontSizeSp = appearance.fontSizeSp,
             showGrid = appearance.showGrid,
@@ -801,8 +805,13 @@ class IpaBoardService : InputMethodService() {
                 addView(TextView(this@IpaBoardService).apply { text = (if (file == active) "✓ " else "") + pageName; setTextColor(Color.WHITE); textSize = 15f })
                 val preview = LinearLayout(this@IpaBoardService).apply { orientation = LinearLayout.VERTICAL; importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS }
                 preview.setBackgroundColor(Color.parseColor(group.appearance.backgroundColor))
+                val popupBgColor = try { Color.parseColor(group.appearance.popupBackgroundColor) } catch (_: Exception) { Color.WHITE }
+                val popupSymbolColor = try { Color.parseColor(group.appearance.popupSymbolColor) } catch (_: Exception) { Color.BLACK }
                 KeyboardRenderer.render(this@IpaBoardService, preview, layout, (80 * resources.displayMetrics.density).toInt(),
-                    Color.parseColor(group.appearance.symbolColor), fontSizeSp = group.appearance.fontSizeSp, showGrid = group.appearance.showGrid)
+                    Color.parseColor(group.appearance.symbolColor),
+                    popupBgColor = popupBgColor,
+                    popupSymbolColor = popupSymbolColor,
+                    fontSizeSp = group.appearance.fontSizeSp, showGrid = group.appearance.showGrid)
                 addView(preview)
                 setOnClickListener {
                     PageGroupManager.selectPage(this@IpaBoardService, file)

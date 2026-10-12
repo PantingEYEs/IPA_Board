@@ -61,4 +61,8 @@
     <string name="height">Height</string>
     <string name="back">Back</string>
     <string name="keyboard_management">Keyboard Management</string>
+    <string name="color_target_keyboard_bg">Keyboard Background</string>
+    <string name="color_target_keyboard_symbol">Keyboard Symbol</string>
+    <string name="color_target_popup_bg">Key Preview Pop-up Background</string>
+    <string name="color_target_popup_symbol">Key Preview Pop-up Symbol</string>
 </resources>

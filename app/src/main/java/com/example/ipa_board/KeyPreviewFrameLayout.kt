@@ -25,6 +25,8 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
     var onSwipeRightItemClick: ((LongPressItem) -> Unit)? = null
     var shiftEnabled = false
     var ctrlEnabled = false
+    var popupBgColor: Int = Color.WHITE
+    var popupSymbolColor: Int = Color.BLACK
 
     private enum class QuickSwipe { NONE, LEFT, RIGHT }
     private var quickSwipe = QuickSwipe.NONE
@@ -273,8 +275,8 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
             }
         }.apply {
             text = value
-            setTextColor(Color.BLACK)
-            setBackgroundColor(Color.WHITE)
+            setTextColor(popupSymbolColor)
+            setBackgroundColor(popupBgColor)
             textSize = 24f
             gravity = Gravity.CENTER
             setPadding((8 * density).toInt(), (6 * density).toInt(), (8 * density).toInt(), (6 * density).toInt())
@@ -295,7 +297,7 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
         popup = PopupWindow(label, label.measuredWidth, label.measuredHeight, false).apply {
             isTouchable = false
             inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
-            setBackgroundDrawable(ColorDrawable(Color.WHITE))
+            setBackgroundDrawable(ColorDrawable(popupBgColor))
             elevation = 6 * density
             // The IME window itself may be only as tall as the keyboard.
             isClippingEnabled = false

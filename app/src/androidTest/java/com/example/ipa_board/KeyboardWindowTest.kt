@@ -159,7 +159,7 @@ class KeyboardWindowTest {
                 KeySlot(1f, "a"), KeySlot(1f, action = KeyAction.SHIFT),
                 KeySlot(1f, action = KeyAction.CTRL), KeySlot(1f, action = KeyAction.BACKSPACE)
             ))))
-            KeyboardRenderer.render(context, keyboard, layout, 210, Color.WHITE, true, true)
+            KeyboardRenderer.render(context, keyboard, layout, 210, Color.WHITE, shiftEnabled = true, ctrlEnabled = true)
             val row = keyboard.getChildAt(0) as ViewGroup
             fun label(index: Int) = ((row.getChildAt(index) as ViewGroup).getChildAt(0) as TextView).text.toString()
             assertEquals("A", label(0))

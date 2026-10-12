@@ -9,6 +9,8 @@ import java.util.UUID
 data class GroupAppearance(
     val backgroundColor: String = SettingsConstants.DEFAULT_BG_COLOR_HEX,
     val symbolColor: String = SettingsConstants.DEFAULT_SYMBOL_COLOR_HEX,
+    val popupBackgroundColor: String = SettingsConstants.DEFAULT_POPUP_BG_COLOR_HEX,
+    val popupSymbolColor: String = SettingsConstants.DEFAULT_POPUP_SYMBOL_COLOR_HEX,
     val heightDp: Int = SettingsConstants.DEFAULT_KEYBOARD_HEIGHT,
     val fontSizeSp: Int = SettingsConstants.DEFAULT_KEYBOARD_FONT_SIZE,
     val showGrid: Boolean = true,
@@ -16,18 +18,27 @@ data class GroupAppearance(
 ) {
     fun validated(): GroupAppearance {
         val colors = Regex("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$")
-        require(colors.matches(backgroundColor) && colors.matches(symbolColor)) { "Invalid colors" }
+        require(colors.matches(backgroundColor) && colors.matches(symbolColor) &&
+            colors.matches(popupBackgroundColor) && colors.matches(popupSymbolColor)) { "Invalid colors" }
         require(heightDp in 150..450) { "Invalid keyboard height" }
         require(fontSizeSp in SettingsConstants.MIN_KEYBOARD_FONT_SIZE..SettingsConstants.MAX_KEYBOARD_FONT_SIZE) { "Invalid font size" }
         return this
     }
     fun toJson() = JSONObject().put("backgroundColor", backgroundColor).put("symbolColor", symbolColor)
+        .put("popupBackgroundColor", popupBackgroundColor).put("popupSymbolColor", popupSymbolColor)
         .put("heightDp", heightDp).put("fontSizeSp", fontSizeSp).put("showGrid", showGrid)
         .put("showPointerLocation", showPointerLocation)
     companion object {
-        fun fromJson(json: JSONObject): GroupAppearance = GroupAppearance(json.getString("backgroundColor"),
-            json.getString("symbolColor"), json.getInt("heightDp"), json.getInt("fontSizeSp"),
-            json.optBoolean("showGrid", true), json.optBoolean("showPointerLocation", false)).validated()
+        fun fromJson(json: JSONObject): GroupAppearance = GroupAppearance(
+            json.getString("backgroundColor"),
+            json.getString("symbolColor"),
+            json.optString("popupBackgroundColor", SettingsConstants.DEFAULT_POPUP_BG_COLOR_HEX),
+            json.optString("popupSymbolColor", SettingsConstants.DEFAULT_POPUP_SYMBOL_COLOR_HEX),
+            json.getInt("heightDp"),
+            json.getInt("fontSizeSp"),
+            json.optBoolean("showGrid", true),
+            json.optBoolean("showPointerLocation", false)
+        ).validated()
     }
 }
 
@@ -47,10 +58,10 @@ object PageGroupManager {
         if (preferences.contains(SettingsConstants.KEY_PAGE_GROUP_STATE)) return
         val pages = LayoutFileManager.getLayoutOrder(context).distinct()
         val appearance = GroupAppearance(
-            preferences.getString(SettingsConstants.KEY_BG_COLOR_HEX, null) ?: SettingsConstants.DEFAULT_BG_COLOR_HEX,
-            preferences.getString(SettingsConstants.KEY_SYMBOL_COLOR_HEX, null) ?: SettingsConstants.DEFAULT_SYMBOL_COLOR_HEX,
-            preferences.getInt(SettingsConstants.KEY_KEYBOARD_HEIGHT, SettingsConstants.DEFAULT_KEYBOARD_HEIGHT).coerceIn(150, 450),
-            preferences.getInt(SettingsConstants.KEY_KEYBOARD_FONT_SIZE, SettingsConstants.DEFAULT_KEYBOARD_FONT_SIZE)
+            backgroundColor = preferences.getString(SettingsConstants.KEY_BG_COLOR_HEX, null) ?: SettingsConstants.DEFAULT_BG_COLOR_HEX,
+            symbolColor = preferences.getString(SettingsConstants.KEY_SYMBOL_COLOR_HEX, null) ?: SettingsConstants.DEFAULT_SYMBOL_COLOR_HEX,
+            heightDp = preferences.getInt(SettingsConstants.KEY_KEYBOARD_HEIGHT, SettingsConstants.DEFAULT_KEYBOARD_HEIGHT).coerceIn(150, 450),
+            fontSizeSp = preferences.getInt(SettingsConstants.KEY_KEYBOARD_FONT_SIZE, SettingsConstants.DEFAULT_KEYBOARD_FONT_SIZE)
                 .coerceIn(SettingsConstants.MIN_KEYBOARD_FONT_SIZE, SettingsConstants.MAX_KEYBOARD_FONT_SIZE)
         ).let { try { it.validated() } catch (_: IllegalArgumentException) { it.copy(backgroundColor = "#000000", symbolColor = "#FFFFFF") } }
         val active = preferences.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, null)?.takeIf { it in pages } ?: pages.firstOrNull()
