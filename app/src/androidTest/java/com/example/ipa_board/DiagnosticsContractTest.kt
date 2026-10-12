@@ -62,6 +62,29 @@ class DiagnosticsContractTest {
         assertFalse(preferences.contains(EngineFeature.SEMANTIC.key))
     }
 
+    @Test fun logFileStorageAndImeLifecycleEventsWork() {
+        AppDiagnostics.configure(context)
+        DebugDiagnosticsSettings.setEnabled(context, true)
+        AppDiagnostics.clearLogFile(context)
+        assertEquals(0L, AppDiagnostics.getLogFileSize(context))
+
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT)
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT_VIEW)
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.SELECTION_CHANGE)
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT_VIEW)
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT)
+
+        val size = AppDiagnostics.getLogFileSize(context)
+        assertTrue("Log file size should be greater than 0 B when logging is enabled", size > 0L)
+
+        AppDiagnostics.clearLogFile(context)
+        assertEquals(0L, AppDiagnostics.getLogFileSize(context))
+
+        DebugDiagnosticsSettings.setEnabled(context, false)
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT)
+        assertEquals(0L, AppDiagnostics.getLogFileSize(context))
+    }
+
     @Test fun diagnosticsPersistIndependentlyWithoutChangingAnyEngineChoice() {
         val preferences = EngineSettings.preferences(context)
         preferences.edit().apply {
