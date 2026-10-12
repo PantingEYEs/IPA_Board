@@ -7,6 +7,9 @@
 
 ### 新增与改进
 
+- **修复相同输入框重新打开键盘候选词消失缺陷 (#1)**：修复了在同一输入框中收起并重新拉起键盘后候选词栏不再显示任何候选词的问题（`#1`）。根因为在 `onStartInputView(restarting = true)` 时未重新激活组合控制器，现已在视图启动与重新打开时统一恢复 `CompositionController` 激活状态。
+- **Engine Management 日志查看与导出**：Engine Management 诊断控制区新增日志文件大小（`diagnostics.log`）实时显示，并新增用户主动触发的“Export Log”（导出日志）与“Clear Log”（清空日志）功能。
+- **输入法生命周期诊断监控**：在输入法核心生命周期回调（`onStartInput`、`onStartInputView`、`onFinishInputView`、`onFinishInput`、`onUpdateSelection`）中注入了诊断追踪埋点，方便早期发现输入会话重启或生命周期状态脱节异常；日志默认关闭时保留零开销防护，不影响输入性能。
 - **页面分组外观绑定与 7 目标调色器**：页面分组（Page Group）外观配置新增对**按键预览浮窗颜色**（背景色与符号色）、**指针位置颜色**（轨迹线、坐标线、准星）及**指针位置差值/反转混合模式**（`Apply Difference Blending for Pointer Location`）的绑定与持久化保存。管理页（Group Settings）调色组件升级为 7 选项下拉菜单，支持对 7 种 Target 进行独立的 HSL 颜色自定义。
 - **指针位置差值混合模式**：开启“Apply Difference Blending for Pointer Location”后，轨迹线与坐标线在经过不同颜色区域（如按键浮窗、按键表面）时自动应用 `BlendMode.DIFFERENCE` 进行颜色取反反转，确保高对比度可见性。
 - **管理页与输入法弹窗 UI 重构**：统一页面选择（Page Selector）与分组选择（Group Selector）Spinner 的外观与 Padding 样式；颜文字与键盘页组切换菜单升级为自研下滑式 `PopupWindow`，带有圆角底色与选中标记（Checkmark）。
