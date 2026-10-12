@@ -307,6 +307,23 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
             invalidate()
         }
 
+    fun setPointerColors(pathColor: Int, axisColor: Int, crosshairColor: Int, differenceBlend: Boolean = false) {
+        if (differenceBlend) {
+            pointerPaint.color = android.graphics.Color.WHITE
+            pointerPaint.blendMode = android.graphics.BlendMode.DIFFERENCE
+            axisPaint.color = android.graphics.Color.WHITE
+            axisPaint.blendMode = android.graphics.BlendMode.DIFFERENCE
+        } else {
+            pointerPaint.color = pathColor
+            pointerPaint.blendMode = null
+            axisPaint.color = axisColor
+            axisPaint.blendMode = null
+        }
+        pointPaint.color = crosshairColor
+        pointPaint.blendMode = null
+        invalidate()
+    }
+
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
         if (showPointerLocation) {
             val action = ev.actionMasked

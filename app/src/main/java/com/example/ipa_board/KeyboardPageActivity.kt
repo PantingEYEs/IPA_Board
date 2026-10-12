@@ -43,10 +43,11 @@ class KeyboardPageActivity : Activity() {
     private lateinit var allPages: CheckBox
     private lateinit var showGrid: CheckBox
     private lateinit var showPointerLocation: CheckBox
+    private lateinit var usePointerDifferenceBlend: CheckBox
     private var editingFilename: String? = null
     private var displayedGroupId: String? = null
 
-    private lateinit var rgColorTarget: RadioGroup
+    private lateinit var spColorTarget: Spinner
     private lateinit var sbHue: SeekBar
     private lateinit var sbSaturation: SeekBar
     private lateinit var sbLightness: SeekBar
@@ -121,13 +122,16 @@ class KeyboardPageActivity : Activity() {
         showGrid.isSaveEnabled = false
         showPointerLocation = groupSettingsView.findViewById(R.id.cb_show_pointer_location)
         showPointerLocation.isSaveEnabled = false
+        usePointerDifferenceBlend = groupSettingsView.findViewById(R.id.cb_use_pointer_difference_blend)
+        usePointerDifferenceBlend.isSaveEnabled = false
         allPages = groupSettingsView.findViewById(R.id.cb_all_pages)
         allPages.isChecked = savedInstanceState?.getBoolean("all_pages") ?: false
         allPages.setOnCheckedChangeListener { _, _ -> updateLayoutSpinner(); refreshPreview() }
         tvHeightValue = groupSettingsView.findViewById(R.id.tv_height_value)
         sbHeight = groupSettingsView.findViewById(R.id.sb_height)
 
-        rgColorTarget = groupSettingsView.findViewById(R.id.rg_color_target)
+        spColorTarget = groupSettingsView.findViewById(R.id.sp_color_target)
+        spColorTarget.isSaveEnabled = false
         sbHue = groupSettingsView.findViewById(R.id.sb_hue)
         sbSaturation = groupSettingsView.findViewById(R.id.sb_saturation)
         sbLightness = groupSettingsView.findViewById(R.id.sb_lightness)
@@ -255,7 +259,16 @@ class KeyboardPageActivity : Activity() {
 
     private fun refreshColorSliders() {
         val appearance = PageGroupManager.active(this).appearance
-        val hex = if (rgColorTarget.checkedRadioButtonId == R.id.rb_target_bg) appearance.backgroundColor else appearance.symbolColor
+        val hex = when (spColorTarget.selectedItemPosition) {
+            0 -> appearance.backgroundColor
+            1 -> appearance.symbolColor
+            2 -> appearance.popupBackgroundColor
+            3 -> appearance.popupSymbolColor
+            4 -> appearance.pointerPathColor
+            5 -> appearance.pointerAxisColor
+            6 -> appearance.pointerCrosshairColor
+            else -> appearance.backgroundColor
+        }
         val hsl = FloatArray(3)
         ColorUtils.colorToHSL(Color.parseColor(hex), hsl)
         sbHue.progress = hsl[0].toInt()
@@ -301,6 +314,12 @@ class KeyboardPageActivity : Activity() {
         showPointerLocation.isChecked = state.active.appearance.showPointerLocation
         showPointerLocation.setOnCheckedChangeListener { _, checked ->
             updateAppearance { it.copy(showPointerLocation = checked) }
+            refreshPreview()
+        }
+        usePointerDifferenceBlend.setOnCheckedChangeListener(null)
+        usePointerDifferenceBlend.isChecked = state.active.appearance.usePointerDifferenceBlend
+        usePointerDifferenceBlend.setOnCheckedChangeListener { _, checked ->
+            updateAppearance { it.copy(usePointerDifferenceBlend = checked) }
             refreshPreview()
         }
         refreshColorSliders()
@@ -371,7 +390,23 @@ class KeyboardPageActivity : Activity() {
     }
 
     private fun setupColorControls() {
-        rgColorTarget.setOnCheckedChangeListener { _, _ -> refreshColorSliders() }
+        val targets = listOf(
+            getString(R.string.color_target_keyboard_bg),
+            getString(R.string.color_target_keyboard_symbol),
+            getString(R.string.color_target_popup_bg),
+            getString(R.string.color_target_popup_symbol),
+            getString(R.string.color_target_pointer_path),
+            getString(R.string.color_target_pointer_axis),
+            getString(R.string.color_target_pointer_crosshair)
+        )
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, targets)
+        spColorTarget.adapter = adapter
+        spColorTarget.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                refreshColorSliders()
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
 
         val hslListener = object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -383,8 +418,18 @@ class KeyboardPageActivity : Activity() {
                     val color = ColorUtils.HSLToColor(floatArrayOf(h, s, l))
                     val hex = String.format("#%06X", 0xFFFFFF and color)
                     
-                    updateAppearance { if (rgColorTarget.checkedRadioButtonId == R.id.rb_target_bg)
-                        it.copy(backgroundColor = hex) else it.copy(symbolColor = hex) }
+                    updateAppearance {
+                        when (spColorTarget.selectedItemPosition) {
+                            0 -> it.copy(backgroundColor = hex)
+                            1 -> it.copy(symbolColor = hex)
+                            2 -> it.copy(popupBackgroundColor = hex)
+                            3 -> it.copy(popupSymbolColor = hex)
+                            4 -> it.copy(pointerPathColor = hex)
+                            5 -> it.copy(pointerAxisColor = hex)
+                            6 -> it.copy(pointerCrosshairColor = hex)
+                            else -> it
+                        }
+                    }
                     
                     updateLabels(h, s, l)
                     refreshPreview()
@@ -528,6 +573,8 @@ class KeyboardPageActivity : Activity() {
 
         val bgColor = try { Color.parseColor(bgColorHex) } catch (e: Exception) { Color.BLACK }
         val symbolColor = try { Color.parseColor(symbolColorHex) } catch (e: Exception) { Color.WHITE }
+        val popupBgColor = try { Color.parseColor(appearance.popupBackgroundColor) } catch (e: Exception) { Color.WHITE }
+        val popupSymbolColor = try { Color.parseColor(appearance.popupSymbolColor) } catch (e: Exception) { Color.BLACK }
         
         previewContainer.setBackgroundColor(bgColor)
 
@@ -535,6 +582,9 @@ class KeyboardPageActivity : Activity() {
         if (clearedLayout?.filename != layoutFile) clearedLayout = null
         findViewById<Button>(R.id.btn_undo_clear).visibility = if (clearedLayout != null) View.VISIBLE else View.GONE
         KeyboardRenderer.render(this, previewContainer, layout, heightPx, symbolColor,
+            popupBgColor = popupBgColor,
+            popupSymbolColor = popupSymbolColor,
+            showKeyPreview = true,
             fontSizeSp = appearance.fontSizeSp,
             showGrid = appearance.showGrid,
             showUnassignedPlaceholders = true) { row, column, _ ->

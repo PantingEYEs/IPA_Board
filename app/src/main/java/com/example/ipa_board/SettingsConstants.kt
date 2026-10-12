@@ -10,6 +10,13 @@ object SettingsConstants {
     
     const val KEY_SYMBOL_COLOR_HEX = "symbol_color_hex"
     const val DEFAULT_SYMBOL_COLOR_HEX = "#FFFFFF"
+
+    const val DEFAULT_POPUP_BG_COLOR_HEX = "#FFFFFF"
+    const val DEFAULT_POPUP_SYMBOL_COLOR_HEX = "#000000"
+
+    const val DEFAULT_POINTER_PATH_COLOR_HEX = "#FFFFFF"
+    const val DEFAULT_POINTER_AXIS_COLOR_HEX = "#FFFFFF"
+    const val DEFAULT_POINTER_CROSSHAIR_COLOR_HEX = "#FF0000"
     
     const val KEY_LAYOUT_REVISION = "layout_revision"
 

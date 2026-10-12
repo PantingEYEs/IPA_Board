@@ -187,6 +187,15 @@
             android:layout_marginBottom="12dp"
             android:textSize="@dimen/management_caption_size" />
 
+        <CheckBox
+            android:id="@+id/cb_use_pointer_difference_blend"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/use_pointer_difference_blend"
+            android:textColor="@color/management_text_secondary"
+            android:layout_marginBottom="12dp"
+            android:textSize="@dimen/management_caption_size" />
+
         <!-- Color Target Selection -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -204,28 +213,12 @@
                 android:textSize="@dimen/management_caption_size"
                 android:layout_marginBottom="8dp"/>
 
-            <RadioGroup
-                android:id="@+id/rg_color_target"
+            <Spinner
+                android:id="@+id/sp_color_target"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="16dp">
-                <RadioButton
-                    android:id="@+id/rb_target_bg"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/background"
-                    android:textColor="@color/management_text"
-                    android:checked="true"/>
-                <RadioButton
-                    android:id="@+id/rb_target_symbol"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/symbol"
-                    android:textColor="@color/management_text"/>
-            </RadioGroup>
+                android:backgroundTint="@color/management_text"
+                android:layout_marginBottom="16dp" />
 
             <!-- HSL Sliders -->
             <TextView

@@ -12,6 +12,8 @@ import android.widget.TextView
 object KeyboardRenderer {
 
     fun render(context: Context, container: ViewGroup, layout: KeyboardLayout, heightPx: Int, symbolColor: Int,
+        popupBgColor: Int = Color.WHITE,
+        popupSymbolColor: Int = Color.BLACK,
         shiftEnabled: Boolean = false,
         ctrlEnabled: Boolean = false,
         showUnassignedPlaceholders: Boolean = false,
@@ -48,6 +50,8 @@ object KeyboardRenderer {
                 val slotView = FrameLayoutWithBorder(context, symbolColor, active, showGrid).apply {
                     isSelected = active
                     previewEnabled = showKeyPreview
+                    this.popupBgColor = popupBgColor
+                    this.popupSymbolColor = popupSymbolColor
                     this.shiftEnabled = shiftEnabled
                     this.ctrlEnabled = ctrlEnabled
                     tapPreview = when {
