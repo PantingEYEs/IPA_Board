@@ -121,6 +121,8 @@ IPA 接入增加 `ipa` 套件，覆盖离线下载事务、哈希/路径拒绝�
 
 管理页用例通过实际 Group Settings / Page Settings 分页访问控件，固定预览区直接点击，不对没有 ScrollView 祖先的控件调用 scrollTo。IME 分类/页组菜单用例验证选择后面板和预输入仍在，返回键优先关闭菜单，再返回键盘。`ImeLifecycleTrace` 仅在测试内开启固定生命周期事件，失败时附上该用例的事件；结束后还原原诊断开关和日志文件，不输出输入文本或完整设备日志。
 
+Shift / Caps Lock 指示由 `KeyboardWindowTest`（ui/full）验证真实控制器三态、标签与加粗、自定义符号色和格线开关、临时状态消耗、连续大写与重置；`ImeEndToEndTest`（e2e/full）验证实际输入法中的开启、锁定、连续输入、原文提交及关闭后的状态和大小写。既有控制器与按键预览用例继续保留。
+
 ## 后续变更规则
 
 1. 先写清输入/输出及失败/关闭时行为，再选择最小有效测试层；纯规则放 JVM，Android 存储放 platform，native 行为放 engines，实际窗口放 e2e。不要为每个常量或 getter 加测试。
@@ -227,3 +229,14 @@ IPA 接入增加 `ipa` 套件，覆盖离线下载事务、哈希/路径拒绝�
 - 主机 debug 应用及测试 APK 编译、117 项 JVM 测试、49 项流程工具测试通过；lint 0 Error、269 Warning，与修改前数量一致。35 类设备套件登记及 93 项引擎资源哈希、E5 重组校验通过。
 - Android 15 / API 35 / `arm64-v8a` 专用只读模拟器：`emoji` 专项 9 项通过，报告 `app/build/reports/regression/e358fd82-3890-4f7e-b3c0-80a796bfcfe9/summary.json`；最终 `full` 的 35 类共 **195 项全部通过**，0 失败、0 跳过，报告 `app/build/reports/regression/1f9ff757-fce5-445d-87d6-4bd7f2a49bb9/summary.json`。两轮均为 `success=true`、`restored=true`。
 - 两轮原软件与私有数据均已恢复并校验，备份已删除，`pending` 为空，专用模拟器已关闭。未操作实体手机；其他 API/ABI、Samsung One UI 7.0、签名 release 尚未验证。本轮未重复执行额外合成 CE/DE 往返自检。
+
+## 2026-10-20 Caps Lock 状态指示（#11）
+
+验证基于 `835f1db` 上的 #11 分支工作树，debug。渲染层使用控制器的完整 `ShiftState`：关闭为 `Shift`，临时启用为 `Shift •`，锁定为加粗的 `Caps Lock •`；按键预览和无障碍状态同步，沿用页组颜色。控制器切换、输入与序列化逻辑未改变。
+
+- 新增 renderer 用例驱动真实控制器，覆盖临时 Shift 消耗、锁定连续输入、解锁及重置，并在白色/自定义符号色、有/无格线下核对标签、加粗、预览与状态。新增真实 IME 用例核对完整的临时/锁定/解锁状态与 `AABa` 输出及 composing 状态；原控制器、快捷键和触摸长按回归保留。
+- 主机 debug 应用及测试 APK 编译、117 项 JVM 与 49 项流程工具测试通过；lint 0 Error、269 项既有 Warning。35 类套件登记、93 项引擎资源哈希与 E5 模型重组校验通过。
+- 现有模拟器占用原 AVD，另建专用临时 AVD，使用相同 Android 15 / API 35 / `arm64-v8a` 系统镜像；未操作既有模拟器或实体手机。首轮启用 `--verify-roundtrip`，合成 APK/CE/DE 私有数据往返恢复通过。
+- 首轮报告 `app/build/reports/regression/92725503-6504-4939-99d8-e243931acce0/summary.json` 执行 197 项，195 通过、2 失败：新增字体断言未考虑 Android 默认 Typeface 可为空，已修正为空即非加粗，保留锁定必须加粗的断言；旧 `actualTouchHoldCommitsOnlyOnRelease` 在首次显示 IME 节点时超时，尚未执行触摸。新增 Caps Lock 真实 IME 用例当轮已通过。保留失败报告，不修改旧断言或扩大等待上限；该轮恢复校验与合成往返验证成功，备份已删除。
+- 最终完整复测报告 `app/build/reports/regression/cc1e2c72-0706-4ac5-a8d3-011b311ba09e/summary.json`：35 类共 **197 项全部通过**，0 失败、0 跳过，`success=true`、`restored=true`。新指示用例与旧长按用例均通过。
+- 两轮原软件及私有数据均已恢复校验并删除备份，`pending` 为空；专用模拟器关闭并清理临时 AVD。未验证其他 API/ABI、实体设备或签名 release。本轮未在 GitHub 创建、审查或合并 PR。
