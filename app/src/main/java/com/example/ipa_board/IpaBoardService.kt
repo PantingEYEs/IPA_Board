@@ -51,6 +51,8 @@ class IpaBoardService : InputMethodService() {
     private val clipboard by lazy { getSystemService(ClipboardManager::class.java) }
     private val clipboardRepository by lazy { ClipboardRepository(this) }
     private var clipboardPanel: ClipboardPanelView? = null
+    private var dashboardPanel: EngineDashboardView? = null
+    private var stopDashboardObservation: (() -> Unit)? = null
 
     private data class QuickPasteState(
         val text: String,
@@ -200,6 +202,7 @@ class IpaBoardService : InputMethodService() {
     }
     override fun onCreateInputView(): View {
         clipboardPanel = null
+        closeDashboardObservation()
         return ImeChromeView(this).also { view ->
             chrome = view
             view.onCalculatorToggle = {
@@ -210,6 +213,7 @@ class IpaBoardService : InputMethodService() {
             view.onLiteral = { if (composition.literal()) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
             view.onPanel = { panel ->
                 updatePanelBack(panel != ImeChromeView.Panel.KEYBOARD)
+                if (panel != ImeChromeView.Panel.ENGINE_DASHBOARD) closeDashboardObservation()
                 if (panel != ImeChromeView.Panel.CLIPBOARD) {
                     clipboardPanel?.commitPendingDelete()
                     clipboardPanel = null
@@ -219,6 +223,7 @@ class IpaBoardService : InputMethodService() {
                         showClipboard()
                         updateQuickPasteStatus()
                     }
+                    ImeChromeView.Panel.ENGINE_DASHBOARD -> showEngineDashboard()
                     ImeChromeView.Panel.PAGES -> showPages()
                     ImeChromeView.Panel.EMOJI -> showEmoji()
                     ImeChromeView.Panel.KAOMOJI -> showKaomojiPanel()
@@ -356,6 +361,10 @@ class IpaBoardService : InputMethodService() {
 
     private fun handleKey(slot: KeySlot) {
         when (slot.action) {
+            KeyAction.ENGINE_DASHBOARD -> {
+                chrome?.showPanel(ImeChromeView.Panel.ENGINE_DASHBOARD)
+                return
+            }
             KeyAction.EMOJI -> {
                 chrome?.showPanel(ImeChromeView.Panel.EMOJI)
                 return
@@ -416,6 +425,7 @@ class IpaBoardService : InputMethodService() {
                 applySettings()
             }
             when (activeShortcut) {
+                KeyAction.ENGINE_DASHBOARD -> { consumeModifiers(); chrome?.showPanel(ImeChromeView.Panel.ENGINE_DASHBOARD); return }
                 KeyAction.EMOJI -> { consumeModifiers(); chrome?.showPanel(ImeChromeView.Panel.EMOJI); return }
                 KeyAction.KAOMOJI -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.KAOMOJI) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.KAOMOJI); return }
                 KeyAction.WIDTH_SWAP -> { consumeModifiers(); toggleWidthSwap(); return }
@@ -780,6 +790,30 @@ class IpaBoardService : InputMethodService() {
 
 
 
+    private fun closeDashboardObservation() {
+        stopDashboardObservation?.invoke()
+        stopDashboardObservation = null
+        dashboardPanel = null
+    }
+
+    private fun showEngineDashboard() {
+        val view = chrome ?: return
+        closeDashboardObservation()
+        val dashboard = EngineDashboardView(this) {
+            try {
+                startActivity(android.content.Intent(this, SettingsActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (_: android.content.ActivityNotFoundException) {
+                Toast.makeText(this, R.string.engine_dashboard_settings_unavailable, Toast.LENGTH_SHORT).show()
+            }
+        }
+        dashboardPanel = dashboard
+        view.showContent(getString(R.string.engine_dashboard_title), dashboard)
+        stopDashboardObservation = engines.observeRuntime {
+            if (chrome === view && view.panel == ImeChromeView.Panel.ENGINE_DASHBOARD)
+                dashboard.render({ EngineSettings.enabled(this, it) }, engines.runtimeSnapshot())
+        }
+    }
+
     private fun showClipboard() {
         val view = chrome ?: return
         syncClipboardHistory()
@@ -887,6 +921,7 @@ class IpaBoardService : InputMethodService() {
         return super.onKeyUp(keyCode, event)
     }
     override fun onFinishInputView(finishingInput: Boolean) {
+        closeDashboardObservation()
         AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT_VIEW)
         clipboard.removePrimaryClipChangedListener(clipboardListener)
         chrome?.showPanel(ImeChromeView.Panel.KEYBOARD)
@@ -898,6 +933,7 @@ class IpaBoardService : InputMethodService() {
         composition.finish(); engines.suspendSemantic(); inputController.reset(); super.onFinishInput()
     }
     override fun onDestroy() {
+        closeDashboardObservation()
         emojiClosed = true
         emojiRequest++
         emojiExecutor.shutdownNow()

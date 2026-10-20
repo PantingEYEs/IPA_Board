@@ -8,6 +8,34 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class KeyboardConfigurationTest {
+    @Test fun dashboardBindingsSurviveLayoutExportAndDoNotAppearInDefaultLayouts() {
+        val action = KeyAction.ENGINE_DASHBOARD
+        val layout = KeyboardLayout("Dashboard mapping", listOf(RowLayout(1f, listOf(
+            KeySlot(1f, action = action, longPressAction = action, swipeLeftAction = action, swipeRightAction = action)
+        ))))
+        val exported = layout.toJson()
+        assertEquals("engine_dashboard", JSONObject(exported).getJSONArray("rows").getJSONObject(0)
+            .getJSONArray("slots").getJSONObject(0).getString("action"))
+        assertEquals(layout, KeyboardLayout.fromJson(exported))
+        val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        val directory = "initialization/keyboards"
+        val bundled = context.assets.list(directory).orEmpty().filter { it.endsWith(".json") }.map { name ->
+            context.assets.open("$directory/$name").bufferedReader().use {
+                val document = JSONObject(it.readText())
+                KeyboardLayout.fromJson((document.optJSONObject("layout") ?: document).toString())
+            }
+        }
+        for (initial in bundled + SettingsConstants.DEFAULT_LAYOUT + com.example.ipa_board.ime.BuiltinLayouts.mixed) {
+            for (key in initial.rows.flatMap { it.slots }) {
+                assertNotEquals(action, key.action)
+                assertNotEquals(action, key.longPressAction)
+                assertNotEquals(action, key.swipeLeftAction)
+                assertNotEquals(action, key.swipeRightAction)
+                assertTrue(key.effectiveLongPressItems.none { it.action == action })
+            }
+        }
+    }
+
     @Test fun unicodeMappingSurvivesExportAndImport() {
         val texts = listOf("t͡ʃ", "ã", "😀", " ", "line\nnext", "")
         val layout = KeyboardLayout("IPA", listOf(RowLayout(1f, texts.map { KeySlot(1f, it) })))

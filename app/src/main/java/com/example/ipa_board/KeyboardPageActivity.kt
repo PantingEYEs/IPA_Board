@@ -299,7 +299,7 @@ class KeyboardPageActivity : Activity() {
         findViewById<Button>(R.id.btn_reorder_groups).isEnabled = state.groups.size > 1
         val members = PageGroupManager.pages(this, state.active)
         findViewById<TextView>(R.id.tv_group_summary).text = getString(R.string.group_page_count, members.size)
-        findViewById<TextView>(R.id.tv_group_appearance).text = getString(R.string.group_appearance, PageGroupManager.label(this, state.active))
+        findViewById<TextView>(R.id.tv_group_appearance).text = getString(R.string.group_appearance)
         sbHeight.progress = state.active.appearance.heightDp - MIN_HEIGHT_DP
         tvHeightValue.text = "${state.active.appearance.heightDp}dp"
         findViewById<SeekBar>(R.id.sb_font_size).progress = state.active.appearance.fontSizeSp - SettingsConstants.MIN_KEYBOARD_FONT_SIZE

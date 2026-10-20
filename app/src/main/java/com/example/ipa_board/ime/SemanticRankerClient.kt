@@ -7,6 +7,7 @@ import com.example.ipa_board.diagnostics.*
 /** Main-thread owner of opt-in binding, debounce and revision/snapshot rejection. */
 internal class SemanticRankerClient(
     private val context: Context,
+    private val runtimeStates: EngineRuntimeStates = EngineRuntimeStates(),
     private val changed: (Long, List<Candidate>, String) -> Unit
 ) : ServiceConnection {
     private data class Request(val revision: Long, val raw: String, val before: String, val after: String, val base: List<Candidate>)
@@ -15,6 +16,7 @@ internal class SemanticRankerClient(
     private var token = 0L
     private var bound = false
     private var remote: Messenger? = null
+    private var runtimeReceiver: Messenger? = null
     private var failed = false
     private val send = Runnable { sendCurrent() }
     private val response = Messenger(Handler(Looper.getMainLooper()) { message ->
@@ -58,7 +60,8 @@ internal class SemanticRankerClient(
     fun release() {
         cancel()
         val wasBound = bound
-        bound = false; remote = null
+        bound = false; remote = null; runtimeReceiver = null
+        runtimeStates.disconnected(EngineBackend.SEMANTIC, unavailable = failed)
         if (wasBound) try { context.unbindService(this) }
         catch (error: Exception) {
             // DIAGNOSTICS: optional engine cleanup must not interrupt the IME lifecycle.
@@ -81,6 +84,7 @@ internal class SemanticRankerClient(
         val current = request ?: return
         if (!ContextRankingSettings.isEnabled(context)) { release(); return }
         if (!bound) {
+            runtimeStates.connecting(EngineBackend.SEMANTIC)
             // DIAGNOSTICS: denied/rejected binding falls back instead of escaping on the UI thread.
             try {
                 bound = context.bindService(Intent(context, SemanticService::class.java), this, Context.BIND_AUTO_CREATE)
@@ -108,7 +112,15 @@ internal class SemanticRankerClient(
             unavailable(AppDiagnostics.signal(DiagnosticComponent.SEMANTIC, DiagnosticStage.SEND, DiagnosticKind.IPC))
         }
     }
-    override fun onServiceConnected(name: ComponentName, service: IBinder) { if (bound) { remote = Messenger(service); sendCurrent() } }
+    override fun onServiceConnected(name: ComponentName, service: IBinder) {
+        if (bound) {
+            val messenger = Messenger(service)
+            remote = messenger
+            try { runtimeReceiver = EngineRuntimeReporting.subscribe(messenger, runtimeStates, EngineBackend.SEMANTIC) }
+            catch (_: RemoteException) { runtimeStates.disconnected(EngineBackend.SEMANTIC, unavailable = true) }
+            sendCurrent()
+        }
+    }
     override fun onServiceDisconnected(name: ComponentName) {
         if (!bound) return
         remote = null

@@ -90,6 +90,8 @@ python3 tools/regression.py restore /PRIVATE/PATH/snapshot-XXXX --serial DEVICE_
 
 IPA 接入增加 `ipa` 套件，覆盖离线下载事务、哈希/路径拒绝、引擎与词典独立切换、失败保留旧资源、真实 DEX/JNI 多语言候选及管理页异步生命周期。三个类分别登记于 platform、engines、ui，并纳入 full；真实引擎用例仅支持当前 ARM64 包，其他 ABI 的跳过必须单独报告。
 
+`dashboard` 套件覆盖 #8 的只读状态订阅、共享后端/关闭项、滚动与主设置入口，以及真实绑定键打开/返回时保留预输入。状态仓库的旧连接、旧实例及乱序拒绝放在 JVM 测试；新增设备类 `EngineDashboardTest` 纳入 ui/full，`EngineDashboardImeTest` 纳入 e2e/full，配置兼容与默认布局无入口纳入 KeyboardConfigurationTest。仪表盘不依赖日志开关，不通过发候选查询来验证运行状态。当前验证结果及暂缓问题见 [仪表盘验证记录](engine-dashboard.md#验证记录)。
+
 普通回归不访问公网。Engine Management 的最新版本展示由测试 runner 注入固定元数据，异步查询另用注入的 transport、时钟及独立 cache 验证成功缓存、失败重试、关闭页面和并发取消。真实上游服务可达性属于单独的人工检查，失败不能与产品离线可用性混为一谈。
 
 ## 本次测试清理及增补
