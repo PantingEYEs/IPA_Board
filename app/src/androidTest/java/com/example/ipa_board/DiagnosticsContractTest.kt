@@ -76,6 +76,8 @@ class DiagnosticsContractTest {
 
         val size = AppDiagnostics.getLogFileSize(context)
         assertTrue("Log file size should be greater than 0 B when logging is enabled", size > 0L)
+        assertEquals(listOf("START_INPUT", "START_INPUT_VIEW", "SELECTION_CHANGE", "FINISH_INPUT_VIEW", "FINISH_INPUT")
+            .map { "IME/$it/READY" }, File(context.filesDir, "diagnostics.log").readLines())
 
         AppDiagnostics.clearLogFile(context)
         assertEquals(0L, AppDiagnostics.getLogFileSize(context))
@@ -412,6 +414,7 @@ class DiagnosticsContractTest {
     private class DiagnosticContext(base: Context) : ContextWrapper(base), AutoCloseable {
         private val prefix = "diagnostics-contract-${UUID.randomUUID()}-"
         private val names = mutableSetOf<String>()
+        private val logDirectory = File(base.cacheDir, prefix).apply { check(mkdirs()) }
         val bindAttempts = mutableListOf<String?>()
         val connections = mutableListOf<ServiceConnection>()
         var throwSecurity = false
@@ -419,6 +422,7 @@ class DiagnosticsContractTest {
         var unbindCalls = 0
 
         override fun getApplicationContext(): Context = this
+        override fun getFilesDir(): File = logDirectory
 
         override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
             val isolated = prefix + name
@@ -437,6 +441,7 @@ class DiagnosticsContractTest {
 
         override fun close() {
             names.forEach { baseContext.deleteSharedPreferences(it) }
+            logDirectory.deleteRecursively()
         }
     }
 }

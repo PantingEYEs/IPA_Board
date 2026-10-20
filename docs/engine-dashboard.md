@@ -28,11 +28,11 @@
 - `dashboard` 的 5 个类共 22 个断言全部通过，包含真实 LatinIME 状态、独立 IPC、配置兼容、真实 IME 预输入保留及设置跳转。报告：`app/build/reports/regression/bdc5e102-978d-48a4-9ad1-321b62bc2b5d/`。
 - 自动收尾未通过临时运行环境校验，因此上述报告的整体结果仍为失败。随后执行脚本给出的 `restore`，确认原软件与私有数据恢复且备份删除，`pending` 为空，再关闭只读模拟器丢弃临时环境。没有绕过校验或操作实体手机。
 
-用户确认本次只完成 #8，以下问题另行处理，原用例及失败报告保留：
+首次 #8 验收时，用户确认暂缓以下问题。后续已修复并通过完整回归，见 [2026-10-20 回归失败修复](testing.md#2026-10-20-回归失败修复)；原用例及历史失败报告保留：
 
 | 待处理问题 | 涉及用例 |
 | --- | --- |
-| 布局操作已移入弹窗，旧测试仍在主页面查找按钮 | LayoutManagementTest |
+| 布局操作已移入 Page Settings 分页，旧测试仍在默认 Group Settings 分页查找按钮 | LayoutManagementTest |
 | 预览区不在 ScrollView 内，旧 scrollTo 定位失败 | KeyEditorTest、EmojiFeatureTest |
 | Delete 同时匹配弹窗标题与按钮 | PageGroupUiTest |
 | 生命周期 trace 的阶段配置未开启文件记录，与测试预期不符 | DiagnosticsContractTest |

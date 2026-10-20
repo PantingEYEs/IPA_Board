@@ -8,7 +8,7 @@ import android.util.Log
 import androidx.core.content.edit
 import com.example.ipa_board.SettingsConstants
 
-/** DIAGNOSTICS: the only Logcat adapter. No files, telemetry, free-text messages or stack traces. */
+/** DIAGNOSTICS: fixed events to Logcat and the bounded local log; no telemetry or input content. */
 object AppDiagnostics {
     // DIAGNOSTICS: single build-time removal gate; false also hides the optional settings control.
     const val LOGGING_AVAILABLE = true
@@ -40,7 +40,7 @@ object AppDiagnostics {
 
     fun trace(component: DiagnosticComponent, stage: DiagnosticStage) {
         if (reporter.enabled) {
-            reporter.atStage(component, stage) {}
+            reporter.trace(component, stage)
         }
     }
 

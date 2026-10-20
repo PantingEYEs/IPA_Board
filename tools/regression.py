@@ -271,6 +271,7 @@ def _archive_inventory(path: Path) -> dict:
 class Device:
     def __init__(self, adb: Path, serial: str):
         self.adb, self.serial = adb, serial
+        self._appop_defaults = {}
 
     def adb_command(self, *args, **kwargs):
         return command([self.adb, "-s", self.serial, *args], **kwargs)
@@ -326,7 +327,24 @@ class Device:
         if not uid:
             raise RegressionError("Cannot resolve package UID for app-op backup")
         uid_value = self.shell("cmd", "appops", "get", "--user", "0", uid.group(1))
-        return parse_appops(self.shell("cmd", "appops", "get", "--user", "0", package), uid_value)
+        modes = parse_appops(self.shell("cmd", "appops", "get", "--user", "0", package), uid_value)
+        # Usage can create a default-mode row without changing any configuration.
+        # Ask THIS Android build for defaults; never hard-code AOSP/OEM modes or ignore real overrides.
+        return self.canonical_appops(modes)
+
+    def canonical_appops(self, modes: dict) -> dict:
+        return {key: mode for key, mode in modes.items() if mode != self.appop_default(key.split(":", 1)[1])}
+
+    def appop_default(self, operation: str) -> str:
+        if operation not in self._appop_defaults:
+            # A nonexistent UID lets the shell report platform defaults without reading another app.
+            # Fail closed if it unexpectedly has operations or the output format is unsupported.
+            value = self.shell("cmd", "appops", "get", "--user", "0", "2147483647", operation)
+            match = re.fullmatch(r"No operations\.?\s+Default mode: (allow|ignore|deny|default|foreground|errored)", value)
+            if not match:
+                raise RegressionError("Cannot determine system app-op default; refusing to mutate device")
+            self._appop_defaults[operation] = match.group(1)
+        return self._appop_defaults[operation]
 
     def stop(self, package: str):
         self.shell("am", "force-stop", "--user", "0", package)
@@ -566,7 +584,7 @@ class TransientEnvironment:
         # never write these fields; remove this path after old backups disappear.
         return cls(device,
                    {package: record["state"] for package, record in manifest["packages"].items() if record["present"]},
-                   {package: record["appops"] for package, record in manifest["packages"].items() if record["present"]},
+                   {package: device.canonical_appops(record["appops"]) for package, record in manifest["packages"].items() if record["present"]},
                    manifest["settings"])
 
     def restore(self):
@@ -576,8 +594,13 @@ class TransientEnvironment:
             self.device.restore_permissions(package, state["permissions"])
             self.device.restore_appops(package, self.appops[package])
             self.device.restore_package_state(package, state)
-            if self.device.state(package) != state or self.device.appops(package) != self.appops[package]:
-                raise RegressionError(f"Temporary execution environment was not restored: {package}")
+            actual = self.device.state(package)
+            differences = sorted(key for key in state.keys() | actual.keys() if actual.get(key) != state.get(key))
+            if self.device.appops(package) != self.appops[package]:
+                differences.append("appops")
+            if differences:
+                # Report fixed field names only; never persist the in-memory environment or private data.
+                raise RegressionError(f"Temporary execution environment was not restored: {package} ({', '.join(differences)})")
         self.device.restore_settings(self.settings)
         if self.device.settings() != self.settings:
             raise RegressionError("Temporary IME execution environment was not restored")

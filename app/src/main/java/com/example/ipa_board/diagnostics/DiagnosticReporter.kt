@@ -60,6 +60,11 @@ class DiagnosticReporter(private val clock: () -> Long, private val sink: (Diagn
     @Volatile var enabled = false
         @Synchronized set(value) { field = value; if (!value) recentFailures.clear() }
 
+    /** DIAGNOSTICS: an explicit point event, independent of automatic operation start/ready tracing. */
+    fun trace(component: DiagnosticComponent, stage: DiagnosticStage) {
+        emit(DiagnosticEvent(component, stage, DiagnosticOutcome.READY))
+    }
+
     fun <T> atStage(component: DiagnosticComponent, stage: DiagnosticStage, operation: () -> T): T {
         if (stage.traceLifecycle) emit(DiagnosticEvent(component, stage, DiagnosticOutcome.START))
         try {

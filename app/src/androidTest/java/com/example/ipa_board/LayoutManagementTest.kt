@@ -31,6 +31,7 @@ class LayoutManagementTest {
             val filename = fixture.create(original)
             fixture.select(filename)
             ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
+                pageSettings()
                 onView(withId(R.id.btn_rename_layout)).perform(scrollTo(), click())
                 onView(withId(R.id.et_layout_name)).check(matches(withText(filename.removeSuffix(".json"))))
                 onView(withId(R.id.et_layout_name)).perform(replaceText("Cancelled"), closeSoftKeyboard())
@@ -51,6 +52,7 @@ class LayoutManagementTest {
                 assertEquals(newFilename, fixture.activeFilename())
                 onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(newName)))
                 scenario.recreate()
+                pageSettings()
                 onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(newName)))
                 assertEquals(newFilename, fixture.activeFilename())
             }
@@ -64,12 +66,13 @@ class LayoutManagementTest {
             PageGroupManager.addPages(fixture.context, PageGroupManager.active(fixture.context).id, listOf(remaining))
             fixture.select(filename)
             ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
+                pageSettings()
                 onView(withId(R.id.btn_delete_layout)).perform(scrollTo(), click())
                 onView(withText("Cancel")).perform(click())
                 assertEquals(filename, fixture.activeFilename())
                 assertNotNull(LayoutFileManager.loadLayout(fixture.context, filename))
                 onView(withId(R.id.btn_delete_layout)).perform(scrollTo(), click())
-                onView(withText("Delete")).perform(click())
+                onView(withId(android.R.id.button1)).perform(click())
                 assertNull(LayoutFileManager.loadLayout(fixture.context, filename))
                 assertFalse(LayoutFileManager.listLayoutFiles(fixture.context).contains(filename))
                 assertEquals(PageGroupManager.pages(fixture.context).firstOrNull(), fixture.activeFilename())
@@ -78,6 +81,7 @@ class LayoutManagementTest {
                     assertTrue(activity.findViewById<android.widget.Button>(R.id.btn_delete_layout).isEnabled)
                 }
                 scenario.recreate()
+                pageSettings()
                 assertEquals(PageGroupManager.pages(fixture.context).firstOrNull(), fixture.activeFilename())
             }
         }
@@ -107,6 +111,7 @@ class LayoutManagementTest {
             try {
                 sourceFile.writeText(config.toString())
                 ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
+                    pageSettings()
                     onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(originalFilename.removeSuffix(".json"))))
                     scenario.onActivity { activity ->
                         // File URIs can be read but provide no DISPLAY_NAME, exercising the name fallback.
@@ -117,6 +122,7 @@ class LayoutManagementTest {
                     }
 
                     onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(importedName)))
+                    onView(withText("Group Settings")).perform(click())
                     onView(withId(R.id.tv_height_value)).check(matches(withText("300dp")))
                     assertEquals(importedFilename, fixture.activeFilename())
                     assertEquals(imported, LayoutFileManager.loadLayout(fixture.context, importedFilename))
@@ -144,6 +150,7 @@ class LayoutManagementTest {
             fixture.track(expectedFilename)
 
             ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
+                pageSettings()
                 onView(withId(R.id.btn_new_layout)).perform(scrollTo(), click())
                 onView(withText("New Blank Layout")).check(matches(isDisplayed()))
                 onView(withId(R.id.et_layout_name)).perform(replaceText(name), closeSoftKeyboard())
@@ -160,6 +167,7 @@ class LayoutManagementTest {
                 assertEquals(SettingsConstants.DEFAULT_LAYOUT, LayoutFileManager.loadLayout(fixture.context, original))
 
                 scenario.recreate()
+                pageSettings()
                 onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(name)))
                 assertEquals(saved, LayoutFileManager.loadLayout(fixture.context, expectedFilename))
             }
@@ -174,6 +182,7 @@ class LayoutManagementTest {
             fixture.track("$cancelledName.json")
 
             ActivityScenario.launch(KeyboardPageActivity::class.java).use {
+                pageSettings()
                 val filesBefore = LayoutFileManager.listLayoutFiles(fixture.context)
                 onView(withId(R.id.btn_new_layout)).perform(scrollTo(), click())
                 onView(withId(R.id.et_layout_name)).perform(replaceText(cancelledName), closeSoftKeyboard())
@@ -196,6 +205,7 @@ class LayoutManagementTest {
             fixture.select(filename)
 
             ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
+                pageSettings()
                 onView(withId(R.id.btn_undo_clear)).check(matches(withEffectiveVisibility(Visibility.GONE)))
                 onView(withId(R.id.btn_clear_layout)).perform(scrollTo(), click())
 
@@ -215,6 +225,7 @@ class LayoutManagementTest {
                 onView(withId(R.id.btn_undo_clear)).check(matches(withEffectiveVisibility(Visibility.VISIBLE)))
                 // The cleared configuration is saved, and recreation retains its undo snapshot.
                 scenario.recreate()
+                pageSettings()
                 assertEquals(cleared, LayoutFileManager.loadLayout(fixture.context, filename))
                 onView(withId(R.id.btn_undo_clear)).perform(scrollTo(), click())
                 assertEquals(original, LayoutFileManager.loadLayout(fixture.context, filename))
@@ -235,7 +246,10 @@ class LayoutManagementTest {
             fixture.select(firstFilename)
 
             ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
+                pageSettings()
+                onView(withText("Group Settings")).perform(click())
                 onView(withId(R.id.cb_all_pages)).check(matches(isNotChecked()))
+                pageSettings()
                 onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(firstFilename.removeSuffix(".json"))))
                 onView(withId(R.id.btn_clear_layout)).perform(scrollTo(), click())
                 onView(withId(R.id.btn_undo_clear)).check(matches(withEffectiveVisibility(Visibility.VISIBLE)))
@@ -256,6 +270,8 @@ class LayoutManagementTest {
             }
         }
     }
+
+    private fun pageSettings() { onView(withText("Page Settings")).perform(click()) }
 
     /** Every UI operation targets disposable files; restore the preferences changed by those operations. */
     private class LayoutFixture : Closeable {

@@ -59,6 +59,9 @@ class FakeDevice:
     def appops(self, package):
         return copy.deepcopy(self.packages[package]["appops"])
 
+    def canonical_appops(self, modes):
+        return copy.deepcopy(modes)  # Fixture modes are all explicit, nondefault overrides.
+
     def data_roots(self, package):
         if package == self.unsupported:
             raise reg.RegressionError("not debuggable")
@@ -162,6 +165,16 @@ class FakeDevice:
 
 
 class TransactionTest(unittest.TestCase):
+    def test_environment_mismatch_reports_fields_without_leaking_configuration_or_weakening_verification(self):
+        device = FakeDevice()
+        environment = reg.TransientEnvironment.capture(device)
+        device.packages[reg.APP]["state"]["enabled"] = 3
+        with mock.patch.object(device, "restore_package_state"), self.assertRaises(reg.RegressionError) as failure:
+            environment.restore()
+        self.assertIn("(enabled)", str(failure.exception))
+        self.assertNotIn("user configuration", str(failure.exception))
+        self.assertFalse(environment.restored)
+
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
         self.root = Path(self.directory.name)
@@ -450,6 +463,25 @@ class TransactionTest(unittest.TestCase):
 
 
 class ParsingTest(unittest.TestCase):
+    def test_appops_compares_nondefault_modes_without_confusing_usage_with_configuration(self):
+        device = reg.Device(Path("adb"), "fixture")
+        def shell(*args):
+            if args[:3] == ("pm", "list", "packages"):
+                return "package:" + reg.APP + " uid:10123"
+            subject = args[-1]
+            if subject == "10123":
+                return "Uid mode: READ_SMS: ignore"
+            if subject == reg.APP:
+                return "Uid mode: READ_SMS: ignore\nVIBRATE: allow; time=+1s ago\nREAD_CLIPBOARD: ignore; rejectTime=+2s ago"
+            self.assertEqual("2147483647", args[-2])
+            return "No operations.\nDefault mode: allow"
+        with mock.patch.object(device, "shell", side_effect=shell):
+            self.assertEqual({"uid:READ_SMS": "ignore", "package:READ_CLIPBOARD": "ignore"}, device.appops(reg.APP))
+        # Unknown output or an unexpectedly occupied UID cannot relax verification.
+        with mock.patch.object(device, "shell", return_value="VIBRATE: ignore"):
+            with self.assertRaises(reg.RegressionError):
+                device.appop_default("UNKNOWN_OPERATION")
+
     def test_am_instrument_zero_exit_is_not_success(self):
         for output in ("INSTRUMENTATION_CODE: -1", "OK (0 tests)", "OK (2 tests)\nProcess crashed", "FAILURES!!!", "OK (1 test)\nshortMsg=Crash"):
             self.assertFalse(reg.instrumentation_passed(output))
