@@ -530,7 +530,7 @@ class IpaBoardService : InputMethodService() {
     private fun showEmojiCategoryMenu(picker: EmojiPickerView) {
         val view = chrome ?: return
         showSingleChoicePopup(view.statusContainer, picker.categories, picker.currentCategoryIndex) { index ->
-            picker.filterCategory(index)
+            picker.scrollToCategory(index)
         }
     }
 
@@ -977,6 +977,7 @@ class IpaBoardService : InputMethodService() {
                 setPadding(dp(16), dp(12), dp(16), dp(12))
                 isClickable = true
                 isFocusable = true
+                this.isSelected = isSelected
                 
                 addView(TextView(context).apply {
                     text = if (isSelected) "✓" else " "

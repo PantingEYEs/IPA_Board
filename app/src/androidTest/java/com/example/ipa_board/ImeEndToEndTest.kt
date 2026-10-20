@@ -214,13 +214,19 @@ class ImeEndToEndTest {
         val alreadyEnabled = context.getSystemService(android.view.inputmethod.InputMethodManager::class.java).enabledInputMethodList.any { it.id == ime }
         val oldFlags = ui.serviceInfo.flags
         var page: String? = null
-        fun showAllEmoji() {
-            assertTrue(awaitNode { it.text?.toString()?.startsWith("Emoji · ") == true && it.isClickable }
-                .performAction(AccessibilityNodeInfo.ACTION_CLICK))
-            var item = awaitNode { it.text?.toString() == context.getString(R.string.emoji_all) }
+        fun openCategoryMenu() {
+            driver.click { it.text?.toString()?.startsWith("Emoji · ") == true && it.isClickable }
+        }
+        fun menuItem(label: String): AccessibilityNodeInfo {
+            // The same label is also a heading in the continuous list below the popup.
+            var item = awaitNode { it.text?.toString() == label && !it.isHeading }
             while (!item.isClickable) item = requireNotNull(item.parent)
-            assertTrue(item.performAction(AccessibilityNodeInfo.ACTION_CLICK))
-            awaitNode { it.text?.toString() == "Emoji · ${context.getString(R.string.emoji_all)} ▾" }
+            return item
+        }
+        fun jumpToCategory(label: String) {
+            openCategoryMenu()
+            assertTrue(menuItem(label).performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            awaitNode { it.text?.toString() == "Emoji · $label ▾" }
         }
         fun findEmoji(entry: EmojiEntry): AccessibilityNodeInfo {
             val description = "${entry.name}, Emoji ${entry.emojiVersion}"
@@ -249,8 +255,20 @@ class ImeEndToEndTest {
                 driver.awaitKeyboard(scenario) { it.contentDescription?.toString() == "Row 1, key 2: n" }
                 driver.click { it.contentDescription?.toString() == "Row 1, key 2: n" }
                 driver.click { it.contentDescription?.toString() == "Row 1, key 1: Emoji" }
-                showAllEmoji()
+                jumpToCategory(first.group)
                 awaitEditorText(scenario, "n", composing = true)
+                val nextGroup = catalog.groups[1]
+                val deadline = android.os.SystemClock.uptimeMillis() + 30_000
+                while (find { it.text?.toString() == "Emoji · $nextGroup ▾" } == null && android.os.SystemClock.uptimeMillis() < deadline) {
+                    assertTrue(awaitNode { it.contentDescription?.toString() == context.getString(R.string.emoji_grid_description) }
+                        .performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD))
+                    android.os.SystemClock.sleep(80)
+                }
+                awaitNode { it.text?.toString() == "Emoji · $nextGroup ▾" }
+                openCategoryMenu()
+                assertTrue("Menu selection must follow ordinary scrolling", menuItem(nextGroup).isSelected)
+                assertTrue(menuItem(first.group).performAction(AccessibilityNodeInfo.ACTION_CLICK))
+                awaitNode { it.text?.toString() == "Emoji · ${first.group} ▾" }
                 assertNull(find { it.contentDescription?.toString()?.startsWith("Row ") == true })
                 repeat(2) {
                     assertTrue(findEmoji(first).performAction(AccessibilityNodeInfo.ACTION_CLICK))
@@ -265,14 +283,14 @@ class ImeEndToEndTest {
                 awaitNode { it.contentDescription?.toString() == context.getString(R.string.emoji_grid_description) }
                 driver.click { it.contentDescription?.toString() == "Return to Keyboard" }
                 driver.click { it.contentDescription?.toString() == "Row 1, key 1: Emoji" }
-                showAllEmoji()
+                jumpToCategory(first.group)
                 findEmoji(first)
-                driver.click { it.text?.toString()?.startsWith("Emoji · ") == true && it.isClickable }
-                awaitNode { it.text?.toString() == context.getString(R.string.emoji_all) }
+                openCategoryMenu()
+                menuItem(first.group)
                 shell("input keyevent 4")
                 awaitNode { it.contentDescription?.toString() == context.getString(R.string.emoji_grid_description) }
                 // Popup exit transitions finish asynchronously; the underlying grid exists throughout.
-                driver.awaitAbsent { it.isVisibleToUser && it.text?.toString() == context.getString(R.string.emoji_all) }
+                driver.awaitAbsent { it.isVisibleToUser && !it.isHeading && it.text?.toString() == first.group }
                 shell("input keyevent 4")
                 awaitNode { it.contentDescription?.toString() == "Row 1, key 1: Emoji" }
             }

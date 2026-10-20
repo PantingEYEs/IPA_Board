@@ -94,6 +94,8 @@ IPA 接入增加 `ipa` 套件，覆盖离线下载事务、哈希/路径拒绝�
 
 `dashboard` 套件覆盖 #8 的只读状态订阅、共享后端/关闭项、滚动与主设置入口，以及真实绑定键打开/返回时保留预输入。状态仓库的旧连接、旧实例及乱序拒绝放在 JVM 测试；新增设备类 `EngineDashboardTest` 纳入 ui/full，`EngineDashboardImeTest` 纳入 e2e/full，配置兼容与默认布局无入口纳入 KeyboardConfigurationTest。仪表盘不依赖日志开关，不通过发候选查询来验证运行状态。首次验证结果见 [仪表盘验证记录](engine-dashboard.md#验证记录)，后续完整回归见本页的 2026-10-20 记录。
 
+`emoji` 专项复用 ui/full 中的 `EmojiFeatureTest` 和 e2e/full 中的 `ImeEndToEndTest`，覆盖常用与官方分类的连续分区、空常用提示、菜单跳转不筛选列表、普通滚动同步 status 和菜单选中项、短尾分类定位及常用区更新后的可视位置保持；同时保留两种键盘宽度下最右列边缘点击、同一区域纵向拖动及取消不插入、滚动后点击当前条目只计数一次，以及真实 IME 中的完整 Unicode 提交、连续输入和返回。触摸通过测试自有 RecyclerView 分发，不直接调用条目回调来代替点击；使用独立使用记录目录，结束后删除。JVM 单独验证连续分区模型的分类顺序、完整 Unicode 保留及空目录合同。
+
 普通回归不访问公网。Engine Management 的最新版本展示由测试 runner 注入固定元数据，异步查询另用注入的 transport、时钟及独立 cache 验证成功缓存、失败重试、关闭页面和并发取消。真实上游服务可达性属于单独的人工检查，失败不能与产品离线可用性混为一谈。
 
 ## 本次测试清理及增补
@@ -204,3 +206,24 @@ IPA 接入增加 `ipa` 套件，覆盖离线下载事务、哈希/路径拒绝�
 - 主机：debug 应用及测试 APK 编译通过，115 个 JVM 测试、49 个流程工具测试全部通过；lint 0 Error、269 Warning。93 项引擎资源哈希及 118,346,824 字节 E5 重组校验通过。
 - 最终专用只读模拟器 Android 15 / API 35、`arm64-v8a`：`full` 的 35 类共 193 项全部通过，0 失败、0 跳过。报告 `app/build/reports/regression/af9d783d-ab24-43eb-a4eb-8f8f475ecd48/summary.json`，`success=true`、`restored=true`、`roundtrip_verified=true`。包含实际 APK 与合成 CE/DE 配置、文件和缓存往返恢复验证。
 - 原软件及私有数据自动恢复并校验成功，备份已删除，`pending` 为空，模拟器已关闭。首轮保留的快照也已显式恢复验证并删除。未操作实体手机；未验证其他 API/ABI、16KB 页设备、签名 release 或真实短信/系统剪贴板。
+
+## 2026-10-20 Emoji 最右列触摸修复（#3）
+
+验证基于 `820d01e` 上的 #3 分支工作树，debug。Emoji 页改用与颜文字页一致的 GridView 普通纵向滚动和条目点击，不启用快速滚动的扩展触摸区域，也不让单元格单独消费点击；保留复用、类别、字号与普通滚动指示器。
+
+- 新增触摸回归覆盖 280×168 dp 和 360×280 dp 两种键盘区域：最右列边缘按下不插入、抬起准确回调一次；同一区域纵向拖动不插入且确实移动列表；停止滚动后点击回收单元格对应当前条目；取消触摸不插入，使用记录总次数与回调次数一致。使用测试自有视图和独立使用记录目录。
+- 旧实现报告 `app/build/reports/regression/5a4ec9c0-894b-4a09-8b9d-49bed04f61a4/` 在最右列边缘点击断言失败，验证用例能发现 #3，测试后恢复并删除备份。
+- 首次修复报告 `app/build/reports/regression/31c171a1-3b6d-47c7-9b24-b007a10e0a4e/` 中初始边缘点击已通过，但新增手势 fixture 使用未来事件时间且未等待滚动停止，滚动后的点击失败；现改为真实时间推进并观察原生空闲状态。该轮既有真实长按用例还在初始 IME 显示前超时，未改动其断言或扩大等待，最终完整回归未复现。保留失败报告；该轮软件也已自动恢复并校验后删除备份。
+- 主机编译与 115 个 JVM 测试、49 个流程工具测试通过；lint 0 Error、269 Warning。35 类设备套件登记通过，93 项引擎资源哈希与 E5 重组校验通过。
+- 最终 Android 15 / API 35 / `arm64-v8a` 专用只读模拟器：`full` 的 35 类共 **194 项全部通过**，0 失败、0 跳过，包含真实 IME Emoji 类别、连续 Unicode 提交、返回及长按用例。报告 `app/build/reports/regression/b4886599-f20e-4392-8a1b-90f69e25988b/summary.json` 为 `success=true`、`restored=true`。
+- 原软件与私有数据已恢复并校验成功，备份已删除，`pending` 为空，模拟器已关闭。未操作实体手机；Issue 中的 Samsung One UI 7.0 设备、其他 API/ABI、签名 release 尚未验证。
+
+## 2026-10-20 Emoji 连续分区与分类导航
+
+验证基于 `194012f` 上的 #3 分支工作树，debug。Emoji 使用连续回收网格，常用区在前，随后按目录原有官方分类排列并显示全宽标题；移除 All，菜单选择改为跳转，列表顶部所在分类同步 status 与菜单选中项。
+
+- 新增 JVM 分区合同覆盖官方分类顺序、全部条目及完整 Unicode 保留、独立常用前缀与空目录。设备验证所有分类跳转不筛选条目、普通滚动触发分类同步、空常用提示、短尾分类顶部定位和点击更新常用后保持位置；保留两种键盘尺寸的最右列点击、拖动、取消及回收后点击合同。
+- 真实 IME 验证普通滚动更新 status、打开菜单时选中最新分类、菜单跳转保留预输入、完整 Unicode 连续提交与两级返回。触摸 fixture 使用自有 RecyclerView 和独立使用记录，不读取私人输入或剪贴板。
+- 主机 debug 应用及测试 APK 编译、117 项 JVM 测试、49 项流程工具测试通过；lint 0 Error、269 Warning，与修改前数量一致。35 类设备套件登记及 93 项引擎资源哈希、E5 重组校验通过。
+- Android 15 / API 35 / `arm64-v8a` 专用只读模拟器：`emoji` 专项 9 项通过，报告 `app/build/reports/regression/e358fd82-3890-4f7e-b3c0-80a796bfcfe9/summary.json`；最终 `full` 的 35 类共 **195 项全部通过**，0 失败、0 跳过，报告 `app/build/reports/regression/1f9ff757-fce5-445d-87d6-4bd7f2a49bb9/summary.json`。两轮均为 `success=true`、`restored=true`。
+- 两轮原软件与私有数据均已恢复并校验，备份已删除，`pending` 为空，专用模拟器已关闭。未操作实体手机；其他 API/ABI、Samsung One UI 7.0、签名 release 尚未验证。本轮未重复执行额外合成 CE/DE 往返自检。
