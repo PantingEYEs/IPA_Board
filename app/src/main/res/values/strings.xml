@@ -41,7 +41,7 @@
     <string name="emoji_loading">Loading emoji…</string>
     <string name="emoji_retry">Unable to load emoji. Tap to retry.</string>
     <string name="emoji_most_commonly">Most commonly</string>
-    <string name="emoji_all">All emoji</string>
+    <string name="emoji_common_empty">No frequently used emoji yet</string>
     <string name="emoji_category">Emoji category</string>
     <string name="emoji_grid_description">Emoji list, scroll vertically</string>
     <string name="emoji_update_section">Emoji Update</string>
