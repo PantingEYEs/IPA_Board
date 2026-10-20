@@ -13,12 +13,18 @@ abstract class EngineService : Service() {
         val work = Handler(worker.looper)
         var engine: QueryEngine? = null
         var failure: DiagnosticIssue? = null
+        val runtimeReporter = EngineRuntimeReporter()
     }
     internal abstract val language: String
     internal abstract fun createEngine(): QueryEngine
     internal open val supportsPrediction = false
     private val component get() = diagnosticComponent(language)
     private val requests = Messenger(Handler(Looper.getMainLooper()) { message ->
+        if (message.what == EngineRuntimeReporting.SUBSCRIBE) {
+            runtimeReporter.subscribe(message.replyTo)
+            return@Handler true
+        }
+        if (message.what != 1 && message.what != 2) return@Handler true
         val data = Bundle(message.data)
         // DIAGNOSTICS: explicit mode snapshot also turns off logging during an in-flight load.
         AppDiagnostics.configure(data)
@@ -34,10 +40,14 @@ abstract class EngineService : Service() {
                 val candidates = if (!policy.wantsQuery(language, raw.isEmpty())) emptyList() else {
                     if (engine == null && failure == null) {
                         // DIAGNOSTICS: nested load stages preserve the most specific failure.
+                        runtimeReporter.update(EngineRuntimeState.INITIALIZING)
                         engine = AppDiagnostics.atStage(component, DiagnosticStage.INITIALIZE) { createEngine() }
+                        runtimeReporter.update(EngineRuntimeState.READY)
                     }
                     if (failure != null) { result.putString("error", failure!!.code); emptyList() }
-                    else engine?.let { AppDiagnostics.atStage(component, DiagnosticStage.QUERY) {
+                    else engine?.let {
+                        runtimeReporter.update(EngineRuntimeState.BUSY)
+                        AppDiagnostics.atStage(component, DiagnosticStage.QUERY) {
                         it.configure(policy)
                         val before = data.getString("beforeCursor").orEmpty().takeLast(256)
                         val after = data.getString("afterCursor").orEmpty().take(256)
@@ -48,6 +58,7 @@ abstract class EngineService : Service() {
                         else emptyList()
                     } } ?: emptyList()
                 }
+                if (engine != null && failure == null) runtimeReporter.update(EngineRuntimeState.READY)
                 result.putStringArrayList("text", ArrayList(candidates.map { it.text }))
                 result.putStringArrayList("language", ArrayList(candidates.map { it.language }))
                 result.putIntArray("rank", candidates.map { it.rank }.toIntArray())
@@ -57,12 +68,15 @@ abstract class EngineService : Service() {
             } catch (e: Exception) {
                 // DIAGNOSTICS: keep the process-wide circuit breaker, without repeated stack traces.
                 failure = AppDiagnostics.failure(component, DiagnosticStage.QUERY, e)
+                runtimeReporter.update(EngineRuntimeState.UNAVAILABLE)
                 result.putString("error", failure!!.code)
             } catch (e: LinkageError) {
                 failure = AppDiagnostics.failure(component, DiagnosticStage.LIBRARY, e)
+                runtimeReporter.update(EngineRuntimeState.UNAVAILABLE)
                 result.putString("error", failure!!.code)
             } catch (e: OutOfMemoryError) {
                 failure = AppDiagnostics.failure(component, DiagnosticStage.QUERY, e)
+                runtimeReporter.update(EngineRuntimeState.UNAVAILABLE)
                 result.putString("error", failure!!.code)
             }
             // DIAGNOSTICS: a dead receiver must not crash the native worker or reveal its payload.
@@ -73,7 +87,8 @@ abstract class EngineService : Service() {
         true
     })
     override fun onBind(intent: Intent): IBinder = requests.binder
-    override fun onDestroy() { work.removeCallbacksAndMessages(null); super.onDestroy() }
+    override fun onUnbind(intent: Intent): Boolean { runtimeReporter.clearObservers(); return super.onUnbind(intent) }
+    override fun onDestroy() { runtimeReporter.clearObservers(); work.removeCallbacksAndMessages(null); super.onDestroy() }
 }
 
 internal fun diagnosticComponent(language: String): DiagnosticComponent = when (language) {

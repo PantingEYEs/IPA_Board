@@ -17,6 +17,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ImeEndToEndTest {
+    @get:org.junit.Rule val lifecycleTrace: org.junit.rules.TestRule = ImeLifecycleTrace()
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val ui = instrumentation.uiAutomation
     private fun shell(command: String) = ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand(command)).bufferedReader().use { it.readText() }
@@ -40,8 +41,7 @@ class ImeEndToEndTest {
         ))
         withWidthSwapKeyboard(listOf(layout, layout.copy(name = "Width Swap E2E alternate"))) { scenario, pages ->
             fun key(column: Int, action: Int = AccessibilityNodeInfo.ACTION_CLICK) {
-                assertTrue(awaitNode { it.contentDescription?.toString()?.startsWith("Row 1, key $column:") == true }
-                    .performAction(action))
+                driver.click(action) { it.contentDescription?.toString()?.startsWith("Row 1, key $column:") == true }
             }
             fun state(enabled: Boolean) {
                 val toggle = awaitNode {
@@ -246,14 +246,11 @@ class ImeEndToEndTest {
             PageGroupManager.selectPage(context, page)
             shell("ime enable $ime"); shell("ime set $ime")
             ActivityScenario.launch(ImeTestEditorActivity::class.java).use { scenario ->
-                android.os.SystemClock.sleep(700)
-                scenario.onActivity {
-                    it.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
-                        .showSoftInput(it.editor, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-                }
-                awaitNode { it.contentDescription?.toString() == "Row 1, key 2: n" }.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                awaitNode { it.contentDescription?.toString() == "Row 1, key 1: Emoji" }.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                driver.awaitKeyboard(scenario) { it.contentDescription?.toString() == "Row 1, key 2: n" }
+                driver.click { it.contentDescription?.toString() == "Row 1, key 2: n" }
+                driver.click { it.contentDescription?.toString() == "Row 1, key 1: Emoji" }
                 showAllEmoji()
+                awaitEditorText(scenario, "n", composing = true)
                 assertNull(find { it.contentDescription?.toString()?.startsWith("Row ") == true })
                 repeat(2) {
                     assertTrue(findEmoji(first).performAction(AccessibilityNodeInfo.ACTION_CLICK))
@@ -266,10 +263,16 @@ class ImeEndToEndTest {
                 instrumentation.waitForIdleSync()
                 scenario.onActivity { assertEquals(repeated + latest.text, it.editor.text.toString()) }
                 awaitNode { it.contentDescription?.toString() == context.getString(R.string.emoji_grid_description) }
-                awaitNode { it.contentDescription?.toString() == "Return to Keyboard" }.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                awaitNode { it.contentDescription?.toString() == "Row 1, key 1: Emoji" }.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                driver.click { it.contentDescription?.toString() == "Return to Keyboard" }
+                driver.click { it.contentDescription?.toString() == "Row 1, key 1: Emoji" }
                 showAllEmoji()
                 findEmoji(first)
+                driver.click { it.text?.toString()?.startsWith("Emoji · ") == true && it.isClickable }
+                awaitNode { it.text?.toString() == context.getString(R.string.emoji_all) }
+                shell("input keyevent 4")
+                awaitNode { it.contentDescription?.toString() == context.getString(R.string.emoji_grid_description) }
+                // Popup exit transitions finish asynchronously; the underlying grid exists throughout.
+                driver.awaitAbsent { it.isVisibleToUser && it.text?.toString() == context.getString(R.string.emoji_all) }
                 shell("input keyevent 4")
                 awaitNode { it.contentDescription?.toString() == "Row 1, key 1: Emoji" }
             }

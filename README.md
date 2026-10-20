@@ -40,6 +40,8 @@
 
 **IPA Engine** 已实验接入，支持 IPA → 英文、简体/繁体中文和日文词条，例如 `həˈloʊ → hello`。当前上游包仅支持 `arm64-v8a`，不提供下一词预测。进入 **Engine Management → Manage IPA engine and dictionary**，可从上游仓库分别更新引擎或词典；词典由开发侧预先编译为压缩二进制，客户端不编译、不需要更新 APK 或连接电脑。先校验文件，再用当前引擎验证兼容性，成功后切换并删除旧词典；失败时保留旧资源。输入与上下文不上传。开发侧发布格式见 [IPA 更新接口](docs/ipa-updates.md)。
 
+**Engine Dashboard** 可在按键编辑中自行绑定，默认布局不添加入口。按下后在键盘区查看全部已接入功能的配置与实时运行状态，支持滚动、打开主设置和返回键盘。面板只观察，不改变引擎开关或预输入；详见 [引擎仪表盘](docs/engine-dashboard.md)。
+
 **Multilingual E5** 语义排序默认关闭。开启后参考光标前后文重排中英日候选，失败时保留普通候选；模型和分词资源约 123 MB。输入与上下文不上传，也不保存学习历史。中文续写、日文预测及 E5 排序均受现有词库范围限制，不提供整句生成或任意混输的自动语言分词。
 
 **Debug diagnostics** 默认关闭，开启后输出引擎加载阶段与固定错误码；不记录输入、候选或私人配置。详见 [诊断说明](docs/diagnostics.md)、[引擎来源与许可](docs/engine-integration.md) 和 [语义排序说明](docs/context-ranking.md)。

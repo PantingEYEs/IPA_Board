@@ -47,10 +47,13 @@ class IpaBoardService : InputMethodService() {
     private var directOnly = false
     private var consumedPanelBack = false
     private var panelBackRegistered = false
-    private val panelBackCallback = android.window.OnBackInvokedCallback { chrome?.showPanel(ImeChromeView.Panel.KEYBOARD) }
+    private var menuPopup: PopupWindow? = null
+    private val panelBackCallback = android.window.OnBackInvokedCallback { returnFromPanel() }
     private val clipboard by lazy { getSystemService(ClipboardManager::class.java) }
     private val clipboardRepository by lazy { ClipboardRepository(this) }
     private var clipboardPanel: ClipboardPanelView? = null
+    private var dashboardPanel: EngineDashboardView? = null
+    private var stopDashboardObservation: (() -> Unit)? = null
 
     private data class QuickPasteState(
         val text: String,
@@ -185,6 +188,8 @@ class IpaBoardService : InputMethodService() {
     }
     override fun onCreate() {
         super.onCreate()
+        // DIAGNOSTICS: initialize the local log sink before any IME lifecycle points are emitted.
+        AppDiagnostics.configure(this)
         LayoutFileManager.initDefaultLayout(this)
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
@@ -199,7 +204,9 @@ class IpaBoardService : InputMethodService() {
         }
     }
     override fun onCreateInputView(): View {
+        menuPopup?.dismiss()
         clipboardPanel = null
+        closeDashboardObservation()
         return ImeChromeView(this).also { view ->
             chrome = view
             view.onCalculatorToggle = {
@@ -209,7 +216,9 @@ class IpaBoardService : InputMethodService() {
             view.onCandidate = { candidate, generation -> if (composition.select(candidate, generation)) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
             view.onLiteral = { if (composition.literal()) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
             view.onPanel = { panel ->
+                menuPopup?.dismiss()
                 updatePanelBack(panel != ImeChromeView.Panel.KEYBOARD)
+                if (panel != ImeChromeView.Panel.ENGINE_DASHBOARD) closeDashboardObservation()
                 if (panel != ImeChromeView.Panel.CLIPBOARD) {
                     clipboardPanel?.commitPendingDelete()
                     clipboardPanel = null
@@ -219,6 +228,7 @@ class IpaBoardService : InputMethodService() {
                         showClipboard()
                         updateQuickPasteStatus()
                     }
+                    ImeChromeView.Panel.ENGINE_DASHBOARD -> showEngineDashboard()
                     ImeChromeView.Panel.PAGES -> showPages()
                     ImeChromeView.Panel.EMOJI -> showEmoji()
                     ImeChromeView.Panel.KAOMOJI -> showKaomojiPanel()
@@ -356,6 +366,10 @@ class IpaBoardService : InputMethodService() {
 
     private fun handleKey(slot: KeySlot) {
         when (slot.action) {
+            KeyAction.ENGINE_DASHBOARD -> {
+                chrome?.showPanel(ImeChromeView.Panel.ENGINE_DASHBOARD)
+                return
+            }
             KeyAction.EMOJI -> {
                 chrome?.showPanel(ImeChromeView.Panel.EMOJI)
                 return
@@ -416,6 +430,7 @@ class IpaBoardService : InputMethodService() {
                 applySettings()
             }
             when (activeShortcut) {
+                KeyAction.ENGINE_DASHBOARD -> { consumeModifiers(); chrome?.showPanel(ImeChromeView.Panel.ENGINE_DASHBOARD); return }
                 KeyAction.EMOJI -> { consumeModifiers(); chrome?.showPanel(ImeChromeView.Panel.EMOJI); return }
                 KeyAction.KAOMOJI -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.KAOMOJI) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.KAOMOJI); return }
                 KeyAction.WIDTH_SWAP -> { consumeModifiers(); toggleWidthSwap(); return }
@@ -767,7 +782,7 @@ class IpaBoardService : InputMethodService() {
             scrollRoot,
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
+            false
         ).apply {
             isOutsideTouchable = true
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
@@ -775,10 +790,34 @@ class IpaBoardService : InputMethodService() {
             exitTransition = android.transition.Slide(Gravity.TOP)
         }
 
-        popup.showAsDropDown(anchorView)
+        showImeMenu(popup, anchorView)
     }
 
 
+
+    private fun closeDashboardObservation() {
+        stopDashboardObservation?.invoke()
+        stopDashboardObservation = null
+        dashboardPanel = null
+    }
+
+    private fun showEngineDashboard() {
+        val view = chrome ?: return
+        closeDashboardObservation()
+        val dashboard = EngineDashboardView(this) {
+            try {
+                startActivity(android.content.Intent(this, SettingsActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (_: android.content.ActivityNotFoundException) {
+                Toast.makeText(this, R.string.engine_dashboard_settings_unavailable, Toast.LENGTH_SHORT).show()
+            }
+        }
+        dashboardPanel = dashboard
+        view.showContent(getString(R.string.engine_dashboard_title), dashboard)
+        stopDashboardObservation = engines.observeRuntime {
+            if (chrome === view && view.panel == ImeChromeView.Panel.ENGINE_DASHBOARD)
+                dashboard.render({ EngineSettings.enabled(this, it) }, engines.runtimeSnapshot())
+        }
+    }
 
     private fun showClipboard() {
         val view = chrome ?: return
@@ -875,10 +914,15 @@ class IpaBoardService : InputMethodService() {
         ) else window.onBackInvokedDispatcher.unregisterOnBackInvokedCallback(panelBackCallback)
         panelBackRegistered = open
     }
+    private fun returnFromPanel() {
+        val popup = menuPopup
+        if (popup?.isShowing == true) popup.dismiss()
+        else chrome?.showPanel(ImeChromeView.Panel.KEYBOARD)
+    }
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK && chrome?.panel != null && chrome?.panel != ImeChromeView.Panel.KEYBOARD) {
             consumedPanelBack = true
-            chrome?.showPanel(ImeChromeView.Panel.KEYBOARD); event.startTracking(); return true
+            returnFromPanel(); event.startTracking(); return true
         }
         return super.onKeyDown(keyCode, event)
     }
@@ -887,6 +931,8 @@ class IpaBoardService : InputMethodService() {
         return super.onKeyUp(keyCode, event)
     }
     override fun onFinishInputView(finishingInput: Boolean) {
+        menuPopup?.dismiss()
+        closeDashboardObservation()
         AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT_VIEW)
         clipboard.removePrimaryClipChangedListener(clipboardListener)
         chrome?.showPanel(ImeChromeView.Panel.KEYBOARD)
@@ -898,6 +944,8 @@ class IpaBoardService : InputMethodService() {
         composition.finish(); engines.suspendSemantic(); inputController.reset(); super.onFinishInput()
     }
     override fun onDestroy() {
+        menuPopup?.dismiss()
+        closeDashboardObservation()
         emojiClosed = true
         emojiRequest++
         emojiExecutor.shutdownNow()
@@ -961,14 +1009,24 @@ class IpaBoardService : InputMethodService() {
             scrollRoot,
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
+            false
         ).apply {
             isOutsideTouchable = true
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             enterTransition = android.transition.Slide(Gravity.TOP)
             exitTransition = android.transition.Slide(Gravity.TOP)
-            showAsDropDown(anchorView)
         }
+        showImeMenu(popup, anchorView)
+    }
+
+    private fun showImeMenu(popup: PopupWindow, anchor: View) {
+        menuPopup?.dismiss()
+        // A focusable IME popup becomes a new input target and restarts the editor session.
+        // Keep input focus with the editor; the panel's Back handler dismisses this menu first.
+        popup.inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
+        popup.setOnDismissListener { if (menuPopup === popup) menuPopup = null }
+        menuPopup = popup
+        popup.showAsDropDown(anchor)
     }
 
 }

@@ -70,7 +70,7 @@ class PageGroupUiTest {
                 assertNull(PageGroupManager.activeFilename(context))
                 assertEquals(SettingsConstants.DEFAULT_LAYOUT, LayoutFileManager.activeLayout(context))
                 onView(withId(R.id.btn_delete_group)).perform(scrollTo(), click())
-                onView(withText("Delete")).inRoot(isDialog()).perform(click())
+                onView(withId(android.R.id.button1)).inRoot(isDialog()).perform(click())
                 assertEquals(second, PageGroupManager.active(context).id)
                 assertNotNull(LayoutFileManager.loadLayout(context, file))
                 scenario.onActivity { assertFalse(it.findViewById<Button>(R.id.btn_delete_group).isEnabled) }

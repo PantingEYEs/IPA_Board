@@ -1,0 +1,17 @@
+<resources>
+    <string name="engine_dashboard_title">Engine Dashboard</string>
+    <string name="engine_dashboard_settings">Open IPA Board settings</string>
+    <string name="engine_dashboard_settings_unavailable">Unable to open settings.</string>
+    <string name="engine_dashboard_enabled">Enabled</string>
+    <string name="engine_dashboard_disabled">Disabled</string>
+    <string name="engine_dashboard_row">Setting: %1$s\nRuntime: %2$s</string>
+    <string name="engine_dashboard_backend_state">%1$s — %2$s</string>
+    <string name="engine_dashboard_unknown">Unknown (not connected; instance may still be retained)</string>
+    <string name="engine_dashboard_connecting">Connecting; runtime not confirmed</string>
+    <string name="engine_dashboard_uninitialized">Not initialized</string>
+    <string name="engine_dashboard_initializing">Initializing</string>
+    <string name="engine_dashboard_ready">Ready</string>
+    <string name="engine_dashboard_busy">Processing</string>
+    <string name="engine_dashboard_unavailable">Unavailable</string>
+    <string name="engine_dashboard_stateless">On demand; no persistent engine instance</string>
+</resources>

@@ -14,7 +14,9 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
     private var closed = false
     private var started = false
     private var requestId = 0L
-    private val semantic = SemanticRankerClient(context) { id, items, state ->
+    private val runtimeStates = EngineRuntimeStates()
+    private val runtimeListeners = linkedSetOf<() -> Unit>()
+    private val semantic = SemanticRankerClient(context, runtimeStates) { id, items, state ->
         if (!closed && id == revision) changed(id, items, listOf(nativeState(), state).filter { it.isNotEmpty() }.joinToString(" · "))
     }
     private val preferences = ContextRankingSettings.preferences(context)
@@ -39,6 +41,7 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
             semantic.preferenceChanged()
             syncBindings()
             query(revision, raw, beforeCursor, afterCursor)
+            runtimeListeners.toList().forEach { it() }
         }
     }
     private val clients = listOf(Client(RimeService::class.java, "ZH"), Client(MozcService::class.java, "JA"),
@@ -50,6 +53,12 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
         // DIAGNOSTICS: one main-process mode source; workers receive explicit snapshots.
         AppDiagnostics.configure(preferences)
         preferences.registerOnSharedPreferenceChangeListener(preferenceListener)
+    }
+    internal fun runtimeSnapshot() = runtimeStates.snapshot()
+    internal fun observeRuntime(listener: () -> Unit): () -> Unit {
+        runtimeListeners.add(listener)
+        val stop = runtimeStates.observe(listener)
+        return { stop(); runtimeListeners.remove(listener) }
     }
     fun start() { started = true; syncBindings() }
     private fun syncBindings() {
@@ -68,6 +77,7 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
     fun close() {
         closed = true; semantic.release(); preferences.unregisterOnSharedPreferenceChangeListener(preferenceListener)
         clients.forEach { it.unbind() }
+        runtimeListeners.clear()
     }
     private fun nativeState() = if (clients.none { policy.needsRuntime(it.label) }) "Literal input" else clients.filter { policy.needsRuntime(it.label) && it.state != "" }.joinToString(" · ") { it.label + it.state }
     private fun publish() {
@@ -79,6 +89,11 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
     }
     private inner class Client(val type: Class<out android.app.Service>, val label: String) : ServiceConnection {
         private val component = if (label == "IPA") DiagnosticComponent.IPA else diagnosticComponent(label)
+        private val backend = when (label) {
+            "ZH" -> EngineBackend.RIME; "JA" -> EngineBackend.MOZC; "EN" -> EngineBackend.LATINIME
+            else -> EngineBackend.IPA
+        }
+        private var runtimeReceiver: Messenger? = null
         var bound = false
         var remote: Messenger? = null
         var items = emptyList<Candidate>()
@@ -116,6 +131,7 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
         })
         fun bind() {
             state = "Loading"
+            runtimeStates.connecting(backend)
             // DIAGNOSTICS: binding failure is isolated per engine; raw input remains available.
             try {
                 bound = context.bindService(Intent(context, type), this, Context.BIND_AUTO_CREATE)
@@ -128,6 +144,8 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
         fun unbind() {
             val wasBound = bound
             bound = false; remote = null; items = emptyList(); state = ""
+            runtimeReceiver = null
+            runtimeStates.disconnected(backend)
             if (wasBound) try { context.unbindService(this) }
             catch (error: Exception) {
                 // DIAGNOSTICS: cleanup failures must not prevent the other engines from releasing.
@@ -135,6 +153,7 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
             }
         }
         private fun unavailable(issue: DiagnosticIssue) {
+            runtimeStates.disconnected(backend, unavailable = true)
             state = "Unavailable (${issue.stage.label})"; items = emptyList()
             publish()
         }
@@ -164,7 +183,15 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
                 unavailable(AppDiagnostics.signal(component, DiagnosticStage.SEND, DiagnosticKind.IPC))
             }
         }
-        override fun onServiceConnected(name: ComponentName, service: IBinder) { if (!closed && bound) { remote = Messenger(service); send() } }
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            if (!closed && bound) {
+                val messenger = Messenger(service)
+                remote = messenger
+                try { runtimeReceiver = EngineRuntimeReporting.subscribe(messenger, runtimeStates, backend) }
+                catch (_: RemoteException) { runtimeStates.disconnected(backend, unavailable = true) }
+                send()
+            }
+        }
         override fun onServiceDisconnected(name: ComponentName) {
             if (closed || !bound) return
             // DIAGNOSTICS: Android may reconnect a disconnected service; preserve its binding.

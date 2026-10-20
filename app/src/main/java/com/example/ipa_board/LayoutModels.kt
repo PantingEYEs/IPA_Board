@@ -257,6 +257,7 @@ enum class KeyAction(val wireValue: String, val title: String, val keyLabel: Str
     KAOMOJI("kaomoji", "顔文字", "顔", "Open the scrollable 顔文字 panel. Tap a 顔文字 to insert it; Return closes the panel."),
     WIDTH_SWAP("width_swap", "全角 / 半角转换", "◩", "Off by default. When enabled, swap full-width and half-width forms of typed characters that have a width counterpart. Tap again to turn off."),
     CALCULATOR("calculator", "计算器", "∑", "Toggle calculator mode. Evaluate math expressions and output results as candidates."),
+    ENGINE_DASHBOARD("engine_dashboard", "Engine Dashboard", "◷", "Open the read-only engine dashboard. Return closes the panel."),
     CANDIDATES("candidates", "Candidates", "⋯", "Open the candidate word list panel."),
     CLIPBOARD("clipboard", "Clipboard", "⧉", "Open the clipboard panel. Tap an item to insert it; Return closes the panel."),
     PAGES("pages", "Keyboard Pages", "⊞", "Open the keyboard page picker panel to switch active layouts."),

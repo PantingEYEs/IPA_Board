@@ -1,6 +1,6 @@
 # 可关闭的错误诊断
 
-Engine Management 底部的 **Debug diagnostics** 默认关闭，debug 和 release 均不自动开启。开启后向 Logcat 的 `IPABoardDiagnostics` 标签输出加载阶段与固定错误码；不写日志文件、不上传数据。关闭会立即停止本进程后续输出，并通过独立控制消息通知已绑定的引擎进程，包括正在加载但尚未回复的引擎。
+Engine Management 底部的 **Debug diagnostics** 默认关闭，debug 和 release 均不自动开启。开启后向 Logcat 的 `IPABoardDiagnostics` 标签输出加载阶段与固定错误码；已初始化应用上下文的进程同时写入应用私有目录的 `diagnostics.log`，超过 512 KiB 时裁剪旧记录，不上传数据。管理页提供大小查看、主动导出和清空。关闭会立即停止本进程后续输出，并通过独立控制消息通知已绑定的引擎进程，包括正在加载但尚未回复的引擎；已有文件保留，直至用户清空。
 
 诊断开关独立于各引擎功能开关。关闭日志不关闭词库或模型，也不取消输入回退。引擎失败时，状态栏显示语言与失败阶段，例如 `ZHUnavailable (schema selection)`；失败引擎不提供候选，其他引擎和原文提交仍可使用。E5 失败时保留原生候选。进程内已有的加载／查询熔断仍保留，避免反复初始化原生运行时；关闭再打开语义引擎可以创建新的语义服务，原生运行时需要进程重建才能重新尝试。
 
@@ -18,6 +18,8 @@ Engine Management 底部的 **Debug diagnostics** 默认关闭，debug 和 relea
 事件仅由固定的 `component/stage/outcome/kind` 枚举组成，例如 `SEMANTIC/MODEL/FAILURE/NATIVE_LINK`。不传入 Throwable、异常 message/stack trace、输入/上下文/候选/词向量、剪贴板/短信、私人配置、文件名/路径/URI、下载地址或响应内容。原生库自身的内部日志由其实现控制，此开关只控制本项目新增及替换的诊断输出。原生硬崩溃通过服务断开检测，不声称能在 Kotlin 中捕获 SIGSEGV。
 
 正常加载记录 `START` / `READY`；查询、取消、无候选、不支持的输入、缺少可选安装文件、过期结果和关闭引擎都不作为错误。相同 component/stage/kind 的失败每进程每 60 秒最多输出一次，成功恢复后可再次报告；去重缓存限 128 项，关闭时清空。诊断 sink 自身失败不会改变业务结果。
+
+IME 生命周期与预输入的显式 `trace` 每次产生一条固定的 `READY` 事件，例如 `IME/START_INPUT_VIEW/READY`。它不受阶段的自动 START/READY 包装开关影响，且仍遵守诊断总开关；不包含输入文字或编辑器信息。
 
 ## 维护和剔除
 

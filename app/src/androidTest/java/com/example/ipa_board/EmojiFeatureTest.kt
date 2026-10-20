@@ -29,7 +29,7 @@ class EmojiFeatureTest {
             PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(filename))
             PageGroupManager.selectPage(context, filename)
             ActivityScenario.launch(KeyboardPageActivity::class.java).use {
-                onView(withContentDescription(startsWith("Row 1, key 1:"))).perform(scrollTo(), click())
+                onView(withContentDescription(startsWith("Row 1, key 1:"))).perform(click())
                 onView(withId(R.id.sp_key_type)).perform(click())
                 onData(equalTo("Emoji")).inRoot(isPlatformPopup()).perform(click())
                 onView(withText("Save")).perform(click())

@@ -12,12 +12,17 @@ class IpaService : Service() {
     private lateinit var work: Handler
     private val manager by lazy { IpaResourceManager(this) }
     private var runtime: IpaGraphRuntime? = null
+    private val runtimeReporter = EngineRuntimeReporter()
     private var generation: String? = null
     private var failedGeneration: String? = null
     private var failedAt = 0L
     private var lastFailure: DiagnosticIssue? = null
     @Volatile private var destroyed = false
     private val requests = Messenger(Handler(Looper.getMainLooper()) { message ->
+        if (message.what == EngineRuntimeReporting.SUBSCRIBE) {
+            runtimeReporter.subscribe(message.replyTo)
+            return@Handler true
+        }
         val data = Bundle(message.data)
         // DIAGNOSTICS: receive the main-process mode snapshot without reading worker preferences.
         AppDiagnostics.configure(data)
@@ -38,6 +43,7 @@ class IpaService : Service() {
                 if (!policy.wantsQuery("IPA", raw.isEmpty()) || raw.length > 64) emptyList()
                 else {
                     val engine = load(requestedGeneration)
+                    runtimeReporter.update(EngineRuntimeState.BUSY)
                     AppDiagnostics.atStage(DiagnosticComponent.IPA, DiagnosticStage.QUERY) {
                         val before = data.getString("beforeCursor").orEmpty().takeLast(256)
                         val after = data.getString("afterCursor").orEmpty().take(256)
@@ -50,6 +56,7 @@ class IpaService : Service() {
             } catch (error: Exception) { failed(requestedGeneration, result, error) }
             catch (error: LinkageError) { failed(requestedGeneration, result, error) }
             catch (error: OutOfMemoryError) { failed(requestedGeneration, result, error) }
+            if (!result.containsKey("error") && runtime != null) runtimeReporter.update(EngineRuntimeState.READY)
             result.putStringArrayList("text", ArrayList(candidates.map { it.text }))
             result.putStringArrayList("language", ArrayList(candidates.map { it.language }))
             result.putIntArray("rank", candidates.map { it.rank }.toIntArray())
@@ -68,7 +75,9 @@ class IpaService : Service() {
 
     override fun onCreate() { super.onCreate(); worker.start(); work = Handler(worker.looper) }
     override fun onBind(intent: Intent): IBinder = requests.binder
+    override fun onUnbind(intent: Intent): Boolean { runtimeReporter.clearObservers(); return super.onUnbind(intent) }
     override fun onDestroy() {
+        runtimeReporter.clearObservers()
         destroyed = true
         work.removeCallbacksAndMessages(null)
         work.post { runtime?.close(); runtime = null; worker.quitSafely() }
@@ -80,6 +89,7 @@ class IpaService : Service() {
         if (failedGeneration == requestedGeneration && SystemClock.elapsedRealtime() - failedAt < 5000L)
             throw DiagnosticStageException(lastFailure!!, IllegalStateException("IPA retry pending"))
         if (generation == requestedGeneration) return checkNotNull(runtime)
+        runtimeReporter.update(EngineRuntimeState.INITIALIZING)
         val snapshot = AppDiagnostics.atStage(DiagnosticComponent.IPA, DiagnosticStage.ASSETS) {
             val current = manager.snapshot() ?: manager.ensureInstalled()
             check(current.generation == requestedGeneration)
@@ -105,6 +115,7 @@ class IpaService : Service() {
         if (failedGeneration != requestedGeneration || now - failedAt >= 5000L) failedAt = now
         failedGeneration = requestedGeneration
         lastFailure = issue
+        runtimeReporter.update(EngineRuntimeState.UNAVAILABLE)
         result.putString("error", issue.code)
         return emptyList()
     }

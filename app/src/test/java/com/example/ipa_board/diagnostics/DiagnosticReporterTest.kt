@@ -5,6 +5,22 @@ import org.junit.Test
 import java.io.IOException
 
 class DiagnosticReporterTest {
+    @Test fun explicitLifecyclePointsAreLoggedOnceWhileAutomaticQuietStagesStayQuiet() {
+        val events = mutableListOf<DiagnosticEvent>()
+        val reporter = DiagnosticReporter({ 0L }, events::add)
+        reporter.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT)
+        assertTrue(events.isEmpty())
+        reporter.enabled = true
+        reporter.atStage(DiagnosticComponent.IME, DiagnosticStage.START_INPUT) { "operation" }
+        assertTrue(events.isEmpty())
+        reporter.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT)
+        reporter.trace(DiagnosticComponent.IME, DiagnosticStage.SELECTION_CHANGE)
+        assertEquals(listOf("IME/START_INPUT/READY", "IME/SELECTION_CHANGE/READY"), events.map { it.line() })
+        reporter.enabled = false
+        reporter.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT)
+        assertEquals(2, events.size)
+    }
+
     @Test fun defaultOffStillRunsOperationsAndPreservesFailureControlFlow() {
         val events = mutableListOf<DiagnosticEvent>()
         val reporter = DiagnosticReporter({ 0L }, events::add)

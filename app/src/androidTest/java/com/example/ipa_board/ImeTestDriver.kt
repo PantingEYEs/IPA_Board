@@ -26,13 +26,24 @@ internal class ImeTestDriver {
         }
     }
 
-    fun awaitNode(predicate: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo {
-        val deadline = SystemClock.uptimeMillis() + 30_000
+    fun awaitNode(predicate: (AccessibilityNodeInfo) -> Boolean) = awaitNode(30_000, predicate)
+
+    fun awaitNode(timeoutMillis: Long, predicate: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo {
+        val deadline = SystemClock.uptimeMillis() + timeoutMillis
         while (SystemClock.uptimeMillis() < deadline) {
             find(predicate)?.let { return it }
             Thread.sleep(80)
         }
         missingNode()
+    }
+
+    fun awaitAbsent(predicate: (AccessibilityNodeInfo) -> Boolean) {
+        val deadline = SystemClock.uptimeMillis() + 5_000
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (find(predicate) == null) return
+            Thread.sleep(40)
+        }
+        fail("Test-owned menu remained visible after dismissal")
     }
 
     private fun missingNode(): Nothing {
@@ -44,17 +55,33 @@ internal class ImeTestDriver {
         error("Timed out waiting for test-owned IME node; descriptions=$descriptions")
     }
 
-    fun awaitKeyboard(scenario: ActivityScenario<ImeTestEditorActivity>, predicate: (AccessibilityNodeInfo) -> Boolean) {
-        val deadline = SystemClock.uptimeMillis() + 30_000
+    fun awaitKeyboard(scenario: ActivityScenario<ImeTestEditorActivity>, timeoutMillis: Long = 30_000,
+                      predicate: (AccessibilityNodeInfo) -> Boolean) {
+        val deadline = SystemClock.uptimeMillis() + timeoutMillis
         while (SystemClock.uptimeMillis() < deadline) {
             if (find { it.isVisibleToUser && predicate(it) } != null) return
             // IME switching can finish after ActivityScenario has delivered focus.
             // Only request input for this fixture's own empty/synthetic editor.
             scenario.onActivity {
-                it.getSystemService(InputMethodManager::class.java)
+                it.editor.requestFocus()
+                if (it.editor.hasWindowFocus()) it.getSystemService(InputMethodManager::class.java)
                     .showSoftInput(it.editor, InputMethodManager.SHOW_IMPLICIT)
             }
             Thread.sleep(200)
+        }
+        missingNode()
+    }
+
+    /** Retry only rejected stale nodes, within the existing wait budget; accepted actions are never repeated. */
+    fun click(action: Int = AccessibilityNodeInfo.ACTION_CLICK, predicate: (AccessibilityNodeInfo) -> Boolean) {
+        val deadline = SystemClock.uptimeMillis() + 30_000
+        while (SystemClock.uptimeMillis() < deadline) {
+            val node = find { it.isEnabled && predicate(it) }
+            if (node != null) {
+                if (!node.isVisibleToUser) node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
+                else if (node.performAction(action)) return
+            }
+            Thread.sleep(80)
         }
         missingNode()
     }

@@ -11,22 +11,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class PageGroupImeTest {
+    @get:org.junit.Rule val lifecycleTrace: org.junit.rules.TestRule = ImeLifecycleTrace()
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val ui = instrumentation.uiAutomation
+    private val driver = ImeTestDriver()
     private fun shell(command: String) = ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand(command))
         .bufferedReader().use { it.readText() }
     private fun awaitNode(predicate: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo {
-        fun visit(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-            if (predicate(node)) return node
-            for (i in 0 until node.childCount) visit(node.getChild(i) ?: continue)?.let { return it }
-            return null
-        }
-        val deadline = android.os.SystemClock.uptimeMillis() + 15_000
-        while (android.os.SystemClock.uptimeMillis() < deadline) {
-            ui.windows.forEach { window -> window.root?.let(::visit)?.let { return it } }
-            Thread.sleep(80)
-        }
-        error("Timed out waiting for page-group IME node")
+        return driver.awaitNode(15_000, predicate)
     }
     private fun clickMenu(label: String) {
         var node = awaitNode { it.text?.toString() == label }
@@ -58,9 +50,15 @@ class PageGroupImeTest {
             val firstLabel = PageGroupManager.label(context, PageGroupManager.active(context))
             shell("ime enable $ime"); shell("ime set $ime")
             ActivityScenario.launch(ImeTestEditorActivity::class.java).use {
+                driver.awaitKeyboard(it, 15_000) { node -> node.contentDescription?.toString() == "Row 1, key 1: Ω" }
                 val firstKey = awaitNode { it.contentDescription?.toString() == "Row 1, key 1: Ω" }
                 val firstBounds = android.graphics.Rect().also { firstKey.getBoundsInScreen(it) }
                 assertTrue(awaitNode { it.contentDescription?.toString() == "Keyboard Overview" }.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+                assertTrue(awaitNode { it.text?.toString() == "$firstLabel ▾" }.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+                awaitNode { it.text?.toString() == emptyLabel }
+                shell("input keyevent 4")
+                driver.awaitAbsent { it.isVisibleToUser && it.text?.toString() == emptyLabel }
+                awaitNode { it.text?.toString() == "$firstLabel ▾" }
                 assertTrue(awaitNode { it.text?.toString() == "$firstLabel ▾" }.performAction(AccessibilityNodeInfo.ACTION_CLICK))
                 clickMenu(emptyLabel)
                 awaitNode { it.text?.toString() == "$emptyLabel ▾" }
