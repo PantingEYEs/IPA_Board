@@ -2,6 +2,10 @@
 
 本文件适用于整个仓库。测试入口和套件清单位于 `docs/testing.md` 与 `tools/regression-suites.json`。
 
+## PR 文档
+
+编写或修改 PR 标题与描述时，遵守 [PR 写作规范](docs/pull-request-guidelines.md)。PR 文档使用英文 Markdown，存放在被 Git 忽略的 `docs/pull-requests/`；规范本身留在该目录之外，不要强制提交被忽略的 PR 文档。
+
 ## 测试机状态保护（必须）
 
 **回归测试开始前需要备份测试机的软件状态与配置；回归测试完成后应该将测试机上的软件状态回滚至回归测试开始前，并删除备份。**

@@ -18,3 +18,6 @@ local.properties
 
 /.kotlin/
 /app/release/
+
+# Local pull request drafts and copies; shared guidelines live outside this directory.
+/docs/pull-requests/
