@@ -24,7 +24,8 @@ class EmojiPickerView(
         columnWidth = dp(56)
         stretchMode = GridView.STRETCH_COLUMN_WIDTH
         isVerticalScrollBarEnabled = true
-        isFastScrollEnabled = true
+        // Match the kaomoji grid: ordinary scrolling must not add a fast-scroll hit target over cells.
+        isFastScrollEnabled = false
         contentDescription = context.getString(R.string.emoji_grid_description)
         setBackgroundColor(Color.BLACK)
     }
@@ -43,6 +44,7 @@ class EmojiPickerView(
     init {
         orientation = VERTICAL
         grid.adapter = emojiAdapter
+        // GridView owns tap/drag arbitration, as in KaomojiPanelView; cells do not consume clicks.
         grid.setOnItemClickListener { _, _, position, _ ->
             handleEmojiClick(emojiAdapter.getItem(position))
         }
@@ -114,9 +116,6 @@ class EmojiPickerView(
             cell.textSize = if (supported) 28f else 11f
             cell.maxLines = if (supported) 1 else 3
             cell.contentDescription = "${entry.name}, Emoji ${entry.emojiVersion}"
-            cell.setOnClickListener {
-                handleEmojiClick(getItem(position))
-            }
             return cell
         }
     }

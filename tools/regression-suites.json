@@ -113,6 +113,12 @@
         "com.example.ipa_board.IpaEngineManagementUiTest"
       ]
     },
+    "emoji": {
+      "classes": [
+        "com.example.ipa_board.EmojiFeatureTest",
+        "com.example.ipa_board.ImeEndToEndTest"
+      ]
+    },
     "dashboard": {
       "classes": [
         "com.example.ipa_board.EngineDashboardTest",

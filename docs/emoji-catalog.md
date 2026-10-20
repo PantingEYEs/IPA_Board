@@ -6,6 +6,8 @@ Provenance, SHA-256, counts and schema version are in `assets/emoji/metadata.jso
 
 The picker uses a recycled GridView and an optional category filter. Data loading runs off the IME main thread and is cached per service. Selecting an entry first commits pending composition literally, then inserts the exact Unicode string. The panel stays open for repeated entry; Return or system Back restores the keyboard. Rendering uses Android's font; unavailable glyphs display their Unicode names and remain selectable. Adding newer catalog data does not upgrade the system font or the receiving app's font.
 
+Touch handling matches the kaomoji panel: GridView distinguishes item taps from ordinary vertical scrolling. Fast scrolling is disabled because its expanded touch target overlaps the rightmost emoji column (#3). Cells do not install separate click listeners; a completed tap selects the current entry once, while dragging or cancelling a touch inserts nothing. Cell recycling and the standard vertical scroll indicator remain in use.
+
 ## Manual catalog updates
 
 The Emoji management screen provides a manual update button. `EmojiUpdateManager` downloads the Unicode latest catalog in a background executor, checks that parsing produces a nonempty catalog, stores it in app-private files, and invalidates the shared repository cache. The app declares INTERNET permission; bundled data remains available offline.

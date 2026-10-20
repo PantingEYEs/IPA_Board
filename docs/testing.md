@@ -94,6 +94,8 @@ IPA 接入增加 `ipa` 套件，覆盖离线下载事务、哈希/路径拒绝�
 
 `dashboard` 套件覆盖 #8 的只读状态订阅、共享后端/关闭项、滚动与主设置入口，以及真实绑定键打开/返回时保留预输入。状态仓库的旧连接、旧实例及乱序拒绝放在 JVM 测试；新增设备类 `EngineDashboardTest` 纳入 ui/full，`EngineDashboardImeTest` 纳入 e2e/full，配置兼容与默认布局无入口纳入 KeyboardConfigurationTest。仪表盘不依赖日志开关，不通过发候选查询来验证运行状态。首次验证结果见 [仪表盘验证记录](engine-dashboard.md#验证记录)，后续完整回归见本页的 2026-10-20 记录。
 
+`emoji` 专项复用 ui/full 中的 `EmojiFeatureTest` 和 e2e/full 中的 `ImeEndToEndTest`，覆盖类别与回收网格、两种键盘宽度下最右列边缘点击、同一区域纵向拖动及取消不插入、滚动后点击当前条目只计数一次，以及真实 IME 中的完整 Unicode 提交、连续输入和返回。触摸通过测试自有 GridView 分发，不直接调用条目回调来代替点击；使用独立使用记录目录，结束后删除。
+
 普通回归不访问公网。Engine Management 的最新版本展示由测试 runner 注入固定元数据，异步查询另用注入的 transport、时钟及独立 cache 验证成功缓存、失败重试、关闭页面和并发取消。真实上游服务可达性属于单独的人工检查，失败不能与产品离线可用性混为一谈。
 
 ## 本次测试清理及增补
@@ -204,3 +206,14 @@ IPA 接入增加 `ipa` 套件，覆盖离线下载事务、哈希/路径拒绝�
 - 主机：debug 应用及测试 APK 编译通过，115 个 JVM 测试、49 个流程工具测试全部通过；lint 0 Error、269 Warning。93 项引擎资源哈希及 118,346,824 字节 E5 重组校验通过。
 - 最终专用只读模拟器 Android 15 / API 35、`arm64-v8a`：`full` 的 35 类共 193 项全部通过，0 失败、0 跳过。报告 `app/build/reports/regression/af9d783d-ab24-43eb-a4eb-8f8f475ecd48/summary.json`，`success=true`、`restored=true`、`roundtrip_verified=true`。包含实际 APK 与合成 CE/DE 配置、文件和缓存往返恢复验证。
 - 原软件及私有数据自动恢复并校验成功，备份已删除，`pending` 为空，模拟器已关闭。首轮保留的快照也已显式恢复验证并删除。未操作实体手机；未验证其他 API/ABI、16KB 页设备、签名 release 或真实短信/系统剪贴板。
+
+## 2026-10-20 Emoji 最右列触摸修复（#3）
+
+验证基于 `820d01e` 上的 #3 分支工作树，debug。Emoji 页改用与颜文字页一致的 GridView 普通纵向滚动和条目点击，不启用快速滚动的扩展触摸区域，也不让单元格单独消费点击；保留复用、类别、字号与普通滚动指示器。
+
+- 新增触摸回归覆盖 280×168 dp 和 360×280 dp 两种键盘区域：最右列边缘按下不插入、抬起准确回调一次；同一区域纵向拖动不插入且确实移动列表；停止滚动后点击回收单元格对应当前条目；取消触摸不插入，使用记录总次数与回调次数一致。使用测试自有视图和独立使用记录目录。
+- 旧实现报告 `app/build/reports/regression/5a4ec9c0-894b-4a09-8b9d-49bed04f61a4/` 在最右列边缘点击断言失败，验证用例能发现 #3，测试后恢复并删除备份。
+- 首次修复报告 `app/build/reports/regression/31c171a1-3b6d-47c7-9b24-b007a10e0a4e/` 中初始边缘点击已通过，但新增手势 fixture 使用未来事件时间且未等待滚动停止，滚动后的点击失败；现改为真实时间推进并观察原生空闲状态。该轮既有真实长按用例还在初始 IME 显示前超时，未改动其断言或扩大等待，最终完整回归未复现。保留失败报告；该轮软件也已自动恢复并校验后删除备份。
+- 主机编译与 115 个 JVM 测试、49 个流程工具测试通过；lint 0 Error、269 Warning。35 类设备套件登记通过，93 项引擎资源哈希与 E5 重组校验通过。
+- 最终 Android 15 / API 35 / `arm64-v8a` 专用只读模拟器：`full` 的 35 类共 **194 项全部通过**，0 失败、0 跳过，包含真实 IME Emoji 类别、连续 Unicode 提交、返回及长按用例。报告 `app/build/reports/regression/b4886599-f20e-4392-8a1b-90f69e25988b/summary.json` 为 `success=true`、`restored=true`。
+- 原软件与私有数据已恢复并校验成功，备份已删除，`pending` 为空，模拟器已关闭。未操作实体手机；Issue 中的 Samsung One UI 7.0 设备、其他 API/ABI、签名 release 尚未验证。

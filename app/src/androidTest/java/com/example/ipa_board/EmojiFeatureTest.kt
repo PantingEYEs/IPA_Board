@@ -2,6 +2,12 @@ package com.example.ipa_board
 
 import android.content.Context
 import android.view.ViewTreeObserver
+import android.os.SystemClock
+import android.view.InputDevice
+import android.view.MotionEvent
+import android.view.View
+import android.widget.FrameLayout
+import android.widget.AbsListView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onData
 import androidx.test.espresso.Espresso.onView
@@ -18,6 +24,121 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class EmojiFeatureTest {
+    @Test fun rightEdgeTapAndVerticalSwipeStayDistinctAcrossKeyboardSizes() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val catalog = BundledEmojiCatalogSource(context).load()
+        val directory = java.io.File(context.cacheDir, "emoji-touch-${java.util.UUID.randomUUID()}").apply { check(mkdirs()) }
+        val usage = EmojiUsageRepository(storageDirOverride = directory)
+        val selected = mutableListOf<EmojiEntry>()
+        var clicked = CountDownLatch(1)
+        lateinit var picker: EmojiPickerView
+        var scrollState = AbsListView.OnScrollListener.SCROLL_STATE_IDLE
+        fun dp(value: Int) = (value * context.resources.displayMetrics.density).toInt()
+        try {
+            ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
+                scenario.onActivity { activity ->
+                    picker = EmojiPickerView(activity, catalog, usage) { selected += it; clicked.countDown() }
+                    picker.grid.setOnScrollListener(object : AbsListView.OnScrollListener {
+                        override fun onScrollStateChanged(view: AbsListView, state: Int) { scrollState = state }
+                        override fun onScroll(view: AbsListView, first: Int, visible: Int, total: Int) {}
+                    })
+                    activity.setContentView(FrameLayout(activity).apply {
+                        addView(picker, FrameLayout.LayoutParams(-1, dp(224)))
+                    })
+                }
+                for ((widthDp, heightDp) in listOf(280 to 168, 360 to 280)) {
+                    awaitGridLayout(scenario, picker, "Keyboard size $widthDp x $heightDp", change = {
+                        picker.layoutParams = picker.layoutParams.apply { width = dp(widthDp); height = dp(heightDp) }
+                        picker.filterCategory(1)
+                    }, ready = { picker.grid.firstVisiblePosition == 0 && picker.grid.canScrollVertically(1) })
+
+                    fun tapRightEdge() {
+                        lateinit var expected: EmojiEntry
+                        var count = 0
+                        var x = 0f
+                        var y = 0f
+                        var down = 0L
+                        clicked = CountDownLatch(1)
+                        scenario.onActivity {
+                            val grid = picker.grid
+                            val cells = (0 until grid.childCount).map { grid.getChildAt(it) }
+                                .filter { it.top >= grid.paddingTop && it.bottom <= grid.height - grid.paddingBottom }
+                            val cell = cells.maxBy { it.right }
+                            val position = grid.firstVisiblePosition + grid.indexOfChild(cell)
+                            expected = grid.adapter.getItem(position) as EmojiEntry
+                            count = selected.size
+                            x = (cell.right - dp(2)).toFloat()
+                            y = (cell.top + cell.bottom) / 2f
+                            down = SystemClock.uptimeMillis()
+                            touch(grid, down, MotionEvent.ACTION_DOWN, x, y)
+                            assertEquals("A press must not insert before release", count, selected.size)
+                        }
+                        SystemClock.sleep(60)
+                        scenario.onActivity { touch(picker.grid, down, MotionEvent.ACTION_UP, x, y) }
+                        assertTrue("Rightmost emoji must be selectable at width $widthDp", clicked.await(5, TimeUnit.SECONDS))
+                        instrumentation.waitForIdleSync()
+                        scenario.onActivity {
+                            assertEquals("Exactly one callback per tap", count + 1, selected.size)
+                            assertEquals(expected, selected.last())
+                        }
+                    }
+
+                    tapRightEdge()
+                    var beforePosition = 0
+                    var beforeTop = 0
+                    var beforeClicks = 0
+                    var x = 0f
+                    var start = 0f
+                    var end = 0f
+                    var down = 0L
+                    scenario.onActivity {
+                        val grid = picker.grid
+                        beforePosition = grid.firstVisiblePosition
+                        beforeTop = grid.getChildAt(0).top
+                        beforeClicks = selected.size
+                        x = (grid.width - dp(2)).toFloat()
+                        start = (grid.height - grid.paddingBottom - dp(28)).toFloat()
+                        end = (grid.paddingTop + dp(28)).toFloat()
+                        down = SystemClock.uptimeMillis()
+                        touch(grid, down, MotionEvent.ACTION_DOWN, x, start)
+                    }
+                    for (step in 1..12) {
+                        SystemClock.sleep(25)
+                        scenario.onActivity { touch(picker.grid, down, MotionEvent.ACTION_MOVE, x, start + (end - start) * step / 12f) }
+                    }
+                    // Keep a real stationary interval before release; do not invent future event times.
+                    SystemClock.sleep(300)
+                    scenario.onActivity { touch(picker.grid, down, MotionEvent.ACTION_UP, x, end) }
+                    awaitGridLayout(scenario, picker, "Swipe from rightmost column", change = {}, ready = {
+                        scrollState == AbsListView.OnScrollListener.SCROLL_STATE_IDLE &&
+                            (picker.grid.firstVisiblePosition != beforePosition || picker.grid.getChildAt(0).top != beforeTop)
+                    })
+                    scenario.onActivity { assertEquals("Vertical dragging must not insert emoji", beforeClicks, selected.size) }
+                    tapRightEdge() // The cell is recycled after the scroll; its current entry must be inserted.
+                    scenario.onActivity {
+                        val grid = picker.grid
+                        val down = SystemClock.uptimeMillis()
+                        touch(grid, down, MotionEvent.ACTION_DOWN, grid.width - dp(2).toFloat(), dp(40).toFloat())
+                        touch(grid, down, MotionEvent.ACTION_CANCEL, grid.width - dp(2).toFloat(), dp(40).toFloat())
+                    }
+                    instrumentation.waitForIdleSync()
+                    scenario.onActivity { assertEquals("Cancelled touches must not insert emoji", beforeClicks + 1, selected.size) }
+                }
+                scenario.onActivity {
+                    assertEquals(selected.size, usage.getUsageRecords().sumOf { it.count })
+                    assertEquals(1, picker.currentCategoryIndex)
+                }
+            }
+        } finally { directory.deleteRecursively() }
+    }
+
+    private fun touch(view: View, down: Long, action: Int, x: Float, y: Float) {
+        val event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, x, y, 0)
+        event.source = InputDevice.SOURCE_TOUCHSCREEN
+        try { view.dispatchTouchEvent(event) } finally { event.recycle() }
+    }
+
     @Test fun emojiActionCanBeAssignedAndRoundTripsWithoutLosingLongPress() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
