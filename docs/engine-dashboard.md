@@ -22,21 +22,23 @@
 
 ## 验证记录
 
-2026-10-20，基于 `af4ff70` 的 #8 工作树，debug，专用 Android 15 / API 35 / ARM64 只读模拟器：
+最新完整验证：2026-10-20，PR #13 最终工作树（随后提交为 `3c80ad7`），Android 15 / API 35 / ARM64 专用只读模拟器，35 类共 195 项 debug 设备测试全部通过，包含仪表盘与真实 IME 用例。报告 `app/build/reports/regression/1f9ff757-fce5-445d-87d6-4bd7f2a49bb9/summary.json` 的 `success=true`、`restored=true`；原软件及私有数据恢复校验成功，备份已删除。详细范围见 [测试记录](testing.md#2026-10-20-emoji-连续分区与分类导航)。未验证其他 API/ABI、实体设备或签名 release。
+
+以下保留首次 #8 验收的历史结果，不能将其改写为通过。2026-10-20，基于 `af4ff70` 的 #8 工作树，debug，专用 Android 15 / API 35 / ARM64 只读模拟器：
 
 - 主机编译通过；114 个 JVM 测试、47 个测试工具用例、93 项引擎资源哈希及 E5 重组校验通过；lint 无错误，269 项警告。未验证其他 API/ABI 或签名 release。
-- `dashboard` 的 5 个类共 22 个断言全部通过，包含真实 LatinIME 状态、独立 IPC、配置兼容、真实 IME 预输入保留及设置跳转。报告：`app/build/reports/regression/bdc5e102-978d-48a4-9ad1-321b62bc2b5d/`。
+- `dashboard` 的 5 个类共 22 项测试全部通过，包含真实 LatinIME 状态、独立 IPC、配置兼容、真实 IME 预输入保留及设置跳转。报告：`app/build/reports/regression/bdc5e102-978d-48a4-9ad1-321b62bc2b5d/`。
 - 自动收尾未通过临时运行环境校验，因此上述报告的整体结果仍为失败。随后执行脚本给出的 `restore`，确认原软件与私有数据恢复且备份删除，`pending` 为空，再关闭只读模拟器丢弃临时环境。没有绕过校验或操作实体手机。
 
 首次 #8 验收时，用户确认暂缓以下问题。后续已修复并通过完整回归，见 [2026-10-20 回归失败修复](testing.md#2026-10-20-回归失败修复)；原用例及历史失败报告保留：
 
-| 待处理问题 | 涉及用例 |
+| 当时暂缓的问题（后续已处理） | 涉及用例 |
 | --- | --- |
 | 布局操作已移入 Page Settings 分页，旧测试仍在默认 Group Settings 分页查找按钮 | LayoutManagementTest |
 | 预览区不在 ScrollView 内，旧 scrollTo 定位失败 | KeyEditorTest、EmojiFeatureTest |
 | Delete 同时匹配弹窗标题与按钮 | PageGroupUiTest |
 | 生命周期 trace 的阶段配置未开启文件记录，与测试预期不符 | DiagnosticsContractTest |
-| 真实 IME 中全半角、Emoji、触摸长按与页组切换存在点击/窗口等待失败，原因待进一步隔离 | ImeEndToEndTest、PageGroupImeTest |
-| 回归工具临时运行环境恢复校验失败，需单独定位具体状态差异 | tools/regression.py |
+| 真实 IME 点击/窗口等待失败；后续修复菜单抢占编辑器焦点与节点等待 | ImeEndToEndTest、PageGroupImeTest |
+| 临时运行环境恢复误报；后续区分设备默认 app-op 使用记录与非默认模式配置 | tools/regression.py |
 
-此前完整回归执行 193 个断言，176 通过、17 失败，不能作为完整通过的依据；其中本次新增配置用例的源布局包装读取错误已修正，并在上述专项中通过。完整失败报告：`app/build/reports/regression/4534bd7f-ff13-47b4-9033-400adc40a1d2/`。该轮保留的软件备份也已通过显式恢复验证并删除。
+此前完整回归执行 193 项测试，176 通过、17 失败，不能作为完整通过的依据；其中新增配置用例的源布局包装读取错误已修正，并在上述专项中通过。完整失败报告：`app/build/reports/regression/4534bd7f-ff13-47b4-9033-400adc40a1d2/`。该轮保留的软件备份也已通过显式恢复验证并删除。

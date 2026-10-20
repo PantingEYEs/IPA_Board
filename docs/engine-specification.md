@@ -88,6 +88,6 @@ data class Candidate(
 4. 查询必须能结束，不能无限等待；当前宿主没有统一查询超时。正在执行的调用可能不会因新请求而停止，不能并发释放其资源。
 5. 故障、禁用或无候选不能改变原文提交路径，也不能退出或杀死输入法进程。格式校验不能保证防住原生崩溃或内存耗尽，仍需接入层隔离与回退。
 
-当前已新增 `IPA` 服务路由、`engine_ipa_conversion` 开关和 IPA 诊断映射。IPA 请求与回复还须原样传递 `ipa_resource_generation: String`，宿主据此拒绝资源替换前的过期候选。具体 GraphEngine 适配与独立资源更新合同见 [IPA 更新接口](docs/ipa-updates.md)。
+当前已新增 `IPA` 服务路由、`engine_ipa_conversion` 开关和 IPA 诊断映射。IPA 请求与回复还须原样传递 `ipa_resource_generation: String`，宿主据此拒绝资源替换前的过期候选。具体 GraphEngine 适配与独立资源更新合同见 [IPA 更新接口](ipa-updates.md)。
 
-接口依据：[QueryEngine](app/src/main/java/com/example/ipa_board/ime/MozcEngine.kt)、[Candidate](app/src/main/java/com/example/ipa_board/ime/Candidate.kt)、[服务通信](app/src/main/java/com/example/ipa_board/ime/EngineService.kt)、[请求协调](app/src/main/java/com/example/ipa_board/ime/EngineCoordinator.kt)。
+接口依据：[QueryEngine](../app/src/main/java/com/example/ipa_board/ime/MozcEngine.kt)、[Candidate](../app/src/main/java/com/example/ipa_board/ime/Candidate.kt)、[服务通信](../app/src/main/java/com/example/ipa_board/ime/EngineService.kt)、[请求协调](../app/src/main/java/com/example/ipa_board/ime/EngineCoordinator.kt)。

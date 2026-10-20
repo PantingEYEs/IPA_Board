@@ -1,6 +1,6 @@
 # Emoji catalog and future updates
 
-The bundled `app/src/main/assets/emoji/emoji-test.txt` is the official final Unicode Emoji 18.0 data, retrieved on 2026-09-28. It contains 3,963 fully-qualified emoji plus 9 standalone emoji components. These 3,972 entries form the complete RGI set. Minimally-qualified and unqualified lines are alternate presentations and are deliberately omitted from the picker. Skin tones, genders, ZWJ sequences, keycaps, national and subdivision flags are retained as complete strings.
+The bundled `app/src/main/assets/emoji/emoji-test.txt` is the pinned Unicode Emoji 18.0 catalog, retrieved on 2026-09-28. The picker includes its 3,963 fully-qualified emoji and 9 standalone emoji components, for 3,972 entries. Minimally-qualified and unqualified lines are alternate presentations and are deliberately omitted. Skin tones, genders, ZWJ sequences, keycaps, national and subdivision flags are retained as complete strings. This bundled version does not describe a user's subsequently downloaded catalog or claim to be the latest upstream release.
 
 Provenance, SHA-256, counts and schema version are in `assets/emoji/metadata.json`; Unicode License V3 is included in `assets/emoji/LICENSE.txt`. Latest upstream release: https://www.unicode.org/Public/emoji/latest/ReadMe.txt and https://www.unicode.org/Public/emoji/latest/emoji-test.txt.
 

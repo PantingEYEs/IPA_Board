@@ -2,11 +2,13 @@
 
 客户端入口为 Engine Management → Manage IPA engine and dictionary。检查更新只读取版本；更新引擎只替换 Java DEX 与 JNI 库；更新词典只下载开发侧预先编译的 `.ipad`，保持当前引擎。客户端没有源词库编译功能，也没有输入学习上传。
 
-当前包来自 IPA_Engine 的 `v0.0.1-dev` ARM64 AAR，源发布提交为 `53eed9518f932934a28aceb4e03a453d545f80b8`；客户端更新产物提交为 `af73155fbe7fd819037f2e63fe6d75cd24c2d4a4`，清单已发布于开发分支。词典是 `IPADWG01` v2 的压缩图与词条二进制，包含 1,024,289 个 IPA 编码，支持五个地区；只提供词条转换，不提供下一词预测。数据来源声明保存在打包的 lexicon.manifest.json 与 licenses/IPA-Engine-THIRD_PARTY_NOTICES.json。
+内置包来自 IPA_Engine 的 `v0.0.1-dev` ARM64 AAR，源发布提交为 `53eed9518f932934a28aceb4e03a453d545f80b8`。内置词典是 `IPADWG01` v2 的压缩图与词条二进制，包含 1,024,289 个 IPA 编码，支持五个地区；只提供词条转换，不提供下一词预测。数据来源声明保存在打包的 lexicon.manifest.json 与 licenses/IPA-Engine-THIRD_PARTY_NOTICES.json。这些是内置基线，不表示上游最新版；活动版本以客户端资源页为准。
 
 ## 开发侧提供的文件
 
 客户端读取 `PantingEYEs/IPA_Engine` 的 `codex/ipa-engine-v0.0.1-dev` 分支。直接读取分支上的 `board-update.json`，随后从清单指定的 artifactCommit 下载文件，避免版本检查与下载时资源混用，也不依赖有公共限流的 GitHub REST API。
+
+**发布位置是固定合同。** 只创建新 tag、GitHub Release，或将文件提交到其他分支，不会被当前客户端发现；缺失根目录清单、字段不符或产物不可获取会使检查/更新失败。上游发布新版后，必须同时在上述分支更新清单并正确固定产物提交。修改客户端跟踪分支需修改代码并发布应用，不能由引擎版本号自动切换。
 
 `board-update.json` 为 UTF-8 JSON，格式示例见 [内置 client.json](../app/src/main/assets/engines/ipa/bundled/client.json)。必需字段：
 
@@ -15,7 +17,7 @@
 | artifactCommit | 产物已发布提交的 40 位小写 SHA；只在远程 board-update.json 必需 |
 | schemaVersion / entryPoint | `1` / `com.ipaengine.graph.GraphEngine` |
 | engineVersion / dictionaryVersion | 分别显示的版本字符串，长度 1–100；词典版本独立变更 |
-| abi / minSdk | 当前为 `arm64-v8a` / `26` |
+| abi / minSdk | abi 必须为 `arm64-v8a`；minSdk 是引擎最低 API，当前解析器接受 26–36，内置为 26。IPA Board 自身最低 API 仍为 35 |
 | dictionaryFormat / dictionaryKeys | 当前为 `2` / IPA 编码数，1–2,000,000 |
 | dexPath / nativePath / dictionaryPath | 同仓库内相对路径；不允许外部 URL、绝对路径或 `..` |
 | dexBytes / nativeBytes / dictionaryBytes | 实际文件长度，上限分别为 4 MB、8 MB、40 MB |
