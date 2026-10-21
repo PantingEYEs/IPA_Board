@@ -327,7 +327,7 @@ class IpaBoardService : InputMethodService() {
         KeyboardRenderer.render(this, view.keyboardHost, layout, height, Color.parseColor(appearance.symbolColor),
             popupBgColor = popupBgColor,
             popupSymbolColor = popupSymbolColor,
-            shiftEnabled = inputController.shiftEnabled, ctrlEnabled = inputController.ctrlEnabled,
+            shiftState = inputController.shiftState, ctrlEnabled = inputController.ctrlEnabled,
             showKeyPreview = true,
             fontSizeSp = appearance.fontSizeSp,
             showGrid = appearance.showGrid,

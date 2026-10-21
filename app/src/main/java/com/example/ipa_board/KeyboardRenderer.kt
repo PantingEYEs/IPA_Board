@@ -2,6 +2,7 @@ package com.example.ipa_board
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.ViewGroup
@@ -14,7 +15,7 @@ object KeyboardRenderer {
     fun render(context: Context, container: ViewGroup, layout: KeyboardLayout, heightPx: Int, symbolColor: Int,
         popupBgColor: Int = Color.WHITE,
         popupSymbolColor: Int = Color.BLACK,
-        shiftEnabled: Boolean = false,
+        shiftState: ShiftState = ShiftState.OFF,
         ctrlEnabled: Boolean = false,
         showUnassignedPlaceholders: Boolean = false,
         showKeyPreview: Boolean = false,
@@ -26,6 +27,7 @@ object KeyboardRenderer {
         onKeyClick: ((Int, Int, KeySlot) -> Unit)? = null
     ) {
         container.removeAllViews()
+        val shiftEnabled = shiftState != ShiftState.OFF
         
         val totalWeight = layout.rows.sumOf { it.heightWeight.toDouble() }.toFloat()
 
@@ -45,17 +47,26 @@ object KeyboardRenderer {
             }
 
             for ((columnIndex, slot) in row.slots.withIndex()) {
+                val capsLocked = slot.action == KeyAction.SHIFT && shiftState == ShiftState.CAPS_LOCK
+                val functionLabel = if (capsLocked) context.getString(R.string.caps_lock_label) else slot.action.keyLabel
                 val active = (slot.action == KeyAction.SHIFT && shiftEnabled) ||
                     (slot.action == KeyAction.CTRL && ctrlEnabled)
                 val slotView = FrameLayoutWithBorder(context, symbolColor, active, showGrid).apply {
                     isSelected = active
+                    if (slot.action == KeyAction.SHIFT) {
+                        stateDescription = context.getString(when (shiftState) {
+                            ShiftState.OFF -> R.string.shift_state_off
+                            ShiftState.SINGLE -> R.string.shift_state_once
+                            ShiftState.CAPS_LOCK -> R.string.caps_lock_label
+                        })
+                    }
                     previewEnabled = showKeyPreview
                     this.popupBgColor = popupBgColor
                     this.popupSymbolColor = popupSymbolColor
                     this.shiftEnabled = shiftEnabled
                     this.ctrlEnabled = ctrlEnabled
                     tapPreview = when {
-                        slot.action != KeyAction.TEXT -> slot.action.keyLabel
+                        slot.action != KeyAction.TEXT -> functionLabel
                         slot.text == " " -> "␣"
                         slot.text == "\n" -> "↵"
                         slot.text == "\t" -> "⇥"
@@ -80,10 +91,15 @@ object KeyboardRenderer {
                 }
                 
                 val unassigned = slot.action == KeyAction.TEXT && slot.text.isEmpty()
-                val label = if (unassigned && !showUnassignedPlaceholders) "" else slot.displayText(shiftEnabled)
+                val label = when {
+                    capsLocked -> functionLabel
+                    unassigned && !showUnassignedPlaceholders -> ""
+                    else -> slot.displayText(shiftEnabled)
+                }
                 val textView = TextView(context).apply {
                     textSize = fontSizeSp.coerceIn(SettingsConstants.MIN_KEYBOARD_FONT_SIZE, SettingsConstants.MAX_KEYBOARD_FONT_SIZE).toFloat()
                     text = label + if (active) " •" else ""
+                    setTypeface(null, if (capsLocked) Typeface.BOLD else Typeface.NORMAL)
                     maxLines = 2
                     gravity = Gravity.CENTER
                     setTextColor(symbolColor)

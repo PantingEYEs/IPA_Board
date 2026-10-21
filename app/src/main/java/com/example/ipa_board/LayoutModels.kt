@@ -247,7 +247,7 @@ enum class KeyAction(val wireValue: String, val title: String, val keyLabel: Str
     RIGHT("right", "Arrow Right", "→", "Move the cursor right. Shift extends the selection."),
     UP("up", "Arrow Up", "↑", "Move the cursor up. Shift extends the selection."),
     DOWN("down", "Arrow Down", "↓", "Move the cursor down. Shift extends the selection."),
-    SHIFT("shift", "Shift / Uppercase", "Shift", "Toggle uppercase text and Shift navigation. Tap again to turn off."),
+    SHIFT("shift", "Shift / Uppercase", "Shift", "Tap once for temporary Shift, again for Caps Lock, and once more to turn off."),
     CTRL("ctrl", "Ctrl", "Ctrl", "Apply Ctrl to the next key. Use single letters for shortcuts, such as Ctrl+A. Support depends on the receiving app."),
     ENTER("enter", "Enter", "↵", "Run the text field action, or insert a new line in a multiline field."),
     TAB("tab", "Tab", "Tab", "Send Tab. Focus movement depends on the receiving app."),

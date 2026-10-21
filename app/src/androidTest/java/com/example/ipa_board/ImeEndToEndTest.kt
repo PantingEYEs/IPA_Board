@@ -25,6 +25,53 @@ class ImeEndToEndTest {
     private fun find(predicate: (AccessibilityNodeInfo) -> Boolean) = driver.find(predicate)
     private fun awaitNode(predicate: (AccessibilityNodeInfo) -> Boolean) = driver.awaitNode(predicate)
 
+    @Test fun capsLockIndicatorTracksTemporaryShiftLockedInputAndUnlocking() {
+        val layout = KeyboardLayout("Caps Lock E2E", listOf(RowLayout(1f, listOf(
+            KeySlot(1f, action = KeyAction.SHIFT), KeySlot(1f, "a"),
+            KeySlot(1f, "b"), KeySlot(1f, action = KeyAction.ENTER)
+        ))))
+        withIsolatedKeyboard(listOf(layout)) { scenario, _ ->
+            fun key(column: Int) = driver.click {
+                it.contentDescription?.toString()?.startsWith("Row 1, key $column:") == true
+            }
+            fun state(description: String, selected: Boolean) {
+                val shift = awaitNode {
+                    it.contentDescription?.toString()?.startsWith("Row 1, key 1:") == true &&
+                        it.stateDescription?.toString() == description
+                }
+                assertEquals(selected, shift.isSelected)
+            }
+            state("Shift off", false)
+            key(1)
+            state("Shift once", true)
+            key(2)
+            state("Shift off", false)
+            awaitEditorText(scenario, "A", composing = true)
+            key(4)
+            awaitEditorText(scenario, "A", composing = false)
+
+            key(1)
+            state("Shift once", true)
+            key(1)
+            state("Caps Lock", true)
+            key(2)
+            key(3)
+            awaitEditorText(scenario, "AAB", composing = true)
+            state("Caps Lock", true)
+            key(4)
+            awaitEditorText(scenario, "AAB", composing = false)
+            state("Caps Lock", true)
+
+            key(1)
+            state("Shift off", false)
+            key(2)
+            awaitEditorText(scenario, "AABa", composing = true)
+            key(4)
+            awaitEditorText(scenario, "AABa", composing = false)
+            state("Shift off", false)
+        }
+    }
+
     @Test fun widthSwapToolbarAndBoundGesturesTransformExactlyOnce() {
         val original = "aＡ1１,， 😀ɑ中"
         val swapped = "ａA１1，,　😀ɑ中"
@@ -39,7 +86,7 @@ class ImeEndToEndTest {
             )),
             RowLayout(1f, listOf(KeySlot(1f, action = KeyAction.CANDIDATES)))
         ))
-        withWidthSwapKeyboard(listOf(layout, layout.copy(name = "Width Swap E2E alternate"))) { scenario, pages ->
+        withIsolatedKeyboard(listOf(layout, layout.copy(name = "Width Swap E2E alternate"))) { scenario, pages ->
             fun key(column: Int, action: Int = AccessibilityNodeInfo.ACTION_CLICK) {
                 driver.click(action) { it.contentDescription?.toString()?.startsWith("Row 1, key $column:") == true }
             }
@@ -114,7 +161,7 @@ class ImeEndToEndTest {
             KeySlot(1f, action = KeyAction.WIDTH_SWAP),
             KeySlot(1f, action = KeyAction.ENTER)
         ))))
-        withWidthSwapKeyboard(listOf(layout)) { scenario, _ ->
+        withIsolatedKeyboard(listOf(layout)) { scenario, _ ->
             assertTrue(awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" }
                 .performAction(AccessibilityNodeInfo.ACTION_CLICK))
             awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" && it.stateDescription?.toString() == "开启" }
@@ -150,7 +197,7 @@ class ImeEndToEndTest {
         assertEquals("The editor's composing state must match the input session", composing, composingStart >= 0)
     }
 
-    private fun withWidthSwapKeyboard(
+    private fun withIsolatedKeyboard(
         layouts: List<KeyboardLayout>,
         body: (ActivityScenario<ImeTestEditorActivity>, List<String>) -> Unit
     ) {
