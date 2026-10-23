@@ -592,10 +592,11 @@ class KeyboardPageActivity : Activity() {
         }
     }
 
-    private fun showKeyEditor(row: Int, column: Int) {
+    private fun showKeyEditor(row: Int, column: Int, restoredDraft: KeySlot? = null) {
         val filename = editingFilename ?: return
         val layout = LayoutFileManager.loadLayout(this, filename) ?: return
-        val slot = layout.rows[row].slots[column]
+        val originalSlot = layout.rows[row].slots[column]
+        val slot = restoredDraft ?: originalSlot
         val editorView = layoutInflater.inflate(R.layout.dialog_key_editor, null)
         val input = editorView.findViewById<EditText>(R.id.et_key_text)
         val longPressTypes = editorView.findViewById<Spinner>(R.id.sp_long_press_type)
@@ -614,6 +615,36 @@ class KeyboardPageActivity : Activity() {
 
         swipeLeftInput.setText(slot.swipeLeftText)
         swipeRightInput.setText(slot.swipeRightText)
+
+        val mode = editorView.findViewById<Spinner>(R.id.sp_multifunction_mode)
+        mode.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("Classic", "Popup"))
+        mode.setSelection(MultifunctionMode.entries.indexOf(slot.multifunctionMode))
+        val classicEditor = editorView.findViewById<View>(R.id.classic_multifunction_editor)
+        val popupHost = editorView.findViewById<android.widget.FrameLayout>(R.id.popup_multifunction_editor)
+        var popupEditor: PopupActionEditorView? = null
+        val keyView = (previewContainer.getChildAt(row) as? ViewGroup)?.getChildAt(column)
+        val keyHeight = keyView?.height?.takeIf { it > 0 } ?: (48 * resources.displayMetrics.density).toInt()
+        val defaultPopup = KeyPreviewMetrics.initialPopup(this, keyHeight,
+            slot.effectiveLongPressItems.firstOrNull()?.previewText() ?: slot.displayText())
+        fun updateMode() {
+            val popup = MultifunctionMode.entries[mode.selectedItemPosition] == MultifunctionMode.POPUP
+            if (popup && popupEditor == null) {
+                val appearance = PageGroupManager.active(this).appearance
+                popupEditor = PopupActionEditorView(this, slot.popupConfiguration ?: defaultPopup).also {
+                    it.resetConfiguration = defaultPopup
+                    it.setPopupColors(Color.parseColor(appearance.popupBackgroundColor), Color.parseColor(appearance.popupSymbolColor))
+                    it.setPointerColors(Color.parseColor(appearance.pointerAxisColor), Color.parseColor(appearance.pointerCrosshairColor), appearance.usePointerDifferenceBlend)
+                    popupHost.addView(it)
+                }
+            }
+            classicEditor.visibility = if (popup) View.GONE else View.VISIBLE
+            popupHost.visibility = if (popup) View.VISIBLE else View.GONE
+        }
+        mode.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = updateMode()
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+        updateMode()
 
         val types = editorView.findViewById<Spinner>(R.id.sp_key_type)
         val behavior = editorView.findViewById<Spinner>(R.id.sp_text_behavior)
@@ -684,6 +715,45 @@ class KeyboardPageActivity : Activity() {
         updateEditor()
         updateLongPressEditor()
         updateSwipeEditors()
+        fun currentDraft(): KeySlot {
+            val action = actions[types.selectedItemPosition]
+            val lpAction = actions[longPressTypes.selectedItemPosition]
+            val unchangedHold = lpAction == slot.longPressAction && longPressInput.text.toString() == currentLpText
+            val lpText = if (unchangedHold) slot.longPressText else if (lpAction == KeyAction.TEXT) longPressInput.text.toString() else ""
+            val items = if (unchangedHold) slot.longPressItems else if (lpAction == KeyAction.TEXT) {
+                LongPressTextCodec.parse(lpText).map { LongPressItem(text = it) }
+            } else listOf(LongPressItem(action = lpAction))
+            val slAction = actions[swipeLeftTypes.selectedItemPosition]
+            val srAction = actions[swipeRightTypes.selectedItemPosition]
+            return slot.copy(
+                action = action, text = if (action == slot.action && input.text.toString() == slot.text) slot.text else if (action == KeyAction.TEXT) input.text.toString() else "",
+                textBehavior = TextBehavior.entries[behavior.selectedItemPosition],
+                longPressText = lpText, longPressAction = lpAction, longPressItems = items,
+                swipeLeftAction = slAction,
+                swipeLeftText = if (slAction == slot.swipeLeftAction && swipeLeftInput.text.toString() == slot.swipeLeftText) slot.swipeLeftText else if (slAction == KeyAction.TEXT) swipeLeftInput.text.toString() else "",
+                swipeRightAction = srAction,
+                swipeRightText = if (srAction == slot.swipeRightAction && swipeRightInput.text.toString() == slot.swipeRightText) slot.swipeRightText else if (srAction == KeyAction.TEXT) swipeRightInput.text.toString() else "",
+                multifunctionMode = MultifunctionMode.entries[mode.selectedItemPosition],
+                popupConfiguration = popupEditor?.configuration ?: slot.popupConfiguration)
+        }
+        fun showOperationUndo(message: Int, undo: () -> Unit) {
+            com.google.android.material.snackbar.Snackbar.make(findViewById(android.R.id.content), message,
+                com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+                .setAction(R.string.popup_edit_undo) { undo() }.show()
+        }
+        var completed = false
+        fun cancelEditing() {
+            if (completed) return
+            completed = true
+            if (popupEditor != null || slot.multifunctionMode == MultifunctionMode.POPUP) {
+                val draft = currentDraft()
+                showOperationUndo(R.string.popup_edit_cancelled) {
+                    val current = LayoutFileManager.loadLayout(this, filename)?.rows?.getOrNull(row)?.slots?.getOrNull(column)
+                    if (editingFilename == filename && current == originalSlot) showKeyEditor(row, column, draft)
+                    else Toast.makeText(this, R.string.popup_edit_conflict, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
         val dialog = AlertDialog.Builder(this)
             .setTitle("Row ${row + 1} · Key ${column + 1}")
             .setMessage(R.string.key_edit_message)
@@ -691,39 +761,30 @@ class KeyboardPageActivity : Activity() {
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Save", null)
             .create()
+        dialog.setOnCancelListener { cancelEditing() }
         dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener { cancelEditing(); dialog.dismiss() }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 try {
-                    val action = actions[types.selectedItemPosition]
-                    val text = if (action == KeyAction.TEXT) input.text.toString() else ""
-                    val lpAction = actions[longPressTypes.selectedItemPosition]
-                    val lpText = if (lpAction == KeyAction.TEXT) longPressInput.text.toString() else ""
-                    val items = if (lpAction == KeyAction.TEXT && lpText.isNotEmpty()) {
-                        LongPressTextCodec.parse(lpText).map { LongPressItem(text = it) }
-                    } else if (lpAction != KeyAction.TEXT) {
-                        listOf(LongPressItem(action = lpAction))
-                    } else {
-                        emptyList()
-                    }
-
-                    val slAction = actions[swipeLeftTypes.selectedItemPosition]
-                    val slText = if (slAction == KeyAction.TEXT) swipeLeftInput.text.toString() else ""
-
-                    val srAction = actions[swipeRightTypes.selectedItemPosition]
-                    val srText = if (srAction == KeyAction.TEXT) swipeRightInput.text.toString() else ""
-
-                    LayoutFileManager.saveLayout(
-                        this, filename,
-                        layout.withKeyMapping(
-                            row, column, text, action, TextBehavior.entries[behavior.selectedItemPosition],
-                            longPressText = lpText, longPressAction = lpAction, longPressItems = items,
-                            swipeLeftText = slText, swipeLeftAction = slAction,
-                            swipeRightText = srText, swipeRightAction = srAction
-                        )
-                    )
+                    val draft = currentDraft()
+                    val saved = if (draft.multifunctionMode == MultifunctionMode.POPUP)
+                        draft.copy(popupConfiguration = draft.popupConfiguration?.let(PopupGeometry::filterForSave))
+                    else draft
+                    replaceEditedSlot(filename, row, column, originalSlot, saved)
                     clearedLayout = null
                     refreshPreview()
+                    completed = true
                     dialog.dismiss()
+                    if (popupEditor != null || slot.multifunctionMode == MultifunctionMode.POPUP) {
+                        showOperationUndo(R.string.popup_edit_saved) {
+                            try {
+                                replaceEditedSlot(filename, row, column, saved, originalSlot)
+                                refreshPreview()
+                            } catch (_: Exception) {
+                                Toast.makeText(this, R.string.popup_edit_conflict, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
                 } catch (e: Exception) {
                     error.text = "Failed to save: ${e.message}"
                     error.visibility = View.VISIBLE
@@ -731,6 +792,15 @@ class KeyboardPageActivity : Activity() {
             }
         }
         dialog.show()
+    }
+
+    /** An operation-level Undo may only restore its own key, never overwrite later layout edits. */
+    private fun replaceEditedSlot(filename: String, row: Int, column: Int, expected: KeySlot, replacement: KeySlot) {
+        val current = requireNotNull(LayoutFileManager.loadLayout(this, filename))
+        check(current.rows.getOrNull(row)?.slots?.getOrNull(column) == expected) { "Key settings have changed" }
+        LayoutFileManager.saveLayout(this, filename, current.copy(rows = current.rows.mapIndexed { r, value ->
+            if (r != row) value else value.copy(slots = value.slots.mapIndexed { c, key -> if (c == column) replacement else key })
+        }))
     }
 
     private fun showNewLayoutDialog() {

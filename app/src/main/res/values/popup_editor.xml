@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="popup_editor_help">Select an object to edit. Drag empty space to pan; double-tap to center.</string>
+    <string name="popup_editor_viewport">Popup editor viewport</string>
+    <string name="popup_editor_shape_constraint">Popup shape constraint</string>
+    <string name="popup_editor_uniform">Uniform</string>
+    <string name="popup_editor_freeform">Freeform</string>
+    <string name="popup_editor_distort">Distort</string>
+    <string name="popup_editor_rotate">Rotate</string>
+    <string name="popup_editor_undo">Undo</string>
+    <string name="popup_editor_redo">Redo</string>
+    <string name="popup_editor_add_item">Add Item</string>
+    <string name="popup_editor_reset">Reset</string>
+    <string name="popup_editor_reset_notice">Popup reset</string>
+    <string name="popup_editor_item_function">Popup item function</string>
+    <string name="popup_editor_text">Text</string>
+    <string name="popup_editor_item_text">Popup item text</string>
+    <string name="popup_editor_layer">Layer %1$d of %2$d</string>
+    <string name="popup_editor_bring_front">Bring to Front</string>
+    <string name="popup_editor_move_up">Move Up</string>
+    <string name="popup_editor_move_down">Move Down</string>
+    <string name="popup_editor_item_title">Popup item</string>
+    <string name="popup_editor_cancel">Cancel</string>
+    <string name="popup_editor_save">Save</string>
+    <string name="popup_editor_text_limit">Maximum 1000 characters</string>
+</resources>
