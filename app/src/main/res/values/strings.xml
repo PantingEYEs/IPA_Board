@@ -77,4 +77,10 @@
     <string name="diagnostics_clear_log">Clear Log</string>
     <string name="diagnostics_log_exported">Log file exported successfully</string>
     <string name="diagnostics_log_cleared">Log file cleared</string>
+    <string name="remote_keyboard_on">Remote keyboard mode on</string>
+    <string name="remote_keyboard_off">Remote keyboard mode off</string>
+    <string name="remote_keyboard_enabled">Remote keyboard mode on. Original engine settings saved.</string>
+    <string name="remote_keyboard_restored">Remote keyboard mode off. Original engine settings restored.</string>
+    <string name="remote_keyboard_storage_failed">Could not save engine settings. The change could not be completed; try again.</string>
+    <string name="remote_keyboard_invalid_state">Saved engine settings could not be read. They have been kept for recovery; no settings were changed.</string>
 </resources>

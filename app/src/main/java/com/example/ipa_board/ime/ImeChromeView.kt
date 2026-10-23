@@ -41,6 +41,8 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     var onLiteral: () -> Unit = {}
     var onPanel: (Panel) -> Unit = {}
     var onCalculatorToggle: () -> Unit = {}
+    var onRemoteKeyboardToggle: () -> Unit = {}
+    private val remoteKeyboardBtn = toolbarButton("⌁", "Remote Keyboard Mode") { onRemoteKeyboardToggle() }
     var onWidthSwapToggle: (() -> Unit)? = null
     private val widthSwapBtn = toolbarButton("◩", "全角 / 半角转换") { onWidthSwapToggle?.invoke() }
     private val calcBtn = toolbarButton("∑", "Calculator") { onCalculatorToggle() }
@@ -60,6 +62,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
                 setMargins(dp(6), 0, dp(6), 0)
             })
             addView(statusContainer, LayoutParams(0, dp(28), 1f))
+            addView(remoteKeyboardBtn)
             addView(widthSwapBtn)
             addView(calcBtn)
         }
@@ -74,6 +77,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         overlay.isClickable = true
         body.addView(overlay, FrameLayout.LayoutParams(-1, -1))
         addView(body, LayoutParams(-1, dp(210)))
+        setRemoteKeyboardEnabled(false)
         setWidthSwapEnabled(false)
         setCalculatorEnabled(false)
         showPanel(Panel.KEYBOARD)
@@ -103,6 +107,13 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
 
     fun setCalculatorEnabled(enabled: Boolean) {
         calcBtn.alpha = if (enabled) 1.0f else 0.5f
+    }
+
+    fun setRemoteKeyboardEnabled(enabled: Boolean) {
+        remoteKeyboardBtn.isSelected = enabled
+        remoteKeyboardBtn.stateDescription = context.getString(if (enabled)
+            com.example.ipa_board.R.string.remote_keyboard_on else com.example.ipa_board.R.string.remote_keyboard_off)
+        remoteKeyboardBtn.alpha = if (enabled) 1f else 0.5f
     }
 
     fun setWidthSwapEnabled(enabled: Boolean) {

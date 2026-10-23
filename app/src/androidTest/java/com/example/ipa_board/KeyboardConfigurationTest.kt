@@ -8,6 +8,53 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class KeyboardConfigurationTest {
+    @Test fun remoteKeyboardBindingsPreserveIndependentTapHoldSwipeAndModifierMappings() {
+        val action = KeyAction.REMOTE_KEYBOARD
+        val layout = KeyboardLayout("Remote mappings", listOf(RowLayout(1f, listOf(
+            KeySlot(1f, "ɑ", longPressAction = action,
+                swipeLeftText = "‹", swipeRightAction = KeyAction.ENTER),
+            KeySlot(2f, action = action, longPressItems = listOf(LongPressItem(text = "β")),
+                swipeLeftAction = action, swipeRightText = "›"),
+            KeySlot(1f, "c", swipeRightAction = action)
+        ))))
+        val exported = layout.toJson()
+        val slots = JSONObject(exported).getJSONArray("rows").getJSONObject(0).getJSONArray("slots")
+        assertEquals("remote_keyboard", slots.getJSONObject(0).getString("longPressAction"))
+        assertEquals("remote_keyboard", slots.getJSONObject(1).getString("action"))
+        assertEquals("remote_keyboard", slots.getJSONObject(1).getString("swipeLeftAction"))
+        assertEquals("remote_keyboard", slots.getJSONObject(2).getString("swipeRightAction"))
+        val restored = KeyboardLayout.fromJson(exported)
+        assertEquals(layout, restored)
+        assertEquals("ɑ", restored.rows.single().slots[0].text)
+        assertEquals("β", restored.rows.single().slots[1].effectiveLongPressItems.single().text)
+
+        val shift = mapOf("r" to action, "c" to KeyAction.COPY)
+        val ctrl = mapOf("r" to KeyAction.PASTE, "c" to action)
+        assertEquals(shift, SettingsConstants.parseShortcutsJson(SettingsConstants.serializeShortcutsJson(shift)))
+        assertEquals(ctrl, SettingsConstants.parseShortcutsJson(SettingsConstants.serializeShortcutsJson(ctrl)))
+    }
+
+    @Test fun remoteKeyboardHasNoEntryInBundledOrDefaultLayouts() {
+        val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val directory = "initialization/keyboards"
+        val bundled = context.assets.list(directory).orEmpty().filter { it.endsWith(".json") }.map { name ->
+            context.assets.open("$directory/$name").bufferedReader().use {
+                val document = JSONObject(it.readText())
+                KeyboardLayout.fromJson((document.optJSONObject("layout") ?: document).toString())
+            }
+        }
+        for (layout in bundled + SettingsConstants.DEFAULT_LAYOUT + com.example.ipa_board.ime.BuiltinLayouts.mixed) {
+            for (key in layout.rows.flatMap { it.slots }) {
+                assertNotEquals(KeyAction.REMOTE_KEYBOARD, key.action)
+                assertTrue(key.effectiveLongPressItems.none { it.action == KeyAction.REMOTE_KEYBOARD })
+                assertNotEquals(KeyAction.REMOTE_KEYBOARD, key.effectiveSwipeLeftItem?.action)
+                assertNotEquals(KeyAction.REMOTE_KEYBOARD, key.effectiveSwipeRightItem?.action)
+            }
+        }
+
+    }
+
     @Test fun dashboardBindingsSurviveLayoutExportAndDoNotAppearInDefaultLayouts() {
         val action = KeyAction.ENGINE_DASHBOARD
         val layout = KeyboardLayout("Dashboard mapping", listOf(RowLayout(1f, listOf(
@@ -74,6 +121,7 @@ class KeyboardConfigurationTest {
             KeyAction.EMOJI to "emoji",
             KeyAction.KAOMOJI to "kaomoji",
             KeyAction.CALCULATOR to "calculator",
+            KeyAction.REMOTE_KEYBOARD to "remote_keyboard",
             KeyAction.CANDIDATES to "candidates",
             KeyAction.CLIPBOARD to "clipboard",
             KeyAction.PAGES to "pages"

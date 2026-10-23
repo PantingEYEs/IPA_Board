@@ -21,6 +21,7 @@ object KeyboardRenderer {
         showKeyPreview: Boolean = false,
         fontSizeSp: Int = SettingsConstants.DEFAULT_KEYBOARD_FONT_SIZE,
         showGrid: Boolean = true,
+        remoteKeyboardEnabled: Boolean = false,
         onKeyQuickSwipeItemClick: ((Int, Int, KeySlot, LongPressItem) -> Unit)? = null,
         onKeyLongItemClick: ((Int, Int, KeySlot, LongPressItem) -> Unit)? = null,
         onKeyLongClick: ((Int, Int, KeySlot) -> Unit)? = null,
@@ -50,7 +51,8 @@ object KeyboardRenderer {
                 val capsLocked = slot.action == KeyAction.SHIFT && shiftState == ShiftState.CAPS_LOCK
                 val functionLabel = if (capsLocked) context.getString(R.string.caps_lock_label) else slot.action.keyLabel
                 val active = (slot.action == KeyAction.SHIFT && shiftEnabled) ||
-                    (slot.action == KeyAction.CTRL && ctrlEnabled)
+                    (slot.action == KeyAction.CTRL && ctrlEnabled) ||
+                    (slot.action == KeyAction.REMOTE_KEYBOARD && remoteKeyboardEnabled)
                 val slotView = FrameLayoutWithBorder(context, symbolColor, active, showGrid).apply {
                     isSelected = active
                     if (slot.action == KeyAction.SHIFT) {
@@ -59,6 +61,9 @@ object KeyboardRenderer {
                             ShiftState.SINGLE -> R.string.shift_state_once
                             ShiftState.CAPS_LOCK -> R.string.caps_lock_label
                         })
+                    } else if (slot.action == KeyAction.REMOTE_KEYBOARD) {
+                        stateDescription = context.getString(if (remoteKeyboardEnabled)
+                            R.string.remote_keyboard_on else R.string.remote_keyboard_off)
                     }
                     previewEnabled = showKeyPreview
                     this.popupBgColor = popupBgColor

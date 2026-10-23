@@ -258,6 +258,7 @@ enum class KeyAction(val wireValue: String, val title: String, val keyLabel: Str
     WIDTH_SWAP("width_swap", "全角 / 半角转换", "◩", "Off by default. When enabled, swap full-width and half-width forms of typed characters that have a width counterpart. Tap again to turn off."),
     CALCULATOR("calculator", "计算器", "∑", "Toggle calculator mode. Evaluate math expressions and output results as candidates."),
     ENGINE_DASHBOARD("engine_dashboard", "Engine Dashboard", "◷", "Open the read-only engine dashboard. Return closes the panel."),
+    REMOTE_KEYBOARD("remote_keyboard", "Remote Keyboard Mode", "⌁", "Save and disable all input engines. Press again to restore their original settings, including after an app restart. Manually enabled engines remain enabled until restoration. No built-in remote connection is required."),
     CANDIDATES("candidates", "Candidates", "⋯", "Open the candidate word list panel."),
     CLIPBOARD("clipboard", "Clipboard", "⧉", "Open the clipboard panel. Tap an item to insert it; Return closes the panel."),
     PAGES("pages", "Keyboard Pages", "⊞", "Open the keyboard page picker panel to switch active layouts."),

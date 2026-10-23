@@ -37,11 +37,16 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
             // DIAGNOSTICS: an asset generation is a new request, even when preedit is unchanged.
             query(revision, raw, beforeCursor, afterCursor)
         } else if (EngineSettings.isKey(key) && !closed) {
-            policy = EngineSettings.snapshot(preferences)
-            semantic.preferenceChanged()
-            syncBindings()
-            query(revision, raw, beforeCursor, afterCursor)
-            runtimeListeners.toList().forEach { it() }
+            val nextPolicy = EngineSettings.snapshot(preferences)
+            // A single remote-mode transaction changes many keys. Each callback sees the
+            // complete policy; apply it once rather than restarting queries for every key.
+            if (policy != nextPolicy) {
+                policy = nextPolicy
+                semantic.preferenceChanged()
+                syncBindings()
+                query(revision, raw, beforeCursor, afterCursor)
+                runtimeListeners.toList().forEach { it() }
+            }
         }
     }
     private val clients = listOf(Client(RimeService::class.java, "ZH"), Client(MozcService::class.java, "JA"),

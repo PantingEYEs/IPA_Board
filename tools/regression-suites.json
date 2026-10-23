@@ -26,7 +26,9 @@
         "com.example.ipa_board.InstalledEmojiCatalogTest",
         "com.example.ipa_board.EngineVersionLookupContractTest",
         "com.example.ipa_board.DiagnosticsContractTest",
-        "com.example.ipa_board.IpaResourceManagerTest"
+        "com.example.ipa_board.IpaResourceManagerTest",
+        "com.example.ipa_board.RemoteKeyboardModeTest",
+        "com.example.ipa_board.RemoteKeyboardEnginePolicyTest"
       ]
     },
     "engines": {
@@ -59,7 +61,8 @@
         "com.example.ipa_board.ImeEndToEndTest",
         "com.example.ipa_board.EnglishImeIntegrationTest",
         "com.example.ipa_board.PageGroupImeTest",
-        "com.example.ipa_board.EngineDashboardImeTest"
+        "com.example.ipa_board.EngineDashboardImeTest",
+        "com.example.ipa_board.RemoteKeyboardModeImeTest"
       ]
     },
     "semantic": {
@@ -103,7 +106,10 @@
         "com.example.ipa_board.IpaEngineRuntimeTest",
         "com.example.ipa_board.IpaEngineManagementUiTest",
         "com.example.ipa_board.EngineDashboardTest",
-        "com.example.ipa_board.EngineDashboardImeTest"
+        "com.example.ipa_board.EngineDashboardImeTest",
+        "com.example.ipa_board.RemoteKeyboardModeTest",
+        "com.example.ipa_board.RemoteKeyboardEnginePolicyTest",
+        "com.example.ipa_board.RemoteKeyboardModeImeTest"
       ]
     },
     "ipa": {
@@ -126,6 +132,17 @@
         "com.example.ipa_board.KeyboardConfigurationTest",
         "com.example.ipa_board.ImeChromeTest",
         "com.example.ipa_board.EngineControlsTest"
+      ]
+    },
+    "remote-keyboard": {
+      "classes": [
+        "com.example.ipa_board.RemoteKeyboardModeTest",
+        "com.example.ipa_board.RemoteKeyboardEnginePolicyTest",
+        "com.example.ipa_board.RemoteKeyboardModeImeTest",
+        "com.example.ipa_board.KeyboardConfigurationTest",
+        "com.example.ipa_board.EngineControlsTest",
+        "com.example.ipa_board.KeyboardInputControllerTest",
+        "com.example.ipa_board.ImeChromeTest"
       ]
     }
   }
