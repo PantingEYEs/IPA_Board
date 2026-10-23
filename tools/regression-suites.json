@@ -141,7 +141,8 @@
         "com.example.ipa_board.RemoteKeyboardModeImeTest",
         "com.example.ipa_board.KeyboardConfigurationTest",
         "com.example.ipa_board.EngineControlsTest",
-        "com.example.ipa_board.KeyboardInputControllerTest"
+        "com.example.ipa_board.KeyboardInputControllerTest",
+        "com.example.ipa_board.ImeChromeTest"
       ]
     }
   }

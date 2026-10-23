@@ -251,3 +251,9 @@ Shift / Caps Lock 指示由 `KeyboardWindowTest`（ui/full）验证真实控制�
 - 使用独立临时 Android 15 / API 35 / `arm64-v8a` 模拟器，未操作已连接的实体手机或既有模拟器。`remote-keyboard` 专项 6 类 **50 项全部通过**，报告 `app/build/reports/regression/bf25a3aa-d30a-4bbf-a217-c1dc84e1d1c8/summary.json`，`success=true`、`restored=true`、`roundtrip_verified=true`；额外验证了安装 APK 及合成 CE/DE 私有数据往返恢复。
 - 最终 `full` 的 38 类 **216 项全部通过**，0 失败、0 跳过。报告 `app/build/reports/regression/8d86a504-9de8-4ecd-bfb2-66eedadf720e/summary.json`，`success=true`、`restored=true`。覆盖全部引擎开关、故障恢复、异步过期回复、实际键盘入口及既有引擎、界面和语义模型。
 - 两轮原软件及私有数据均恢复并校验成功，备份已删除，`pending` 为空；专用模拟器已关闭并清理临时 AVD。未验证实体设备、其他 API/ABI、签名 release、真实强制终止恢复或第三方远程应用兼容性；控制器重建及输入会话重开已覆盖，不能将其等同于实机杀进程测试。
+
+### ⌁ 默认入口调整
+
+- 后续工作树将 Remote Keyboard Mode 的绑定键标志统一为 `⌁`，在多功能栏的 status 与全半角键之间加入默认入口；与绑定键共享持久化状态。入口复用既有工具栏按钮样式，打开面板或显示自定义 status 时切换不关闭面板、不替换 status。
+- 更新旧的“工具栏无入口”合同，保留默认键盘布局不自动新增绑定的检查；真实 IME 验证通过工具栏开启、绑定键关闭及状态同步。`remote-keyboard` 专项纳入 `ImeChromeTest`，验证入口顺序、样式及开关状态。
+- 本轮 debug 编译、117 项 JVM 测试及 lint 通过（0 Error、270 Warning）。专用 Android 15 / API 35 / ARM64 模拟器专项 **56 项通过**，0 失败、0 跳过，报告 `app/build/reports/regression/8f076812-d5d3-4076-aab0-0c9d1cd55e64/summary.json`，`success=true`、`restored=true`；原软件与私有数据恢复校验通过，备份删除，`pending` 为空。未重复运行完整回归，前述 216 项结果属于入口调整前的版本；其他未测范围不变。

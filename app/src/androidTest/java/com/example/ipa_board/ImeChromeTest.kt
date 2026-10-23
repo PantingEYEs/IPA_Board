@@ -65,18 +65,55 @@ class ImeChromeTest {
         }
     }
 
+    @Test fun remoteToolbarToggleMatchesStyleAndPreservesPanelAndStatus() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val chrome = ImeChromeView(InstrumentationRegistry.getInstrumentation().targetContext)
+            val toolbar = chrome.getChildAt(0) as ViewGroup
+            val remote = toolbar.getChildAt(4) as Button
+            val width = toolbar.getChildAt(5) as Button
+            assertEquals("⌁", remote.text.toString())
+            assertEquals(KeyAction.REMOTE_KEYBOARD.keyLabel, remote.text.toString())
+            assertEquals("Remote Keyboard Mode", remote.contentDescription)
+            assertSame(chrome.statusContainer, toolbar.getChildAt(3))
+            assertEquals((width.background as ColorDrawable).color, (remote.background as ColorDrawable).color)
+            assertEquals(width.alpha, remote.alpha, 0f)
+            assertFalse(remote.isSelected)
+            assertEquals("Remote keyboard mode off", remote.stateDescription)
+            chrome.showPanel(ImeChromeView.Panel.CLIPBOARD)
+            val status = EditText(chrome.context)
+            chrome.setStatusCustomView(status)
+            var enabled = false
+            var clicks = 0
+            chrome.onRemoteKeyboardToggle = {
+                enabled = !enabled
+                clicks++
+                chrome.setRemoteKeyboardEnabled(enabled)
+            }
+            repeat(2) { index ->
+                remote.performClick()
+                assertEquals(index + 1, clicks)
+                assertEquals(index == 0, remote.isSelected)
+                assertEquals(if (index == 0) 1f else 0.5f, remote.alpha, 0f)
+                assertEquals(if (index == 0) "Remote keyboard mode on" else "Remote keyboard mode off", remote.stateDescription)
+                assertEquals(ImeChromeView.Panel.CLIPBOARD, chrome.panel)
+                assertSame(chrome.statusContainer, status.parent)
+            }
+        }
+    }
+
     @Test fun widthSwapToolbarToggleExposesStateAndPreservesTheOpenPanel() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             val context = InstrumentationRegistry.getInstrumentation().targetContext
             val chrome = ImeChromeView(context)
             val toolbar = chrome.getChildAt(0) as ViewGroup
             val buttons = (0 until toolbar.childCount).mapNotNull { toolbar.getChildAt(it) as? Button }
-            assertEquals(listOf("⧉", "⊞", "顔", "◩", "∑"), buttons.map { it.text.toString() })
+            assertEquals(listOf("⧉", "⊞", "顔", "⌁", "◩", "∑"), buttons.map { it.text.toString() })
             assertSame(chrome.statusContainer, toolbar.getChildAt(3))
             assertSame(buttons[2], toolbar.getChildAt(2))
             assertSame(buttons[3], toolbar.getChildAt(4))
-            val widthSwap = buttons[3]
-            val calculator = buttons[4]
+            assertSame(buttons[4], toolbar.getChildAt(5))
+            val widthSwap = buttons[4]
+            val calculator = buttons[5]
             val calculatorBackgroundColor = (calculator.background as ColorDrawable).color
             val widthSwapBackground = widthSwap.background
             fun assertMatchesCalculator(enabled: Boolean) {

@@ -39,8 +39,9 @@ class RemoteKeyboardModeImeTest {
             modeState(false)
             key(2)
             editorText(scenario, "ɑ中😀", composing = true)
-            key(1)
+            driver.click { it.contentDescription?.toString() == "Remote Keyboard Mode" }
             modeState(true)
+            assertTrue(driver.awaitNode { it.contentDescription?.toString() == "Remote Keyboard Mode" }.isSelected)
             assertTrue(prefs.contains(RemoteKeyboardMode.KEY_SNAPSHOT))
             assertTrue(EngineFeature.entries.all { !EngineSettings.enabled(prefs, it) })
             editorText(scenario, "ɑ中😀", composing = true)
@@ -68,6 +69,7 @@ class RemoteKeyboardModeImeTest {
 
             key(1)
             modeState(false)
+            assertFalse(driver.awaitNode { it.contentDescription?.toString() == "Remote Keyboard Mode" }.isSelected)
             assertFalse(prefs.contains(RemoteKeyboardMode.KEY_SNAPSHOT))
             assertEquals("Restore the captured choices, including engines originally disabled",
                 initialEnabled, EngineFeature.entries.filter { EngineSettings.enabled(prefs, it) }.toSet())

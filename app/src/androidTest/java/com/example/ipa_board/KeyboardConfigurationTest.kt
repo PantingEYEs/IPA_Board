@@ -34,7 +34,7 @@ class KeyboardConfigurationTest {
         assertEquals(ctrl, SettingsConstants.parseShortcutsJson(SettingsConstants.serializeShortcutsJson(ctrl)))
     }
 
-    @Test fun remoteKeyboardHasNoEntryInBundledOrDefaultLayoutsOrDefaultToolbar() {
+    @Test fun remoteKeyboardHasNoEntryInBundledOrDefaultLayouts() {
         val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val directory = "initialization/keyboards"
@@ -52,16 +52,7 @@ class KeyboardConfigurationTest {
                 assertNotEquals(KeyAction.REMOTE_KEYBOARD, key.effectiveSwipeRightItem?.action)
             }
         }
-        instrumentation.runOnMainSync {
-            fun assertNoEntry(view: android.view.View) {
-                assertNotEquals(KeyAction.REMOTE_KEYBOARD.title, view.contentDescription?.toString())
-                if (view is android.widget.TextView) assertNotEquals(KeyAction.REMOTE_KEYBOARD.keyLabel, view.text.toString())
-                if (view is android.view.ViewGroup) {
-                    for (index in 0 until view.childCount) assertNoEntry(view.getChildAt(index))
-                }
-            }
-            assertNoEntry(com.example.ipa_board.ime.ImeChromeView(context))
-        }
+
     }
 
     @Test fun dashboardBindingsSurviveLayoutExportAndDoNotAppearInDefaultLayouts() {

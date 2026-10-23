@@ -214,6 +214,7 @@ class IpaBoardService : InputMethodService() {
             view.onCalculatorToggle = {
                 toggleCalculator()
             }
+            view.onRemoteKeyboardToggle = { toggleRemoteKeyboard() }
             view.onWidthSwapToggle = { toggleWidthSwap() }
             view.onCandidate = { candidate, generation -> if (composition.select(candidate, generation)) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
             view.onLiteral = { if (composition.literal()) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
@@ -341,6 +342,7 @@ class IpaBoardService : InputMethodService() {
         val axisColor = try { Color.parseColor(appearance.pointerAxisColor) } catch (_: Exception) { Color.WHITE }
         val crosshairColor = try { Color.parseColor(appearance.pointerCrosshairColor) } catch (_: Exception) { Color.RED }
         view.setPointerColors(pathColor, axisColor, crosshairColor, appearance.usePointerDifferenceBlend)
+        view.setRemoteKeyboardEnabled(remoteKeyboardMode.active)
         view.setWidthSwapEnabled(widthSwapEnabled)
         view.keyboardHost.setBackgroundColor(Color.parseColor(appearance.backgroundColor))
         val layout = LayoutFileManager.activeLayout(this)
