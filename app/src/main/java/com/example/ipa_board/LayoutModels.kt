@@ -24,7 +24,8 @@ data class KeyboardLayout(
         longPressText: String? = null, longPressAction: KeyAction? = null,
         longPressItems: List<LongPressItem>? = null,
         swipeLeftText: String? = null, swipeLeftAction: KeyAction? = null,
-        swipeRightText: String? = null, swipeRightAction: KeyAction? = null
+        swipeRightText: String? = null, swipeRightAction: KeyAction? = null,
+        multifunctionMode: MultifunctionMode? = null, popupConfiguration: PopupConfiguration? = null
     ): KeyboardLayout {
         require(row in rows.indices && column in rows[row].slots.indices) { "Unknown key position" }
         return copy(rows = rows.mapIndexed { r, value ->
@@ -39,14 +40,16 @@ data class KeyboardLayout(
                     swipeLeftText = swipeLeftText ?: slot.swipeLeftText,
                     swipeLeftAction = swipeLeftAction ?: slot.swipeLeftAction,
                     swipeRightText = swipeRightText ?: slot.swipeRightText,
-                    swipeRightAction = swipeRightAction ?: slot.swipeRightAction
+                    swipeRightAction = swipeRightAction ?: slot.swipeRightAction,
+                    multifunctionMode = multifunctionMode ?: slot.multifunctionMode,
+                    popupConfiguration = popupConfiguration ?: slot.popupConfiguration
                 ) else slot
             })
         })
     }
 
     fun cleared(): KeyboardLayout = copy(rows = rows.map { row ->
-        row.copy(slots = row.slots.map { slot -> slot.copy(text = "", action = KeyAction.TEXT, textBehavior = TextBehavior.LITERAL, longPressText = "", longPressAction = KeyAction.TEXT, longPressItems = emptyList(), swipeLeftText = "", swipeLeftAction = KeyAction.TEXT, swipeRightText = "", swipeRightAction = KeyAction.TEXT) })
+        row.copy(slots = row.slots.map { slot -> slot.copy(text = "", action = KeyAction.TEXT, textBehavior = TextBehavior.LITERAL, longPressText = "", longPressAction = KeyAction.TEXT, longPressItems = emptyList(), swipeLeftText = "", swipeLeftAction = KeyAction.TEXT, swipeRightText = "", swipeRightAction = KeyAction.TEXT, multifunctionMode = MultifunctionMode.CLASSIC, popupConfiguration = null) })
     })
 
     fun toJson(): String {
@@ -149,7 +152,9 @@ data class KeySlot(
     val swipeLeftText: String = "",
     val swipeLeftAction: KeyAction = KeyAction.TEXT,
     val swipeRightText: String = "",
-    val swipeRightAction: KeyAction = KeyAction.TEXT
+    val swipeRightAction: KeyAction = KeyAction.TEXT,
+    val multifunctionMode: MultifunctionMode = MultifunctionMode.CLASSIC,
+    val popupConfiguration: PopupConfiguration? = null
 ) {
     val effectiveLongPressItems: List<LongPressItem>
         get() {
@@ -177,11 +182,12 @@ data class KeySlot(
             else -> null
         }
 
-    val hasSwipeLeft: Boolean get() = effectiveSwipeLeftItem != null
-    val hasSwipeRight: Boolean get() = effectiveSwipeRightItem != null
+    val hasSwipeLeft: Boolean get() = multifunctionMode == MultifunctionMode.CLASSIC && effectiveSwipeLeftItem != null
+    val hasSwipeRight: Boolean get() = multifunctionMode == MultifunctionMode.CLASSIC && effectiveSwipeRightItem != null
 
     val hasLongPress: Boolean
         get() = when {
+            multifunctionMode == MultifunctionMode.POPUP -> true
             action == KeyAction.REPEAT_BACKSPACE -> true
             else -> effectiveLongPressItems.isNotEmpty()
         }
@@ -210,6 +216,8 @@ data class KeySlot(
         obj.put("swipeLeftAction", swipeLeftAction.wireValue)
         obj.put("swipeRightText", swipeRightText)
         obj.put("swipeRightAction", swipeRightAction.wireValue)
+        obj.put("multifunctionMode", multifunctionMode.wireValue)
+        popupConfiguration?.let { obj.put("popupConfiguration", it.toJsonObject()) }
         return obj
     }
 
@@ -233,7 +241,11 @@ data class KeySlot(
                 obj.optString("swipeLeftText", ""),
                 if (obj.has("swipeLeftAction")) KeyAction.fromWireValue(obj.getString("swipeLeftAction")) else KeyAction.TEXT,
                 obj.optString("swipeRightText", ""),
-                if (obj.has("swipeRightAction")) KeyAction.fromWireValue(obj.getString("swipeRightAction")) else KeyAction.TEXT
+                if (obj.has("swipeRightAction")) KeyAction.fromWireValue(obj.getString("swipeRightAction")) else KeyAction.TEXT,
+                MultifunctionMode.fromWireValue(obj.optString("multifunctionMode", "classic")),
+                if (obj.has("popupConfiguration") && !obj.isNull("popupConfiguration")) {
+                    PopupConfiguration.fromJsonObject(obj.getJSONObject("popupConfiguration"))
+                } else null
             )
         }
     }
