@@ -65,6 +65,8 @@ object KeyboardRenderer {
                         stateDescription = context.getString(if (remoteKeyboardEnabled)
                             R.string.remote_keyboard_on else R.string.remote_keyboard_off)
                     }
+                    multifunctionMode = slot.multifunctionMode
+                    popupConfiguration = slot.popupConfiguration
                     previewEnabled = showKeyPreview
                     this.popupBgColor = popupBgColor
                     this.popupSymbolColor = popupSymbolColor
@@ -129,7 +131,8 @@ object KeyboardRenderer {
                         onKeyQuickSwipeItemClick(rowIndex, columnIndex, slot, item)
                     }
                 }
-                if ((onKeyLongItemClick != null || onKeyLongClick != null) && slot.hasLongPress) {
+                val popupMode = slot.multifunctionMode == MultifunctionMode.POPUP
+                if ((onKeyLongItemClick != null || onKeyLongClick != null) && (slot.hasLongPress || popupMode)) {
                     slotView.onLongPressItemClick = { item ->
                         if (onKeyLongItemClick != null) {
                             onKeyLongItemClick(rowIndex, columnIndex, slot, item)
@@ -147,7 +150,12 @@ object KeyboardRenderer {
                         true
                     }
                 }
-                if (slot.longPressAction == KeyAction.REPEAT_BACKSPACE || slot.action == KeyAction.REPEAT_BACKSPACE) {
+                slotView.repeatForItem = { item ->
+                    if (item.action == KeyAction.REPEAT_BACKSPACE) {
+                        { slotView.onLongPressItemClick?.invoke(item); Unit }
+                    } else null
+                }
+                if (!popupMode && (slot.longPressAction == KeyAction.REPEAT_BACKSPACE || slot.action == KeyAction.REPEAT_BACKSPACE)) {
                     slotView.onLongPressRepeat = {
                         val firstItem = slot.effectiveLongPressItems.firstOrNull() ?: LongPressItem(text = slot.longPressText, action = slot.longPressAction)
                         if (onKeyLongItemClick != null) {
@@ -162,7 +170,7 @@ object KeyboardRenderer {
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     Gravity.CENTER
                 ))
-                if (slot.hasLongPress) {
+                if (slot.hasLongPress && !popupMode) {
                     val firstItem = slot.effectiveLongPressItems.firstOrNull()
                     // The persistent corner label shows the symbol, independently of Ctrl input mode.
                     val longPressLabel = firstItem?.previewText(shiftEnabled)

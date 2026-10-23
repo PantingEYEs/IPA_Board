@@ -44,6 +44,24 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:text="@string/multifunction_mode"
+            android:labelFor="@id/sp_multifunction_mode" />
+
+        <Spinner
+            android:id="@+id/sp_multifunction_mode"
+            android:contentDescription="@string/multifunction_mode"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+
+        <LinearLayout
+            android:id="@+id/classic_multifunction_editor"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:labelFor="@id/sp_long_press_type"
             android:text="@string/long_press_type" />
@@ -111,6 +129,14 @@
             android:inputType="textMultiLine|textNoSuggestions"
             android:maxLength="1000"
             android:hint="@string/swipe_right_text_hint" />
+
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/popup_multifunction_editor"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/tv_key_error"

@@ -96,6 +96,10 @@ IPA 接入增加 `ipa` 套件，覆盖离线下载事务、哈希/路径拒绝�
 
 `remote-keyboard` 专项覆盖 #4 Phase 1：`RemoteKeyboardModeTest` 验证独立 Preferences 的原子快照、精确恢复、原始缺失键、四种状态组合、重复周期、控制器重建、连续写入失败及损坏快照；`RemoteKeyboardEnginePolicyTest` 使用离线 IPC 验证批量配置只应用一次、关闭后解绑与旧回复拒绝、手动重开引擎及原文提交。这两类登记于 platform/full。`RemoteKeyboardModeImeTest` 登记于 e2e/full，使用测试自有编辑器验证绑定键、独立短按/长按、左右滑动、Shift/Ctrl 快捷键、模式指示、重开输入会话及预输入不丢失；复用配置、引擎开关和控制器用例。控制器重建与输入会话重开不等同于实机强制终止验证，第三方远程应用和实际网络连接也不在自动测试范围。
 
+`popup` 专项覆盖 #20：JVM 保护 even-odd 几何、面积重心/零面积、重叠过滤和共享长按状态；`PopupConfigurationPersistenceTest` 登记于 platform/full，保护旧配置与双模式配置序列化；`PopupActionEditorTest`、`PopupKeySettingsTest`、`PopupGestureEquivalenceTest` 登记于 ui/full，覆盖图形编辑、四种变形、对象选择、图层、缩放、历史与操作 Undo、模式切换后的草稿保留、八种手势等价以及屏幕裁剪。`PopupActionsImeTest` 登记于 e2e/full，以系统注入的原始触摸流跨越真实键盘与浮窗，验证 Unicode/功能输入、编辑器焦点和离窗取消后的回返；复用旧按键编辑、经典预览和配置测试。截图/绘制检查仅针对测试自有视图，不读取其他应用窗口。
+
+`popup-ime` 仅选择 `PopupActionsImeTest`，用于快速定位真实窗口坐标、原始触摸流和 Classic 对照；提交前仍按影响范围运行 `popup` 或 `full`。
+
 `emoji` 专项复用 ui/full 中的 `EmojiFeatureTest` 和 e2e/full 中的 `ImeEndToEndTest`，覆盖常用与官方分类的连续分区、空常用提示、菜单跳转不筛选列表、普通滚动同步 status 和菜单选中项、短尾分类定位及常用区更新后的可视位置保持；同时保留两种键盘宽度下最右列边缘点击、同一区域纵向拖动及取消不插入、滚动后点击当前条目只计数一次，以及真实 IME 中的完整 Unicode 提交、连续输入和返回。触摸通过测试自有 RecyclerView 分发，不直接调用条目回调来代替点击；使用独立使用记录目录，结束后删除。JVM 单独验证连续分区模型的分类顺序、完整 Unicode 保留及空目录合同。
 
 普通回归不访问公网。Engine Management 的最新版本展示由测试 runner 注入固定元数据，异步查询另用注入的 transport、时钟及独立 cache 验证成功缓存、失败重试、关闭页面和并发取消。真实上游服务可达性属于单独的人工检查，失败不能与产品离线可用性混为一谈。
@@ -257,3 +261,16 @@ Shift / Caps Lock 指示由 `KeyboardWindowTest`（ui/full）验证真实控制�
 - 后续工作树将 Remote Keyboard Mode 的绑定键标志统一为 `⌁`，在多功能栏的 status 与全半角键之间加入默认入口；与绑定键共享持久化状态。入口复用既有工具栏按钮样式，打开面板或显示自定义 status 时切换不关闭面板、不替换 status。
 - 更新旧的“工具栏无入口”合同，保留默认键盘布局不自动新增绑定的检查；真实 IME 验证通过工具栏开启、绑定键关闭及状态同步。`remote-keyboard` 专项纳入 `ImeChromeTest`，验证入口顺序、样式及开关状态。
 - 本轮 debug 编译、117 项 JVM 测试及 lint 通过（0 Error、270 Warning）。专用 Android 15 / API 35 / ARM64 模拟器专项 **56 项通过**，0 失败、0 跳过，报告 `app/build/reports/regression/8f076812-d5d3-4076-aab0-0c9d1cd55e64/summary.json`，`success=true`、`restored=true`；原软件与私有数据恢复校验通过，备份删除，`pending` 为空。未重复运行完整回归，前述 216 项结果属于入口调整前的版本；其他未测范围不变。
+
+## 2026-10-24 浮窗多功能操作（#20）
+
+开发基于 `a06c10c`；配置与几何基础已提交为 `342a722`，编辑器、运行时及回归针对其上的开发工作树，debug。
+
+- 主机：128 项 JVM、49 项流程工具测试通过；应用及测试 APK 编译、43 类套件登记、93 项资源哈希与 E5 模型重组校验通过。lint 0 Error、276 Warning；保留当前建议级警告，没有禁用 lint。浮窗运行时缓存不可变绘制数据，编辑器复用 Path，避免每次绘制造成不必要分配。
+- 使用独立临时 Android 15 / API 35 / `arm64-v8a` 模拟器。首轮 `popup` 报告 `app/build/reports/regression/17e20660-8cd4-4e86-a09f-41baba053802/summary.json`：45 项执行，41 通过、4 失败、0 跳过；合成 APK/CE/DE 私有数据往返恢复通过。修正新增测试的浮点精确相等、提示条动画期间提前点击，以及正常 UP 后再断言孤立 CANCEL 的错误；未删除用例或扩大旧等待上限。
+- 第二轮 `popup` 报告 `app/build/reports/regression/c6a79bec-8655-4b0a-9488-18cc2b22ecd1/summary.json`：45 项执行，44 通过、1 失败。实际跨窗口输入发现共用 `CompositionController.backspace()` 按 UTF-16 单元删除，会切断 Emoji 代理对。用户明确暂不修复，#20 只验证与 Classic 行为一致；保留完整 Unicode 输入检查，退格改用真实 Classic 物理按键作为文本及 composing 状态基准，不把缺陷输出写成正确预期。该问题仍见[已知缺陷](popup-multifunctional-actions.md#已知的共用功能缺陷)。
+- 上述两轮均恢复并校验原软件与私有数据成功，之后删除备份。未操作实体手机或既有模拟器。
+- 首轮 `full` 报告 `app/build/reports/regression/56285c83-ed8d-4af7-9ff0-b0fe928ac392/summary.json`：43 类、240 项执行，238 通过、2 失败、0 跳过。旧 `actualTouchHoldCommitsOnlyOnRelease` 在首次获取 IME 节点前超时，尚未执行触摸，历史有同类记录；新增 Popup 真实输入第一次滑动后为空。新 fixture 随后改为先等待本布局的第 3 个按键，并观察按键位置稳定后才注入，而非使用可能尚在移动的首次坐标；未调整文本断言或扩大等待上限。保留原断言及报告，该轮恢复校验成功并删除备份；这些失败不作为通过结果。
+- 新增快速 `popup-ime` 验证后两项真实 IME 用例通过，报告 `app/build/reports/regression/41e91514-5c9c-43a6-97ed-f01d4d15942e/summary.json` 为 `success=true`、`restored=true`，备份已删除。验证完整 Unicode 原文输入、实际 Classic 对照、编辑器焦点、离窗立即取消及回返不触发；该结果不等于已修复共用 Unicode 退格缺陷。
+- 最终 `full` 报告 `app/build/reports/regression/31aa174a-5d22-49c5-92cf-5fbec209c6d7/summary.json`：43 类 **240 项全部通过**，0 失败、0 跳过，`success=true`、`restored=true`。包含全部 23 项新增浮窗设备用例和原有引擎、配置、界面、端到端及语义模型回归；此前等待节点超时的旧长按用例本轮通过，未改动其断言或等待上限，偶发原因仍未确认。
+- 最终已恢复并校验原软件及私有数据，删除备份，`pending` 为空；独立模拟器已关闭并删除临时 AVD。未验证实体手机、其他 API/ABI、16KB 页设备或签名 release；共用 Unicode 退格缺陷按用户决定保留，不作为 #20 已修复项。

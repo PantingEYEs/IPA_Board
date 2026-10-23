@@ -15,6 +15,7 @@
 | [错误诊断](diagnostics.md) | 日志开关、固定事件、文件边界与剔除入口 |
 | [引擎仪表盘](engine-dashboard.md) | ◷ 绑定、只读状态及当前功能边界 |
 | [Emoji 目录与浏览](emoji-catalog.md) | Unicode 目录、连续分区、分类导航与更新 |
+| [浮窗多功能操作](popup-multifunctional-actions.md) | 按键双模式、图形编辑、撤回与运行时手势 |
 
 ## 开发与验证
 

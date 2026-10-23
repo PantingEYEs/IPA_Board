@@ -28,7 +28,8 @@
         "com.example.ipa_board.DiagnosticsContractTest",
         "com.example.ipa_board.IpaResourceManagerTest",
         "com.example.ipa_board.RemoteKeyboardModeTest",
-        "com.example.ipa_board.RemoteKeyboardEnginePolicyTest"
+        "com.example.ipa_board.RemoteKeyboardEnginePolicyTest",
+        "com.example.ipa_board.PopupConfigurationPersistenceTest"
       ]
     },
     "engines": {
@@ -53,7 +54,10 @@
         "com.example.ipa_board.PresentationContractTest",
         "com.example.ipa_board.ClipboardPanelOrderTest",
         "com.example.ipa_board.IpaEngineManagementUiTest",
-        "com.example.ipa_board.EngineDashboardTest"
+        "com.example.ipa_board.EngineDashboardTest",
+        "com.example.ipa_board.PopupActionEditorTest",
+        "com.example.ipa_board.PopupKeySettingsTest",
+        "com.example.ipa_board.PopupGestureEquivalenceTest"
       ]
     },
     "e2e": {
@@ -62,7 +66,8 @@
         "com.example.ipa_board.EnglishImeIntegrationTest",
         "com.example.ipa_board.PageGroupImeTest",
         "com.example.ipa_board.EngineDashboardImeTest",
-        "com.example.ipa_board.RemoteKeyboardModeImeTest"
+        "com.example.ipa_board.RemoteKeyboardModeImeTest",
+        "com.example.ipa_board.PopupActionsImeTest"
       ]
     },
     "semantic": {
@@ -109,7 +114,12 @@
         "com.example.ipa_board.EngineDashboardImeTest",
         "com.example.ipa_board.RemoteKeyboardModeTest",
         "com.example.ipa_board.RemoteKeyboardEnginePolicyTest",
-        "com.example.ipa_board.RemoteKeyboardModeImeTest"
+        "com.example.ipa_board.RemoteKeyboardModeImeTest",
+        "com.example.ipa_board.PopupConfigurationPersistenceTest",
+        "com.example.ipa_board.PopupActionEditorTest",
+        "com.example.ipa_board.PopupKeySettingsTest",
+        "com.example.ipa_board.PopupGestureEquivalenceTest",
+        "com.example.ipa_board.PopupActionsImeTest"
       ]
     },
     "ipa": {
@@ -143,6 +153,23 @@
         "com.example.ipa_board.EngineControlsTest",
         "com.example.ipa_board.KeyboardInputControllerTest",
         "com.example.ipa_board.ImeChromeTest"
+      ]
+    },
+    "popup-ime": {
+      "classes": [
+        "com.example.ipa_board.PopupActionsImeTest"
+      ]
+    },
+    "popup": {
+      "classes": [
+        "com.example.ipa_board.PopupConfigurationPersistenceTest",
+        "com.example.ipa_board.PopupActionEditorTest",
+        "com.example.ipa_board.PopupKeySettingsTest",
+        "com.example.ipa_board.PopupGestureEquivalenceTest",
+        "com.example.ipa_board.PopupActionsImeTest",
+        "com.example.ipa_board.KeyEditorTest",
+        "com.example.ipa_board.KeyPressPreviewTest",
+        "com.example.ipa_board.KeyboardConfigurationTest"
       ]
     }
   }
