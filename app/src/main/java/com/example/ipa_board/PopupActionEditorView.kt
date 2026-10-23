@@ -322,8 +322,6 @@ class PopupActionEditorView(context: Context, initial: PopupConfiguration) : Lin
                 val selected = (selection as? Selection.Item)?.index == index
                 paint.style = Paint.Style.FILL; paint.color = if (selected) symbolColor else popupColor
                 canvas.drawCircle(item.center.x, item.center.y, item.radius, paint)
-                paint.style = Paint.Style.STROKE; paint.color = symbolColor; paint.strokeWidth = 1.5f
-                canvas.drawCircle(item.center.x, item.center.y, item.radius, paint)
                 val label = itemLabels[index]
                 paint.style = Paint.Style.FILL; paint.color = if (selected) popupColor else symbolColor
                 paint.textAlign = Paint.Align.CENTER; paint.textSize = item.radius * .8f
@@ -382,6 +380,11 @@ class PopupActionEditorView(context: Context, initial: PopupConfiguration) : Lin
                         val dx = point.x.toDouble() - downPoint.x; val dy = point.y.toDouble() - downPoint.y
                         when {
                             handle >= 0 -> transformBoundary(point)
+                            downSelection == Selection.Popup && downTarget == downSelection -> {
+                                configuration = downConfiguration.copy(vertices = downConfiguration.vertices.map {
+                                    finitePoint(it.x + dx, it.y + dy)
+                                })
+                            }
                             downSelection == Selection.Anchor && downTarget == downSelection -> configuration = downConfiguration.copy(anchor = finitePoint(downConfiguration.anchor.x + dx, downConfiguration.anchor.y + dy))
                             downSelection is Selection.Item && downTarget == downSelection -> {
                                 val index = (downSelection as Selection.Item).index

@@ -4,6 +4,9 @@ import android.graphics.Color
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Rect
+import android.view.View
+import com.example.ipa_board.ime.ImeChromeView
+import java.util.concurrent.atomic.AtomicInteger
 import android.os.SystemClock
 import android.view.Gravity
 import android.view.MotionEvent
@@ -191,6 +194,145 @@ class PopupGestureEquivalenceTest {
                 assertEquals(before, key.popupConfiguration?.toJsonObject().toString())
             }
         }
+    }
+
+    @Test fun popupPointerOverlayUsesChromeCoordinatesColorsAndLiveVisibility() {
+        ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
+            lateinit var chrome: ImeChromeView
+            lateinit var key: KeyPreviewFrameLayout
+            val background = Color.rgb(32, 64, 96)
+            val drawCount = AtomicInteger()
+            val down = SystemClock.uptimeMillis()
+            fun chromeTouch(action: Int, x: Float, y: Float) {
+                val event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, x, y, 0)
+                try { assertTrue(chrome.dispatchTouchEvent(event)) } finally { event.recycle() }
+            }
+            scenario.onActivity { activity ->
+                val host = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.BOTTOM }
+                chrome = ImeChromeView(activity).apply {
+                    setKeyboardHeight(180)
+                    showPointerLocation = true
+                    setPointerColors(Color.GREEN, Color.BLUE, Color.RED)
+                    // Wide test strokes avoid subpixel antialias ambiguity while retaining the actual shared paints.
+                    pointerPaint.strokeWidth = 3f
+                    axisPaint.strokeWidth = 3f
+                    pointPaint.strokeWidth = 3f
+                }
+                host.addView(chrome, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                activity.setContentView(host)
+                val config = PopupConfiguration(
+                    vertices = listOf(PopupPoint(-80f, -400f), PopupPoint(80f, -400f), PopupPoint(80f, -20f), PopupPoint(-80f, -20f)),
+                    anchor = PopupPoint(0f, 0f))
+                KeyboardRenderer.render(activity, chrome.keyboardHost,
+                    KeyboardLayout("Pointer fixture", listOf(RowLayout(1f, listOf(KeySlot(1f, "tap",
+                        multifunctionMode = MultifunctionMode.POPUP, popupConfiguration = config))))),
+                    180, Color.WHITE, popupBgColor = background, popupSymbolColor = Color.WHITE,
+                    showKeyPreview = false, onKeyClick = { _, _, _ -> fail("Pointer fixture must not tap") })
+                key = (chrome.keyboardHost.getChildAt(0) as ViewGroup).getChildAt(0) as KeyPreviewFrameLayout
+            }
+            instrumentation.waitForIdleSync()
+            scenario.onActivity {
+                val keyLocation = IntArray(2).also(key::getLocationOnScreen)
+                val chromeLocation = IntArray(2).also(chrome::getLocationOnScreen)
+                chromeTouch(MotionEvent.ACTION_DOWN, keyLocation[0] - chromeLocation[0] + key.width / 2f,
+                    keyLocation[1] - chromeLocation[1] + key.height / 2f)
+            }
+            SystemClock.sleep(KeyboardGestureSettings.longPressTimeoutMs(instrumentation.targetContext).toLong() + 100)
+            instrumentation.waitForIdleSync()
+            lateinit var content: View
+            var pointerX = 0f
+            var pointerY = 0f
+            scenario.onActivity {
+                content = requireNotNull(key.visiblePopupContent)
+                content.viewTreeObserver.addOnDrawListener { drawCount.incrementAndGet() }
+                val density = chrome.resources.displayMetrics.density
+                pointerX = chrome.width / 2f
+                pointerY = -30f * density
+                chromeTouch(MotionEvent.ACTION_MOVE, pointerX, pointerY)
+                val pointer = requireNotNull(chrome.currentPointers[0])
+                assertEquals(pointerX, pointer.x, 0f)
+                assertEquals(pointerY, pointer.y, 0f)
+                assertPopupPointerPixels(content, chrome, background, Color.GREEN, Color.BLUE, Color.RED)
+                chrome.setPointerColors(Color.MAGENTA, Color.CYAN, Color.YELLOW)
+                assertPopupPointerPixels(content, chrome, background, Color.MAGENTA, Color.CYAN, Color.YELLOW)
+                chrome.setPointerColors(Color.BLACK, Color.BLACK, Color.RED, differenceBlend = true)
+                val inverse = Color.rgb(255 - Color.red(background), 255 - Color.green(background), 255 - Color.blue(background))
+                assertPopupPointerPixels(content, chrome, background, inverse, inverse, Color.RED)
+            }
+            instrumentation.waitForIdleSync()
+            val countBeforeDisable = drawCount.get()
+            scenario.onActivity { chrome.showPointerLocation = false }
+            val deadline = SystemClock.uptimeMillis() + 2_000
+            while (drawCount.get() <= countBeforeDisable && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(20)
+            assertTrue("Disabling Pointer Location refreshes the separate popup window without another MOVE", drawCount.get() > countBeforeDisable)
+            scenario.onActivity {
+                assertTrue(chrome.currentPointers.isEmpty())
+                val bitmap = renderOwnedView(content)
+                try {
+                    val chromeLocation = IntArray(2).also(chrome::getLocationOnScreen)
+                    val popupLocation = IntArray(2).also(content::getLocationOnScreen)
+                    val x = (chromeLocation[0] - popupLocation[0] + pointerX).toInt()
+                    val y = (chromeLocation[1] - popupLocation[1] + pointerY).toInt()
+                    assertEquals(background, bitmap.getPixel(x, y))
+                } finally { bitmap.recycle() }
+                chromeTouch(MotionEvent.ACTION_UP, pointerX, pointerY)
+                assertNull(key.visiblePopupContent)
+            }
+        }
+    }
+
+    private fun assertPopupPointerPixels(content: View, chrome: ImeChromeView, background: Int,
+        pathColor: Int, axisColor: Int, crossColor: Int) {
+        val bitmap = renderOwnedView(content)
+        try {
+            val source = IntArray(2).also(chrome::getLocationOnScreen)
+            val popup = IntArray(2).also(content::getLocationOnScreen)
+            val pointer = requireNotNull(chrome.currentPointers[0])
+            val x = (source[0] - popup[0] + pointer.x).toInt()
+            val y = (source[1] - popup[1] + pointer.y).toInt()
+            val density = chrome.resources.displayMetrics.density
+            fun near(expected: Int, px: Int, py: Int) {
+                assertTrue("Sample ($px,$py) must be inside the test-owned Popup", px in 2 until bitmap.width - 2 && py in 2 until bitmap.height - 2)
+                assertTrue("Expected overlay color $expected near ($px,$py)",
+                    (px - 1..px + 1).any { sx -> (py - 1..py + 1).any { sy -> bitmap.getPixel(sx, sy) == expected } })
+            }
+            near(crossColor, x + (5 * density).toInt(), y)
+            near(axisColor, x + (25 * density).toInt(), y)
+            // The source-relative y is still negative here, above the source's vertical axis.
+            near(pathColor, x, y + (15 * density).toInt())
+            assertEquals(background, bitmap.getPixel(x + (25 * density).toInt(), y + (15 * density).toInt()))
+        } finally { bitmap.recycle() }
+    }
+
+    @Test fun popupItemsHaveNoCircularOutlineButStillInvertWhenActive() {
+        instrumentation.runOnMainSync {
+            val context = instrumentation.targetContext
+            val density = context.resources.displayMetrics.density
+            val background = Color.rgb(32, 64, 96)
+            val config = PopupConfiguration(
+                vertices = listOf(PopupPoint(0f, 0f), PopupPoint(100f, 0f), PopupPoint(100f, 100f), PopupPoint(0f, 100f)),
+                anchor = PopupPoint(0f, 0f),
+                items = listOf(PopupItem(PopupPoint(50f, 50f), 20f, LongPressItem(text = "x"))))
+            val content = PopupActionView(context, config, 0.0, 0.0, background, Color.WHITE, false, false)
+            val size = (100 * density).toInt()
+            content.measure(View.MeasureSpec.makeMeasureSpec(size, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(size, View.MeasureSpec.EXACTLY))
+            content.layout(0, 0, size, size)
+            val inactive = renderOwnedView(content)
+            try {
+                val edge = (30 * density).toInt()
+                val middleY = (50 * density).toInt()
+                for (x in edge - 2..edge + 2) assertEquals("Inactive item boundary has no stroke", background, inactive.getPixel(x, middleY))
+            } finally { inactive.recycle() }
+            content.activeIndex = 0
+            val active = renderOwnedView(content)
+            try { assertEquals(Color.WHITE, active.getPixel((35 * density).toInt(), (50 * density).toInt())) }
+            finally { active.recycle() }
+        }
+    }
+
+    private fun renderOwnedView(view: View): Bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888).also {
+        // Only the test-owned popup is rendered; no screenshot or unrelated UI data is read.
+        view.draw(Canvas(it))
     }
 
     private fun touch(key: KeyPreviewFrameLayout, action: Int, x: Float, y: Float) {

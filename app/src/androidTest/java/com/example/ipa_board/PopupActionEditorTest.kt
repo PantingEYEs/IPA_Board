@@ -1,5 +1,8 @@
 package com.example.ipa_board
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
@@ -35,6 +38,76 @@ class PopupActionEditorTest {
         listOf(PopupPoint(-80f, -80f), PopupPoint(80f, -80f), PopupPoint(80f, 80f), PopupPoint(-80f, 80f)),
         PopupPoint(0f, 40f)
     )
+
+    @Test fun draggingSelectedPopupMovesOnlyBoundaryWithHistoryAndCanceledDragRollback() {
+        val original = warped(PopupShapeMode.DISTORT)
+        val shifted = original.copy(vertices = original.vertices.map { PopupPoint(it.x + 20f, it.y + 15f) })
+        withEditor(original) { fixture ->
+            fixture.tap(PopupPoint(-15f, -20f)); fixture.confirmTap()
+            fixture.ui { editor, viewport ->
+                drag(fixture, viewport, PopupPoint(-15f, -20f), PopupPoint(5f, -5f))
+                assertOutline(shifted.vertices, editor.configuration.vertices)
+                assertEquals(original.items, editor.configuration.items)
+                assertEquals(original.anchor, editor.configuration.anchor)
+                button(editor, "Undo").performClick()
+                assertEquals(original, editor.configuration)
+                button(editor, "Redo").performClick()
+                assertOutline(shifted.vertices, editor.configuration.vertices)
+            }
+            fixture.tap(PopupPoint(5f, -5f)); fixture.confirmTap()
+            fixture.ui { editor, viewport ->
+                val beforeCancel = editor.configuration
+                val start = fixture.screen(PopupPoint(5f, -5f))
+                val end = fixture.screen(PopupPoint(35f, -15f))
+                val down = fixture.nextTime()
+                event(viewport, down, down, MotionEvent.ACTION_DOWN, start.first, start.second)
+                event(viewport, down, fixture.nextTime(), MotionEvent.ACTION_MOVE, end.first, end.second)
+                assertNotEquals(beforeCancel.vertices, editor.configuration.vertices)
+                event(viewport, down, fixture.nextTime(), MotionEvent.ACTION_CANCEL, end.first, end.second)
+                assertEquals(beforeCancel, editor.configuration)
+                button(editor, "Undo").performClick()
+                assertEquals("Canceled drag must not add an extra history entry", original, editor.configuration)
+            }
+        }
+    }
+
+    @Test fun circularItemsHaveNoStrokeWhileSelectionStillInvertsTheirFillAndLabel() {
+        val item = PopupItem(PopupPoint(0f, -20f), 24f, LongPressItem("I"))
+        val background = Color.rgb(24, 36, 48)
+        withEditor(initial.copy(items = listOf(item))) { fixture ->
+            fixture.ui { editor, viewport ->
+                editor.setPopupColors(background, Color.WHITE)
+                val image = Bitmap.createBitmap(viewport.width, viewport.height, Bitmap.Config.ARGB_8888)
+                try {
+                    viewport.draw(Canvas(image))
+                    // Sample around the east arc, well away from the icon, reference and outline.
+                    // A circular stroke would introduce white pixels here even when unselected.
+                    for (distance in listOf(23.5f, 24f, 24.5f)) {
+                        val point = fixture.screen(PopupPoint(distance, item.center.y))
+                        assertEquals(background, image.getPixel(point.first.toInt(), point.second.toInt()))
+                    }
+                } finally { image.recycle() }
+            }
+            fixture.tap(item.center); fixture.confirmTap()
+            fixture.ui { _, viewport ->
+                val image = Bitmap.createBitmap(viewport.width, viewport.height, Bitmap.Config.ARGB_8888)
+                try {
+                    viewport.draw(Canvas(image))
+                    val fill = fixture.screen(PopupPoint(15f, item.center.y))
+                    assertEquals("Selected item must retain inverted fill", Color.WHITE, image.getPixel(fill.first.toInt(), fill.second.toInt()))
+                    val center = fixture.screen(item.center)
+                    val d = viewport.resources.displayMetrics.density
+                    var invertedIconPixels = 0
+                    for (x in (center.first - 5f * d).toInt()..(center.first + 5f * d).toInt()) {
+                        for (y in (center.second - 8f * d).toInt()..(center.second + 8f * d).toInt()) {
+                            if (image.getPixel(x, y) == background) invertedIconPixels++
+                        }
+                    }
+                    assertTrue("Selected label must remain visible in the inverted color", invertedIconPixels > 0)
+                } finally { image.recycle() }
+            }
+        }
+    }
 
     @Test fun addSelectedItemDragAndHistoryLeaveAnchorAndBoundaryUnchanged() = withEditor(initial) { fixture ->
         fixture.ui { editor, _ -> button(editor, "Add Item").performClick() }

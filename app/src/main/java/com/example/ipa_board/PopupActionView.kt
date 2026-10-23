@@ -19,11 +19,13 @@ internal class PopupActionView(
     private val backgroundColor: Int,
     private val symbolColor: Int,
     private val shift: Boolean,
-    private val ctrl: Boolean
+    private val ctrl: Boolean,
+    pointerSource: View? = null
 ) : View(context) {
     var activeIndex: Int? = null
         set(value) { if (field != value) { field = value; invalidate() } }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val pointerOverlay = KeyPreviewPointerOverlay(this, pointerSource)
     private data class Point(val x: Double, val y: Double)
     private data class DrawItem(
         val index: Int, val x: Float, val y: Float, val radius: Float,
@@ -99,6 +101,11 @@ internal class PopupActionView(
         drawItems = cached
     }
 
+    override fun dispatchDraw(canvas: Canvas) {
+        super.dispatchDraw(canvas)
+        pointerOverlay.draw(canvas)
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         paint.color = backgroundColor
@@ -115,9 +122,6 @@ internal class PopupActionView(
             if (item.coversWindow) {
                 canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
             } else {
-                canvas.drawCircle(item.x, item.y, item.radius, paint)
-                paint.style = Paint.Style.STROKE
-                paint.color = symbolColor
                 canvas.drawCircle(item.x, item.y, item.radius, paint)
             }
             item.label?.let { label ->

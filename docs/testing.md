@@ -274,3 +274,12 @@ Shift / Caps Lock 指示由 `KeyboardWindowTest`（ui/full）验证真实控制�
 - 新增快速 `popup-ime` 验证后两项真实 IME 用例通过，报告 `app/build/reports/regression/41e91514-5c9c-43a6-97ed-f01d4d15942e/summary.json` 为 `success=true`、`restored=true`，备份已删除。验证完整 Unicode 原文输入、实际 Classic 对照、编辑器焦点、离窗立即取消及回返不触发；该结果不等于已修复共用 Unicode 退格缺陷。
 - 最终 `full` 报告 `app/build/reports/regression/31aa174a-5d22-49c5-92cf-5fbec209c6d7/summary.json`：43 类 **240 项全部通过**，0 失败、0 跳过，`success=true`、`restored=true`。包含全部 23 项新增浮窗设备用例和原有引擎、配置、界面、端到端及语义模型回归；此前等待节点超时的旧长按用例本轮通过，未改动其断言或等待上限，偶发原因仍未确认。
 - 最终已恢复并校验原软件及私有数据，删除备份，`pending` 为空；独立模拟器已关闭并删除临时 AVD。未验证实体手机、其他 API/ABI、16KB 页设备或签名 release；共用 Unicode 退格缺陷按用户决定保留，不作为 #20 已修复项。
+
+### 浮窗拖移、Pointer Location 与无描边
+
+验证基于 `beabc07` 上的后续工作树。编辑器选中浮窗后可直接平移四顶点，内部项目和基准点不随动；普通预览与 Popup 共用实时 Pointer Location 绘制层，沿用屏幕坐标转换、路径/坐标线/准星颜色和差值混合；两处圆形项目均去掉描边并保留反色反馈。
+
+- 新增 4 项设备用例，复用既有测试类和套件：平移与 Undo/Redo/取消回滚、编辑器无描边与图标反色、真实 Chrome→按键→Popup 接线及坐标/颜色/差值/关闭后刷新、运行时无描边与激活反色。仅绘制测试自有视图，不截取其他应用。
+- 主机：128 项 JVM、49 项流程工具测试通过；debug 应用/测试 APK 编译、套件登记和 93 项资源哈希/E5 重组校验通过。lint 0 Error、276 Warning。
+- Android 15 / API 35 / ARM64 独立临时模拟器：`popup` 的 8 类 **49 项全部通过**，0 失败、0 跳过。报告 `app/build/reports/regression/8a5e6733-e315-47e3-aaa3-864fae80bf6b/summary.json` 为 `success=true`、`restored=true`、`roundtrip_verified=true`。包含实际 APK 及合成 CE/DE 私有数据往返恢复。
+- 原软件及私有数据已回滚校验，备份删除，`pending` 为空；临时模拟器已关闭并清理 AVD，未操作既有模拟器或实体手机。本轮未重复完整回归；此前 240 项完整结果对应 `beabc07` 的实现。其他 API/ABI、签名 release 及实体设备仍未验证，共用 Unicode 退格缺陷保持原状。
