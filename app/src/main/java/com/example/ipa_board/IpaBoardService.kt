@@ -32,6 +32,7 @@ import java.util.Locale
 class IpaBoardService : InputMethodService() {
     private var chrome: ImeChromeView? = null
     private lateinit var prefs: SharedPreferences
+    private val remoteKeyboardMode by lazy { RemoteKeyboardMode(prefs) }
     private var widthSwapEnabled = false
     private val inputController = KeyboardInputController(::transformOutput)
     private lateinit var engines: EngineCoordinator
@@ -172,6 +173,7 @@ class IpaBoardService : InputMethodService() {
     }
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == RemoteKeyboardMode.KEY_SNAPSHOT) applySettings()
         if (key == EngineFeature.CALCULATOR.key) {
             chrome?.setCalculatorEnabled(calculatorEnabled())
             composition.updateCandidates(composition.candidates.filter { it.language != "∑" })
@@ -247,6 +249,26 @@ class IpaBoardService : InputMethodService() {
         widthSwapEnabled = !widthSwapEnabled
         chrome?.setWidthSwapEnabled(widthSwapEnabled)
         composition.refreshOutput()
+    }
+    private fun toggleRemoteKeyboard() {
+        val result = remoteKeyboardMode.toggle()
+        // DIAGNOSTICS: removable fixed-code reporting; never log the saved engine choices.
+        if (result == RemoteKeyboardMode.Result.STORAGE_FAILED) {
+            AppDiagnostics.signal(DiagnosticComponent.IME, DiagnosticStage.SAVE, DiagnosticKind.IO)
+        } else if (result == RemoteKeyboardMode.Result.INVALID_STATE) {
+            AppDiagnostics.signal(DiagnosticComponent.IME, DiagnosticStage.LOAD, DiagnosticKind.INVALID_DATA)
+        }
+        val message = when (result) {
+            RemoteKeyboardMode.Result.ENABLED -> R.string.remote_keyboard_enabled
+            RemoteKeyboardMode.Result.RESTORED -> R.string.remote_keyboard_restored
+            RemoteKeyboardMode.Result.STORAGE_FAILED -> R.string.remote_keyboard_storage_failed
+            RemoteKeyboardMode.Result.INVALID_STATE -> R.string.remote_keyboard_invalid_state
+            RemoteKeyboardMode.Result.UNCHANGED -> return
+        }
+        // Keep the pending input intact. EngineCoordinator observes the atomic preference change,
+        // re-queries the current composition and rejects replies from the previous request.
+        applySettings()
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
     private fun toggleCalculator() {
         if (!EngineSettings.enabled(this, EngineFeature.CALCULATOR)) {
@@ -331,6 +353,7 @@ class IpaBoardService : InputMethodService() {
             showKeyPreview = true,
             fontSizeSp = appearance.fontSizeSp,
             showGrid = appearance.showGrid,
+            remoteKeyboardEnabled = remoteKeyboardMode.active,
             onKeyQuickSwipeItemClick = { _, _, slot, item -> handleLongPressItem(slot, item) },
             onKeyLongItemClick = { _, _, slot, item -> handleLongPressItem(slot, item) },
             onKeyLongClick = { _, _, slot -> handleLongPress(slot) }) { _, _, slot -> handleKey(slot) }
@@ -366,6 +389,10 @@ class IpaBoardService : InputMethodService() {
 
     private fun handleKey(slot: KeySlot) {
         when (slot.action) {
+            KeyAction.REMOTE_KEYBOARD -> {
+                toggleRemoteKeyboard()
+                return
+            }
             KeyAction.ENGINE_DASHBOARD -> {
                 chrome?.showPanel(ImeChromeView.Panel.ENGINE_DASHBOARD)
                 return
@@ -430,6 +457,7 @@ class IpaBoardService : InputMethodService() {
                 applySettings()
             }
             when (activeShortcut) {
+                KeyAction.REMOTE_KEYBOARD -> { consumeModifiers(); toggleRemoteKeyboard(); return }
                 KeyAction.ENGINE_DASHBOARD -> { consumeModifiers(); chrome?.showPanel(ImeChromeView.Panel.ENGINE_DASHBOARD); return }
                 KeyAction.EMOJI -> { consumeModifiers(); chrome?.showPanel(ImeChromeView.Panel.EMOJI); return }
                 KeyAction.KAOMOJI -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.KAOMOJI) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.KAOMOJI); return }

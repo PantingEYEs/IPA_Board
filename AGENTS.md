@@ -6,6 +6,10 @@
 
 编写或修改 PR 标题与描述时，遵守 [PR 写作规范](docs/pull-request-guidelines.md)。PR 文档使用英文 Markdown，存放在被 Git 忽略的 `docs/pull-requests/`；规范本身留在该目录之外，不要强制提交被忽略的 PR 文档。
 
+## Issue 分支与分期开发
+
+遵守 [分支约定](.github/ISSUE_GUIDELINES.md#122-branches)：默认使用 GitHub 为 Issue 自动生成的分支名，旧分支合并并清理后允许从当期目标开发分支重新创建同名分支。同一版本允许同一 Issue 多个 PR；分期 PR 明确本次范围，使用 `Refs #<编号>`，整个 Issue 验收完成前保持开放。
+
 ## GitHub Issue Authoring
 
 When creating or editing GitHub Issues, follow

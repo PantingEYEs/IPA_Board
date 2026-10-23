@@ -46,6 +46,10 @@ Use the following order. `Summary`, `Key Changes`, and `Verification` are requir
 
 Lead with behavior; reference files or APIs only to explain a cause, boundary, or design choice. Keep the description proportional to the change. Avoid conversational history, abandoned approaches, raw logs, unrelated future plans, and unsupported performance claims.
 
+For a phased issue, identify the current phase and its remaining scope in `Summary` or `Compatibility and Limitations`; use `Refs #<number>` in the PR body and related commit messages until the whole issue is complete. Multiple PRs for the same issue are allowed within a version. Follow the [branch workflow](../.github/ISSUE_GUIDELINES.md#122-branches) when creating or reusing its branch.
+
+Before merging partial work, check that GitHub does not list the issue as one this PR will close. A PR created from an issue-linked branch can inherit a Development link; `Refs` does not remove such a link. If partial work targets the repository's default branch, remove any closing Development link before merging. GitHub's [issue-linking behavior](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue) depends on the target branch.
+
 ## Verification rules
 
 - Use `[x]` only for checks actually completed and passed on the relevant implementation. Use `[ ]` for planned checks, or explicitly say `Not run` with the reason. Prefer `Verification` over labeling completed work as a plan.
