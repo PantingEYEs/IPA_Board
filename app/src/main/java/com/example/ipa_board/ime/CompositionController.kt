@@ -71,7 +71,8 @@ class CompositionController(
             return commit(prefix + candidate.text + if (english) " " else "")
         }
         if (candidate.language == "∑") {
-            val cleanResult = candidate.text.removeSuffix("…")
+            // Approximation markers may occur in both real and parenthesized imaginary parts.
+            val cleanResult = candidate.text.replace("…", "")
             replaceRaw(cleanResult)
             return true
         }

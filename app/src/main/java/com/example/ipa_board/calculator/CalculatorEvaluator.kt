@@ -6,7 +6,7 @@ import java.util.ArrayDeque
 
 /**
  * Calculator evaluator capable of evaluating basic four arithmetic operations
- * (+, -, *, /), real square roots and nested (), [], {} groups with precision up to 4 decimal places
+ * (+, -, *, /), square roots and constants and nested (), [], {} groups with precision up to 4 decimal places
  * using BigDecimal. Bracket styles do not introduce different precedence levels.
  */
 object CalculatorEvaluator {
@@ -29,13 +29,13 @@ object CalculatorEvaluator {
     /** Decimal first, exact form second for root expressions, even when the texts are equal. */
     fun resultForms(expression: String): List<String> = try {
         evaluateResult(expression)?.let { result ->
-            listOfNotNull(result.decimal, result.exact)
+            listOfNotNull(result.decimal, result.exact, result.symbolic)
         }.orEmpty()
     } catch (_: Exception) {
         emptyList()
     }
 
-    private data class Result(val decimal: String, val exact: String? = null)
+    private data class Result(val decimal: String, val exact: String? = null, val symbolic: String? = null)
 
     private fun evaluateResult(expression: String): Result? {
         val trimmed = expression.trim()
@@ -44,10 +44,17 @@ object CalculatorEvaluator {
         val tokens = tokenize(trimmed)
         if (tokens.isEmpty()) return null
         val rpn = shuntingYard(tokens)
-        return if (tokens.any { it is Token.Operator && it.op == '√' }) {
-            val arithmetic = RadicalArithmetic()
-            val result = evalRadicalRpn(rpn, arithmetic)
-            Result(arithmetic.decimalText(result), arithmetic.exactText(result))
+        return if (tokens.any { it is Token.Constant || (it is Token.Operator && it.op == '√') }) {
+            val expanded = SymbolicArithmetic()
+            val value = evalSymbolicRpn(rpn, expanded, expandPhi = true)
+            val decimal = expanded.decimalText(value)
+            val exact = expanded.exactText(value)
+            val symbolic = if (tokens.any { it is Token.Constant && it.name == 'φ' }) {
+                val preserved = SymbolicArithmetic()
+                preserved.exactText(evalSymbolicRpn(rpn, preserved, expandPhi = false))
+            } else null
+            require(listOfNotNull(decimal, exact, symbolic).all { it.length <= 1000 }) { "Result length limit" }
+            Result(decimal, exact, symbolic)
         } else {
             Result(formatResult(evalRpn(rpn)))
         }
@@ -55,6 +62,7 @@ object CalculatorEvaluator {
 
     private sealed class Token {
         data class Number(val value: BigDecimal) : Token()
+        data class Constant(val name: Char) : Token()
         data class Operator(val op: Char) : Token() // '+', '-', '×', '÷', '~' (unary minus), '√'
         data class OpenGroup(val bracket: Char) : Token()
         data class CloseGroup(val bracket: Char) : Token()
@@ -62,8 +70,8 @@ object CalculatorEvaluator {
 
     private fun tokenize(expr: String): List<Token> {
         val clean = expr.replace('*', '×').replace('/', '÷')
-        val hasRoot = clean.contains('√') || clean.contains("sqrt")
-        if (hasRoot) require(clean.length <= 4096) { "Radical expression length limit" }
+        val special = clean.contains('√') || clean.contains("sqrt") || clean.any { it in "eπφi" }
+        if (special) require(clean.length <= 4096) { "Radical expression length limit" }
         val tokens = mutableListOf<Token>()
         var i = 0
         val len = clean.length
@@ -76,6 +84,7 @@ object CalculatorEvaluator {
             }
 
             if (c.isDigit() || c == '.') {
+                if (special && tokens.lastOrNull() is Token.Constant) tokens.add(Token.Operator('×'))
                 val sb = StringBuilder()
                 while (i < len && (clean[i].isDigit() || clean[i] == '.')) {
                     sb.append(clean[i])
@@ -88,10 +97,16 @@ object CalculatorEvaluator {
                     while (i < len && clean[i].isWhitespace()) i++
                     require(i < len && clean[i] == '(') { "sqrt requires parentheses" }
                 } else i++
-                if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup) {
+                if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant) {
                     tokens.add(Token.Operator('×'))
                 }
                 tokens.add(Token.Operator('√'))
+            } else if (c in "eπφi") {
+                if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant) {
+                    tokens.add(Token.Operator('×'))
+                }
+                tokens.add(Token.Constant(c))
+                i++
             } else if (c == '+' || c == '-' || c == '×' || c == '÷') {
                 val isUnaryMinus = c == '-' &&
                     (tokens.isEmpty() || tokens.last() is Token.Operator || tokens.last() is Token.OpenGroup)
@@ -99,7 +114,7 @@ object CalculatorEvaluator {
                 i++
             } else if (c in "([{") {
                 // Exact forms such as 2√2 and (1+√2)(1-√2) must remain reusable as input.
-                if (hasRoot && (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup)) {
+                if (special && (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant)) {
                     tokens.add(Token.Operator('×'))
                 }
                 tokens.add(Token.OpenGroup(c))
@@ -108,7 +123,6 @@ object CalculatorEvaluator {
                 tokens.add(Token.CloseGroup(c))
                 i++
             } else {
-                require(!hasRoot) { "Unsupported character in radical expression" }
                 i++
             }
         }
@@ -137,7 +151,7 @@ object CalculatorEvaluator {
 
         for (token in tokens) {
             when (token) {
-                is Token.Number -> {
+                is Token.Number, is Token.Constant -> {
                     require(expectingOperand) { "Missing operator" }
                     output.add(token)
                     expectingOperand = false
@@ -226,11 +240,12 @@ object CalculatorEvaluator {
         return stack.pop()
     }
 
-    private fun evalRadicalRpn(tokens: List<Token>, arithmetic: RadicalArithmetic): RadicalArithmetic.Value {
-        val stack = ArrayDeque<RadicalArithmetic.Value>()
+    private fun evalSymbolicRpn(tokens: List<Token>, arithmetic: SymbolicArithmetic, expandPhi: Boolean): SymbolicArithmetic.Complex {
+        val stack = ArrayDeque<SymbolicArithmetic.Complex>()
         for (token in tokens) {
             when (token) {
                 is Token.Number -> stack.push(arithmetic.number(token.value))
+                is Token.Constant -> stack.push(arithmetic.constant(token.name, expandPhi))
                 is Token.Operator -> {
                     require(stack.isNotEmpty()) { "Missing operand" }
                     val b = stack.pop()

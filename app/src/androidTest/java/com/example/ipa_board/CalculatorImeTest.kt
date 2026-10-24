@@ -50,10 +50,10 @@ class CalculatorImeTest {
         editor(scenario, "√(2+√2)+1", composing = false)
         click("Calculator")
         key(2, 2)
-        editor(scenario, "√(2+√2)+1√(-1)")
+        editor(scenario, "√(2+√2)+1sqrt()")
         driver.awaitAbsent { it.contentDescription?.toString() == "Error" }
         key(2, 3)
-        editor(scenario, "√(2+√2)+1√(-1)", composing = false)
+        editor(scenario, "√(2+√2)+1sqrt()", composing = false)
     }
 
     @Test fun equalDecimalAndExactResultsRenderAsTwoSelectableEntries() = withKeyboard { scenario ->
@@ -74,6 +74,51 @@ class CalculatorImeTest {
         editor(scenario, "2")
         key(2, 3)
         editor(scenario, "2", composing = false)
+    }
+
+    @Test fun goldenRatioProvidesThreeCompleteFormsAndItsExpandedFormCanContinue() = withKeyboard { scenario ->
+        key(3, 3)
+        candidate("1.618…")
+        candidate("(1+√5)/2")
+        candidate("φ")
+        select("(1+√5)/2")
+        editor(scenario, "(1+√5)/2")
+        key(2, 1)
+        candidate("2.618…")
+        candidate("(3+√5)/2")
+        key(2, 3)
+        editor(scenario, "(1+√5)/2+1", composing = false)
+    }
+
+    @Test fun constantWithoutDigitsAndComplexCoefficientsRenderAndSelectWithoutEllipsis() = withKeyboard { scenario ->
+        key(3, 1)
+        candidate("2.7183…")
+        candidate("e")
+        select("e")
+        editor(scenario, "e")
+        key(2, 3)
+        key(3, 6)
+        candidate("0.7071…+(0.7071…)i")
+        candidate("√2/2+(√2/2)i")
+        select("0.7071…+(0.7071…)i")
+        editor(scenario, "e0.7071+(0.7071)i")
+        key(2, 1)
+        candidate("1.7071+(0.7071)i")
+        key(2, 3)
+        editor(scenario, "e0.7071+(0.7071)i+1", composing = false)
+    }
+
+    @Test fun negativeRootUsesImaginaryUnitAndExactCoefficientCanContinue() = withKeyboard { scenario ->
+        key(3, 5)
+        candidate("(1.4142…)i")
+        candidate("(√2)i")
+        select("(√2)i")
+        editor(scenario, "(√2)i")
+        key(2, 1)
+        candidate("1+(1.4142…)i")
+        candidate("1+(√2)i")
+        key(2, 3)
+        editor(scenario, "(√2)i+1", composing = false)
     }
 
     private fun key(row: Int, column: Int) = driver.click {
@@ -126,7 +171,9 @@ class CalculatorImeTest {
             ui.serviceInfo = ui.serviceInfo.apply { flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS }
             val layout = KeyboardLayout("Radical fixture", listOf(
                 RowLayout(1f, listOf(KeySlot(1f, "√8+√2"), KeySlot(1f, "sqrt(2+sqrt(2))"), KeySlot(1f, "√4"))),
-                RowLayout(1f, listOf(KeySlot(1f, "+1"), KeySlot(1f, "√(-1)"), KeySlot(1f, action = KeyAction.ENTER)))
+                RowLayout(1f, listOf(KeySlot(1f, "+1"), KeySlot(1f, "sqrt()"), KeySlot(1f, action = KeyAction.ENTER))),
+                RowLayout(1f, listOf(KeySlot(1f, "e"), KeySlot(1f, "π"), KeySlot(1f, "φ"),
+                    KeySlot(1f, "i"), KeySlot(1f, "√(-2)"), KeySlot(1f, "sqrt(i)")))
             ))
             filename = LayoutFileManager.createLayout(context, layout.name, layout)
             PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(filename))

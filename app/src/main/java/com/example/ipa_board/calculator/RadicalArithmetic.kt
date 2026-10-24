@@ -101,13 +101,13 @@ internal class RadicalArithmetic {
         return multiply(conjugate, inverse(norm))
     }
     private fun basis(level: Int) = Value(mapOf((1 shl level) to Rational.ONE))
-    private fun rational(v: Value): Rational? = when {
+    fun rational(v: Value): Rational? = when {
         v.terms.isEmpty() -> Rational.ZERO
         v.terms.keys == setOf(0) -> v.terms.getValue(0)
         else -> null
     }
     /** Exact ordering in the chosen real embedding; all generators denote positive roots. */
-    private fun sign(v: Value): Int {
+    fun sign(v: Value): Int {
         tick()
         rational(v)?.let { return it.numerator.signum() }
         val mask = v.terms.keys.fold(0) { a, b -> a or b }
@@ -241,7 +241,7 @@ internal class RadicalArithmetic {
         generators += Generator(square, prime, decimal.sqrt(precision))
         return generators.lastIndex
     }
-    private fun decimal(v: Value): BigDecimal = v.terms.entries.fold(BigDecimal.ZERO) { sum, (mask, coefficient) ->
+    fun decimal(v: Value): BigDecimal = v.terms.entries.fold(BigDecimal.ZERO) { sum, (mask, coefficient) ->
         var term = coefficient.decimal(precision)
         generators.indices.filter { mask and (1 shl it) != 0 }.forEach {
             term = term.multiply(generators[it].decimal, precision)

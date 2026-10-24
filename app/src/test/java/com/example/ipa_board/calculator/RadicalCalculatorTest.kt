@@ -72,9 +72,9 @@ class RadicalCalculatorTest {
         forms("(1+√2)(1-√2)", "-1", "-1")
     }
 
-    @Test fun invalidNonRealAndIncompleteRootsDoNotBecomeMisleadingNumbers() {
+    @Test fun invalidAndIncompleteRootsDoNotBecomeMisleadingNumbers() {
         for (input in listOf("√", "sqrt", "sqrt2", "sqrt()", "√()", "√(2", "√[2)",
-            "√(-1)", "sqrt(-4)", "√(1-√2)", "√(√(2+√2)-2)", "√2abc", "√2+√", "√(2+)")) {
+            "√2+√", "√(2+)")) {
             assertEquals(input, "Error", CalculatorEvaluator.evaluate(input))
             assertTrue(input, CalculatorEvaluator.resultForms(input).isEmpty())
         }
@@ -118,7 +118,7 @@ class RadicalCalculatorTest {
     @Test fun ordinaryArithmeticKeepsOneCandidateAndDisabledModeKeepsLanguageResults() {
         assertEquals(listOf("3"), CalculatorEvaluator.resultForms("1+2"))
         assertEquals(listOf("3"), CalculatorCandidates.forInput("1+2", true).map { it.text })
-        for (raw in listOf("2", "-2", "text", "1+")) assertTrue(raw, CalculatorCandidates.forInput(raw, true).isEmpty())
+        for (raw in listOf("2", "-2", "abc", "1+")) assertTrue(raw, CalculatorCandidates.forInput(raw, true).isEmpty())
         val base = listOf(Candidate("literal", "EN"))
         assertEquals(base, CalculatorCandidates.merge("√2", false, base))
     }

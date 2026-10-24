@@ -7,15 +7,15 @@ object CalculatorCandidates {
     fun forInput(raw: String, enabled: Boolean): List<Candidate> {
         if (!enabled) return emptyList()
         val trimmed = raw.trim()
-        if (trimmed.isEmpty() || trimmed.none { it.isDigit() }) return emptyList()
-        val root = trimmed.contains('√') || trimmed.contains("sqrt")
+        if (trimmed.isEmpty()) return emptyList()
+        val special = trimmed.contains('√') || trimmed.contains("sqrt") || trimmed.any { it in "eπφi" }
         val operations = trimmed.count { it in "+-*/×÷" }
-        if (!root && operations == 0) return emptyList()
-        if (!root && operations == 1 && trimmed.startsWith("-") &&
+        if (!special && operations == 0) return emptyList()
+        if (!special && operations == 1 && trimmed.startsWith("-") &&
             trimmed.substring(1).all { it.isDigit() || it == '.' }) return emptyList()
 
         val forms = CalculatorEvaluator.resultForms(trimmed)
-        if (!root && forms.singleOrNull().let {
+        if (!special && forms.singleOrNull().let {
                 it == trimmed || it == trimmed.takeWhile { c -> c.isDigit() || c == '.' || c == '-' }
             }) return emptyList()
         // Different ranks keep equal decimal/exact texts independently selectable.
