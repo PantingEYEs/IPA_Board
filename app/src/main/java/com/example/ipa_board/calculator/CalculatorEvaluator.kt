@@ -5,8 +5,8 @@ import java.math.RoundingMode
 import java.util.ArrayDeque
 
 /**
- * Calculator evaluator capable of evaluating basic four arithmetic operations
- * (+, -, *, /), square roots and constants and nested (), [], {} groups with precision up to 4 decimal places
+ * Calculator evaluator for arithmetic, powers, square roots, constants and nested (), [], {}
+ * groups, displaying up to 4 decimal places.
  * using BigDecimal. Bracket styles do not introduce different precedence levels.
  */
 object CalculatorEvaluator {
@@ -26,7 +26,7 @@ object CalculatorEvaluator {
         }
     }
 
-    /** Decimal first, exact form second for root expressions, even when the texts are equal. */
+    /** Decimal first, then applicable exact/constant forms, even when their texts are equal. */
     fun resultForms(expression: String): List<String> = try {
         evaluateResult(expression)?.let { result ->
             listOfNotNull(result.decimal, result.exact, result.symbolic)
@@ -44,11 +44,12 @@ object CalculatorEvaluator {
         val tokens = tokenize(trimmed)
         if (tokens.isEmpty()) return null
         val rpn = shuntingYard(tokens)
-        return if (tokens.any { it is Token.Constant || (it is Token.Operator && it.op == '√') }) {
+        return if (tokens.any { it is Token.Constant || it is Token.PowFunction || (it is Token.Operator && it.op in "√^") }) {
             val expanded = SymbolicArithmetic()
             val value = evalSymbolicRpn(rpn, expanded, expandPhi = true)
             val decimal = expanded.decimalText(value)
-            val exact = expanded.exactText(value)
+            val exact = if (expanded.nonIntegerPower || tokens.any { it is Token.Constant || (it is Token.Operator && it.op == '√') })
+                expanded.exactText(value) else null
             val symbolic = if (tokens.any { it is Token.Constant && it.name == 'φ' }) {
                 val preserved = SymbolicArithmetic()
                 preserved.exactText(evalSymbolicRpn(rpn, preserved, expandPhi = false))
@@ -63,6 +64,8 @@ object CalculatorEvaluator {
     private sealed class Token {
         data class Number(val value: BigDecimal) : Token()
         data class Constant(val name: Char) : Token()
+        data object PowFunction : Token()
+        data object Comma : Token()
         data class Operator(val op: Char) : Token() // '+', '-', '×', '÷', '~' (unary minus), '√'
         data class OpenGroup(val bracket: Char) : Token()
         data class CloseGroup(val bracket: Char) : Token()
@@ -70,7 +73,7 @@ object CalculatorEvaluator {
 
     private fun tokenize(expr: String): List<Token> {
         val clean = expr.replace('*', '×').replace('/', '÷')
-        val special = clean.contains('√') || clean.contains("sqrt") || clean.any { it in "eπφi" }
+        val special = clean.contains('√') || clean.contains("sqrt") || clean.contains("pow") || clean.contains('^') || clean.any { it in "eπφi" }
         if (special) require(clean.length <= 4096) { "Radical expression length limit" }
         val tokens = mutableListOf<Token>()
         var i = 0
@@ -91,6 +94,17 @@ object CalculatorEvaluator {
                     i++
                 }
                 tokens.add(Token.Number(BigDecimal(sb.toString())))
+            } else if (clean.startsWith("pow", i)) {
+                i += 3
+                while (i < len && clean[i].isWhitespace()) i++
+                require(i < len && clean[i] == '(') { "pow requires parentheses" }
+                if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant) {
+                    tokens.add(Token.Operator('×'))
+                }
+                tokens.add(Token.PowFunction)
+            } else if (c == ',') {
+                tokens.add(Token.Comma)
+                i++
             } else if (c == '√' || clean.startsWith("sqrt", i)) {
                 if (c != '√') {
                     i += 4
@@ -107,9 +121,9 @@ object CalculatorEvaluator {
                 }
                 tokens.add(Token.Constant(c))
                 i++
-            } else if (c == '+' || c == '-' || c == '×' || c == '÷') {
+            } else if (c == '+' || c == '-' || c == '×' || c == '÷' || c == '^') {
                 val isUnaryMinus = c == '-' &&
-                    (tokens.isEmpty() || tokens.last() is Token.Operator || tokens.last() is Token.OpenGroup)
+                    (tokens.isEmpty() || tokens.last() is Token.Operator || tokens.last() is Token.OpenGroup || tokens.last() is Token.Comma)
                 tokens.add(Token.Operator(if (isUnaryMinus) '~' else c))
                 i++
             } else if (c in "([{") {
@@ -129,7 +143,7 @@ object CalculatorEvaluator {
 
         // Drop trailing operators for evaluation (e.g. "5 +" -> "5")
         val resultTokens = tokens.toMutableList()
-        while (resultTokens.lastOrNull().let { it is Token.Operator && it.op != '√' }) {
+        while (resultTokens.lastOrNull().let { it is Token.Operator && it.op !in "√^" }) {
             resultTokens.removeAt(resultTokens.size - 1)
         }
 
@@ -137,7 +151,8 @@ object CalculatorEvaluator {
     }
 
     private fun precedence(op: Char): Int = when (op) {
-        '√' -> 4
+        '√' -> 5
+        '^' -> 4
         '~' -> 3
         '×', '÷' -> 2
         '+', '-' -> 1
@@ -147,6 +162,8 @@ object CalculatorEvaluator {
     private fun shuntingYard(tokens: List<Token>): List<Token> {
         val output = mutableListOf<Token>()
         val opStack = ArrayDeque<Char>()
+        data class Group(val bracket: Char, val pow: Boolean, var commas: Int = 0)
+        val groups = ArrayDeque<Group>()
         var expectingOperand = true
 
         for (token in tokens) {
@@ -156,6 +173,17 @@ object CalculatorEvaluator {
                     output.add(token)
                     expectingOperand = false
                 }
+                Token.PowFunction -> {
+                    require(expectingOperand) { "Missing operator before pow" }
+                    opStack.push('p')
+                }
+                Token.Comma -> {
+                    val group = groups.peek()
+                    require(!expectingOperand && group != null && group.pow && group.commas == 0) { "Invalid pow arguments" }
+                    while (opStack.peek()?.let { it !in "([{" } == true) output.add(Token.Operator(opStack.pop()))
+                    group.commas++
+                    expectingOperand = true
+                }
                 is Token.Operator -> {
                     val unary = token.op == '~' || token.op == '√'
                     require(expectingOperand == unary) { "Missing operand" }
@@ -164,7 +192,7 @@ object CalculatorEvaluator {
                         val top = opStack.peek() ?: break
                         val shouldPop = !unary && top !in "([{" &&
                             (precedence(top) > precedence(token.op) ||
-                                precedence(top) == precedence(token.op))
+                                (token.op != '^' && precedence(top) == precedence(token.op)))
                         if (!shouldPop) break
                         output.add(Token.Operator(opStack.pop()))
                     }
@@ -173,6 +201,7 @@ object CalculatorEvaluator {
                 }
                 is Token.OpenGroup -> {
                     require(expectingOperand) { "Missing operator before group" }
+                    groups.push(Group(token.bracket, opStack.peek() == 'p'))
                     opStack.push(token.bracket)
                 }
                 is Token.CloseGroup -> {
@@ -188,6 +217,11 @@ object CalculatorEvaluator {
                         else -> '{'
                     }
                     require(opStack.isNotEmpty() && opStack.pop() == opening) { "Mismatched group" }
+                    val group = groups.pop()
+                    if (group.pow) {
+                        require(group.commas == 1 && opStack.pop() == 'p') { "pow needs two arguments" }
+                        output.add(Token.Operator('^'))
+                    }
                 }
             }
         }
@@ -260,6 +294,7 @@ object CalculatorEvaluator {
                                 '-' -> arithmetic.subtract(a, b)
                                 '×' -> arithmetic.multiply(a, b)
                                 '÷' -> arithmetic.divide(a, b)
+                                '^' -> arithmetic.power(a, b)
                                 else -> throw IllegalArgumentException("Unknown operator")
                             }
                         }

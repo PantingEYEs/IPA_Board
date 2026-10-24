@@ -121,6 +121,44 @@ class CalculatorImeTest {
         editor(scenario, "(√2)i+1", composing = false)
     }
 
+    @Test fun caretAndPowCandidatesApplyPrecedenceAndRemainEditable() = withKeyboard { scenario ->
+        key(4, 1)
+        candidate("512")
+        select("512")
+        editor(scenario, "512")
+        key(2, 3)
+        key(4, 2)
+        candidate("1.4142…")
+        candidate("√2")
+        select("√2")
+        editor(scenario, "512√2")
+        key(2, 1)
+        candidate("2.4142…")
+        candidate("1+√2")
+        key(2, 3)
+        editor(scenario, "512√2+1", composing = false)
+    }
+
+    @Test fun powersKeepPhiThreeFormsComplexFormattingAndIncompleteLiteralFallback() = withKeyboard { scenario ->
+        key(4, 4)
+        candidate("3.0696…")
+        candidate("(2)^((1+√5)/2)")
+        candidate("(2)^(φ)")
+        select("(2)^(φ)")
+        editor(scenario, "(2)^(φ)")
+        key(2, 3)
+        key(4, 3)
+        candidate("(2)i")
+        select("(2)i")
+        editor(scenario, "(2)^(φ)(2)i")
+        key(2, 3)
+        key(4, 5)
+        editor(scenario, "(2)^(φ)(2)i2^")
+        driver.awaitAbsent { it.contentDescription?.toString() == "(2)i" }
+        key(2, 3)
+        editor(scenario, "(2)^(φ)(2)i2^", composing = false)
+    }
+
     private fun key(row: Int, column: Int) = driver.click {
         it.contentDescription?.toString()?.startsWith("Row $row, key $column:") == true
     }
@@ -173,7 +211,9 @@ class CalculatorImeTest {
                 RowLayout(1f, listOf(KeySlot(1f, "√8+√2"), KeySlot(1f, "sqrt(2+sqrt(2))"), KeySlot(1f, "√4"))),
                 RowLayout(1f, listOf(KeySlot(1f, "+1"), KeySlot(1f, "sqrt()"), KeySlot(1f, action = KeyAction.ENTER))),
                 RowLayout(1f, listOf(KeySlot(1f, "e"), KeySlot(1f, "π"), KeySlot(1f, "φ"),
-                    KeySlot(1f, "i"), KeySlot(1f, "√(-2)"), KeySlot(1f, "sqrt(i)")))
+                    KeySlot(1f, "i"), KeySlot(1f, "√(-2)"), KeySlot(1f, "sqrt(i)"))),
+                RowLayout(1f, listOf(KeySlot(1f, "2^3^2"), KeySlot(1f, "pow(2,1/2)"),
+                    KeySlot(1f, "(1+i)^2"), KeySlot(1f, "2^φ"), KeySlot(1f, "2^")))
             ))
             filename = LayoutFileManager.createLayout(context, layout.name, layout)
             PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(filename))
