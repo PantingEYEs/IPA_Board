@@ -11,6 +11,42 @@ import org.junit.Test
 
 class CompositionControllerTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    @Test fun undefinedSlopePlaceholderDoesNotReplaceComposition() {
+        instrumentation.runOnMainSync {
+            val editor = EditText(instrumentation.targetContext)
+            val ic = requireNotNull(editor.onCreateInputConnection(EditorInfo()))
+            val controller = CompositionController({ ic }, { _, _ -> }, {})
+            controller.input("90°")
+            val placeholder = Candidate("Undefined", "∑", rank = -5)
+            controller.updateCandidates(listOf(placeholder))
+            val revision = controller.revision
+            assertFalse(controller.select(placeholder))
+            assertEquals("90°", controller.raw)
+            assertEquals("90°", editor.text.toString())
+            assertEquals(revision, controller.revision)
+        }
+    }
+    @Test fun mathSelectionRemovesApproximationMarkersFromAllComplexComponentsOnly() {
+        instrumentation.runOnMainSync {
+            val editor = EditText(instrumentation.targetContext)
+            val ic = requireNotNull(editor.onCreateInputConnection(EditorInfo()))
+            val controller = CompositionController({ ic }, { _, _ -> }, {})
+            controller.input("sqrt(i)")
+            val result = Candidate("0.7071…+(0.7071…)i", "∑", rank = -1)
+            controller.updateCandidates(listOf(result))
+            assertTrue(controller.select(result))
+            assertEquals("0.7071+(0.7071)i", controller.raw)
+            assertEquals(controller.raw, editor.text.toString())
+            controller.input("+1")
+            assertTrue(controller.literal())
+            assertEquals("0.7071+(0.7071)i+1", editor.text.toString())
+            controller.input("a")
+            val literal = Candidate("word…", "EN")
+            controller.updateCandidates(listOf(literal))
+            assertTrue(controller.select(literal))
+            assertEquals("0.7071+(0.7071)i+1word…", editor.text.toString())
+        }
+    }
     @Test fun widthToggleRepaintsCompositionButKeepsEngineEncodingAndRejectsOldCandidates() {
         instrumentation.runOnMainSync {
             val editor = EditText(instrumentation.targetContext)

@@ -30,6 +30,7 @@ import com.example.ipa_board.SettingsConstants.KEY_CTRL_SHORTCUTS
 import java.util.Locale
 
 class IpaBoardService : InputMethodService() {
+    private val calculatorSession = CalculatorSession()
     private var chrome: ImeChromeView? = null
     private lateinit var prefs: SharedPreferences
     private val remoteKeyboardMode by lazy { RemoteKeyboardMode(prefs) }
@@ -288,45 +289,11 @@ class IpaBoardService : InputMethodService() {
         composition.updateCandidates(composition.candidates.filter { it.language != "∑" })
         refreshCandidates()
     }
-    private fun getMathCandidate(raw: String): Candidate? {
-        if (!calculatorEnabled()) return null
-        val trimmed = raw.trim()
-        if (trimmed.isEmpty()) return null
-
-        val mathOps = setOf('+', '-', '*', '/', '×', '÷')
-        val opsCount = trimmed.count { it in mathOps }
-        if (opsCount == 0) return null
-
-        if (opsCount == 1 && trimmed.startsWith("-") && trimmed.substring(1).all { it.isDigit() || it == '.' }) {
-            return null
-        }
-
-        val hasDigit = trimmed.any { it.isDigit() }
-        if (!hasDigit) return null
-
-        val evalRes = CalculatorEvaluator.evaluate(trimmed)
-        if (evalRes.isEmpty() || evalRes == "Error" || evalRes == "除数不能为0") {
-            return null
-        }
-
-        val firstNum = trimmed.takeWhile { it.isDigit() || it == '.' || it == '-' }
-        if (evalRes == firstNum || evalRes == trimmed) {
-            return null
-        }
-
-        return Candidate(evalRes, "∑", rank = -1)
-    }
-
     private fun refreshCandidates() {
         val raw = composition.raw
         val baseStatus = if (directOnly) "Direct Input" else engineStatus
 
-        val mathCand = getMathCandidate(raw)
-        val displayCandidates = if (mathCand != null) {
-            listOf(mathCand) + composition.candidates.filter { it.text != mathCand.text }
-        } else {
-            composition.candidates
-        }
+        val displayCandidates = CalculatorCandidates.merge(raw, calculatorEnabled(), composition.candidates, calculatorSession)
 
         composition.updateCandidates(displayCandidates)
         chrome?.render(raw, displayCandidates, baseStatus, composition.revision)
@@ -921,6 +888,7 @@ class IpaBoardService : InputMethodService() {
     }
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
+        calculatorSession.reset()
         AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT)
         inputController.reset()
         val type = attribute?.inputType ?: 0
@@ -934,6 +902,7 @@ class IpaBoardService : InputMethodService() {
     }
     override fun onStartInputView(editorInfo: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(editorInfo, restarting)
+        calculatorSession.reset()
         AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT_VIEW)
         clipboard.addPrimaryClipChangedListener(clipboardListener)
         composition.start()
@@ -969,6 +938,7 @@ class IpaBoardService : InputMethodService() {
         return super.onKeyUp(keyCode, event)
     }
     override fun onFinishInputView(finishingInput: Boolean) {
+        calculatorSession.reset()
         menuPopup?.dismiss()
         closeDashboardObservation()
         AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT_VIEW)
@@ -978,10 +948,12 @@ class IpaBoardService : InputMethodService() {
         super.onFinishInputView(finishingInput)
     }
     override fun onFinishInput() {
+        calculatorSession.reset()
         AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT)
         composition.finish(); engines.suspendSemantic(); inputController.reset(); super.onFinishInput()
     }
     override fun onDestroy() {
+        calculatorSession.reset()
         menuPopup?.dismiss()
         closeDashboardObservation()
         emojiClosed = true

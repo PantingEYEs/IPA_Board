@@ -69,7 +69,8 @@
         "com.example.ipa_board.EngineDashboardImeTest",
         "com.example.ipa_board.RemoteKeyboardModeImeTest",
         "com.example.ipa_board.PopupActionsImeTest",
-        "com.example.ipa_board.MultifunctionBarImeTest"
+        "com.example.ipa_board.MultifunctionBarImeTest",
+        "com.example.ipa_board.CalculatorImeTest"
       ]
     },
     "semantic": {
@@ -123,7 +124,8 @@
         "com.example.ipa_board.PopupGestureEquivalenceTest",
         "com.example.ipa_board.PopupActionsImeTest",
         "com.example.ipa_board.MultifunctionBarTest",
-        "com.example.ipa_board.MultifunctionBarImeTest"
+        "com.example.ipa_board.MultifunctionBarImeTest",
+        "com.example.ipa_board.CalculatorImeTest"
       ]
     },
     "ipa": {
@@ -182,6 +184,13 @@
         "com.example.ipa_board.MultifunctionBarImeTest",
         "com.example.ipa_board.ImeChromeTest",
         "com.example.ipa_board.KeyboardInputControllerTest"
+      ]
+    },
+    "calculator": {
+      "classes": [
+        "com.example.ipa_board.CalculatorImeTest",
+        "com.example.ipa_board.CompositionControllerTest",
+        "com.example.ipa_board.ImeChromeTest"
       ]
     }
   }
