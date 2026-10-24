@@ -5,7 +5,7 @@ import java.math.RoundingMode
 import java.util.ArrayDeque
 
 /**
- * Calculator evaluator for arithmetic, powers, square roots, constants and nested (), [], {}
+ * Calculator evaluator for arithmetic, powers, percentages, square roots, constants and nested (), [], {}
  * groups, displaying up to 4 decimal places.
  * using BigDecimal. Bracket styles do not introduce different precedence levels.
  */
@@ -66,6 +66,7 @@ object CalculatorEvaluator {
         data class Constant(val name: Char) : Token()
         data object PowFunction : Token()
         data object Comma : Token()
+        data object Percent : Token() // Postfix division by 100; never a contextual percentage.
         data class Operator(val op: Char) : Token() // '+', '-', '×', '÷', '~' (unary minus), '√'
         data class OpenGroup(val bracket: Char) : Token()
         data class CloseGroup(val bracket: Char) : Token()
@@ -73,7 +74,7 @@ object CalculatorEvaluator {
 
     private fun tokenize(expr: String): List<Token> {
         val clean = expr.replace('*', '×').replace('/', '÷')
-        val special = clean.contains('√') || clean.contains("sqrt") || clean.contains("pow") || clean.contains('^') || clean.any { it in "eπφi" }
+        val special = clean.contains('√') || clean.contains("sqrt") || clean.contains("pow") || clean.contains('^') || clean.contains('%') || clean.any { it in "eπφi" }
         if (special) require(clean.length <= 4096) { "Radical expression length limit" }
         val tokens = mutableListOf<Token>()
         var i = 0
@@ -87,7 +88,7 @@ object CalculatorEvaluator {
             }
 
             if (c.isDigit() || c == '.') {
-                if (special && tokens.lastOrNull() is Token.Constant) tokens.add(Token.Operator('×'))
+                if (special && (tokens.lastOrNull() is Token.Constant || tokens.lastOrNull() is Token.Percent)) tokens.add(Token.Operator('×'))
                 val sb = StringBuilder()
                 while (i < len && (clean[i].isDigit() || clean[i] == '.')) {
                     sb.append(clean[i])
@@ -98,10 +99,13 @@ object CalculatorEvaluator {
                 i += 3
                 while (i < len && clean[i].isWhitespace()) i++
                 require(i < len && clean[i] == '(') { "pow requires parentheses" }
-                if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant) {
+                if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant || tokens.lastOrNull() is Token.Percent) {
                     tokens.add(Token.Operator('×'))
                 }
                 tokens.add(Token.PowFunction)
+            } else if (c == '%') {
+                tokens.add(Token.Percent)
+                i++
             } else if (c == ',') {
                 tokens.add(Token.Comma)
                 i++
@@ -111,12 +115,12 @@ object CalculatorEvaluator {
                     while (i < len && clean[i].isWhitespace()) i++
                     require(i < len && clean[i] == '(') { "sqrt requires parentheses" }
                 } else i++
-                if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant) {
+                if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant || tokens.lastOrNull() is Token.Percent) {
                     tokens.add(Token.Operator('×'))
                 }
                 tokens.add(Token.Operator('√'))
             } else if (c in "eπφi") {
-                if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant) {
+                if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant || tokens.lastOrNull() is Token.Percent) {
                     tokens.add(Token.Operator('×'))
                 }
                 tokens.add(Token.Constant(c))
@@ -128,7 +132,7 @@ object CalculatorEvaluator {
                 i++
             } else if (c in "([{") {
                 // Exact forms such as 2√2 and (1+√2)(1-√2) must remain reusable as input.
-                if (special && (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant)) {
+                if (special && (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant || tokens.lastOrNull() is Token.Percent)) {
                     tokens.add(Token.Operator('×'))
                 }
                 tokens.add(Token.OpenGroup(c))
@@ -172,6 +176,11 @@ object CalculatorEvaluator {
                     require(expectingOperand) { "Missing operator" }
                     output.add(token)
                     expectingOperand = false
+                }
+                Token.Percent -> {
+                    require(!expectingOperand) { "Missing percentage operand" }
+                    // Postfix binds directly to the completed operand, including a closed group.
+                    output.add(token)
                 }
                 Token.PowFunction -> {
                     require(expectingOperand) { "Missing operator before pow" }
@@ -221,6 +230,9 @@ object CalculatorEvaluator {
                     if (group.pow) {
                         require(group.commas == 1 && opStack.pop() == 'p') { "pow needs two arguments" }
                         output.add(Token.Operator('^'))
+                    } else if (opStack.peek() == '√') {
+                        // A grouped root is complete before a following postfix percentage.
+                        output.add(Token.Operator(opStack.pop()))
                     }
                 }
             }
@@ -243,6 +255,10 @@ object CalculatorEvaluator {
         for (token in tokens) {
             when (token) {
                 is Token.Number -> stack.push(token.value)
+                Token.Percent -> {
+                    require(stack.isNotEmpty()) { "Missing percentage operand" }
+                    stack.push(stack.pop().movePointLeft(2))
+                }
                 is Token.Operator -> {
                     if (token.op == '~') {
                         require(stack.isNotEmpty()) { "Missing operand" }
@@ -279,6 +295,10 @@ object CalculatorEvaluator {
         for (token in tokens) {
             when (token) {
                 is Token.Number -> stack.push(arithmetic.number(token.value))
+                Token.Percent -> {
+                    require(stack.isNotEmpty()) { "Missing percentage operand" }
+                    stack.push(arithmetic.divide(stack.pop(), arithmetic.number(BigDecimal(100))))
+                }
                 is Token.Constant -> stack.push(arithmetic.constant(token.name, expandPhi))
                 is Token.Operator -> {
                     require(stack.isNotEmpty()) { "Missing operand" }

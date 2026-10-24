@@ -9,13 +9,13 @@ object CalculatorCandidates {
         val trimmed = raw.trim()
         if (trimmed.isEmpty()) return emptyList()
         val special = trimmed.contains('√') || trimmed.contains("sqrt") || trimmed.contains("pow") || trimmed.any { it in "eπφi" }
-        val operations = trimmed.count { it in "+-*/×÷^" }
+        val operations = trimmed.count { it in "+-*/×÷^%" }
         if (!special && operations == 0) return emptyList()
         if (!special && operations == 1 && trimmed.startsWith("-") &&
             trimmed.substring(1).all { it.isDigit() || it == '.' }) return emptyList()
 
         val forms = CalculatorEvaluator.resultForms(trimmed)
-        if (!special && '^' !in trimmed && forms.singleOrNull().let {
+        if (!special && '^' !in trimmed && '%' !in trimmed && forms.singleOrNull().let {
                 it == trimmed || it == trimmed.takeWhile { c -> c.isDigit() || c == '.' || c == '-' }
             }) return emptyList()
         // Different ranks keep equal decimal/exact texts independently selectable.
