@@ -8,7 +8,7 @@ object CalculatorCandidates {
         if (!enabled) return emptyList()
         val trimmed = raw.trim()
         if (trimmed.isEmpty()) return emptyList()
-        val special = trimmed.contains('√') || trimmed.contains("sqrt") || trimmed.contains("pow") || trimmed.contains("perm") || trimmed.contains("comb") || trimmed.contains("log") || trimmed.any { it in "eπφi" }
+        val special = '°' in trimmed || listOf("sin", "cos", "tan", "asin", "acos", "atan").any { trimmed.contains(it) } || trimmed.contains('√') || trimmed.contains("sqrt") || trimmed.contains("pow") || trimmed.contains("perm") || trimmed.contains("comb") || trimmed.contains("log") || trimmed.any { it in "eπφi" }
         val operations = trimmed.count { it in "+-*/×÷^%!" }
         if (!special && operations == 0) return emptyList()
         if (!special && operations == 1 && trimmed.startsWith("-") &&

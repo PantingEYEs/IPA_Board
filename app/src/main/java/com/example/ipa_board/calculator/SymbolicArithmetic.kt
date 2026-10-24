@@ -18,6 +18,8 @@ internal class SymbolicArithmetic {
     data class PowerFormula(val base: Complex, val exponent: Complex, val integer: Int?) : Formula
     data class BinaryFormula(val operator: Char, val a: Complex, val b: Complex) : Formula
     data class UnaryFormula(val operator: Char, val a: Complex) : Formula
+    data class TrigFormula(val name: String, val argument: Complex) : Formula
+    data class TrigPart(val source: TrigFormula, val imaginary: Boolean) : Real
     data class LogFormula(val value: Complex, val base: Complex) : Formula
     data class LogPart(val source: LogFormula, val imaginary: Boolean) : Real
     data class PowerPart(val source: PowerFormula, val imaginary: Boolean) : Real
@@ -29,12 +31,35 @@ internal class SymbolicArithmetic {
     private val two = Number(field.number(BigDecimal(2)))
     var nonIntegerPower = false
         private set
+    private val trigDecimals = mutableMapOf<TrigFormula, DecimalPowers.Value>()
     private val logDecimals = mutableMapOf<LogFormula, DecimalPowers.Value>()
     private val powerDecimals = mutableMapOf<PowerFormula, DecimalPowers.Value>()
     private var work = 0
     private val decimals = mutableMapOf<Real, BigDecimal>()
     private fun tick() { require(++work <= 20000) { "Symbolic expression work limit" } }
     fun number(n: BigDecimal) = Complex(Number(field.number(n)), zero)
+    fun rationalReal(value: Complex): Rational? =
+        if (value.formula == null && value.imaginary == zero && value.real is Number) field.rational(value.real.value) else null
+
+    fun angleForms(value: Complex): List<String> {
+        val degrees = divide(multiply(value, number(BigDecimal(180))), constant('π', true))
+        fun degreeText(text: String): String =
+            if (text.replace("\u2026", "").matches(Regex("-?[0-9]+([.][0-9]+)?"))) "$text\u00b0" else "($text)\u00b0"
+        val forms = mutableListOf(degreeText(decimalText(degrees)), degreeText(exactText(degrees)), decimalText(value), exactText(value))
+        val slope = try { trigonometric("tan", value) } catch (_: TrigonometricPole) { null }
+        if (slope == null) forms.addAll(listOf("Undefined", "Undefined"))
+        else forms.addAll(listOf(decimalText(slope), exactText(slope)))
+        require(forms.all { it.length <= 1000 }) { "Angle result length limit" }
+        return forms
+    }
+    /** A tangent result is a slope; derive principal angles without replacing its exact slope. */
+    fun slopeForms(value: Complex): List<String> {
+        val angle = try { trigonometric("atan", value) } catch (_: TrigonometricPole) { null }
+        val angleEntries = if (angle == null) List(4) { "Undefined" } else angleForms(angle).take(4)
+        return (angleEntries + listOf(decimalText(value), exactText(value))).also { forms ->
+            require(forms.all { it.length <= 1000 }) { "Slope result length limit" }
+        }
+    }
     // Discrete operations require an exact real integer; never round approximate values.
     fun nonNegativeInteger(value: Complex): BigDecimal {
         require(value.formula == null && value.imaginary == zero && value.real is Number) { "Exact integer required" }
@@ -165,7 +190,7 @@ internal class SymbolicArithmetic {
         is Sum -> a.terms.all(::algebraic)
         is Product -> a.factors.all(::algebraic)
         is Quotient -> algebraic(a.numerator) && algebraic(a.denominator)
-        is PowerPart, is LogPart -> false
+        is PowerPart, is LogPart, is TrigPart -> false
     }
     private fun piMultiple(a: Real): Rational? = when {
         a == zero -> Rational.ZERO
@@ -190,6 +215,47 @@ internal class SymbolicArithmetic {
         repeat(halves) { unit = sqrt(unit) }
         val n = angle.numerator.mod(angle.denominator * BigInteger.TWO).toInt()
         return integerPower(unit, n)
+    }
+    fun trigonometric(name: String, a: Complex): Complex {
+        tick()
+        if (name == "atan" && a.real == zero && (a.imaginary == one || a.imaginary == negative(one))) {
+            throw TrigonometricPole()
+        }
+        val inverse = a.formula as? TrigFormula
+        if (inverse != null && name == "tan" && inverse.name == "atan") {
+            // Slope after principal atan returns its argument; atan(tan(z)) is not globally z.
+            return inverse.argument
+        }
+        if (a.formula == null && a.imaginary == zero) {
+            if (name in listOf("sin", "cos", "tan")) {
+                piMultiple(a.real)?.let { angle -> unitCircle(angle)?.let { unit ->
+                    return when (name) { "sin" -> Complex(unit.imaginary, zero); "cos" -> Complex(unit.real, zero)
+                        else -> { if (unit.real == zero) throw TrigonometricPole(); Complex(divideReal(unit.imaginary, unit.real), zero) } }
+                } }
+            } else {
+                // Recognize a finite exact table by algebraic equality, never by decimal proximity.
+                val denominators = listOf(1, 2, 3, 4, 6)
+                for (q in denominators) for (p in -q..q) {
+                    val ratio = Rational.of(BigInteger.valueOf(p.toLong()), BigInteger.valueOf(q.toLong()))
+                    val inRange = when(name) { "asin" -> 2*p in -q..q; "acos" -> p in 0..q; else -> 2*p > -q && 2*p < q }
+                    if (!inRange) continue
+                    val unit = unitCircle(ratio) ?: continue
+                    val target = when(name) { "asin" -> unit.imaginary; "acos" -> unit.real
+                        else -> if (unit.real == zero) continue else divideReal(unit.imaginary, unit.real) }
+                    if (target == a.real) return Complex(multiplyReal(Number(field.divide(field.number(BigDecimal(p)), field.number(BigDecimal(q)))), Symbol('π')), zero)
+                }
+            }
+        }
+        val source = TrigFormula(name, a)
+        trigDecimal(source)
+        val realOnly = a.real == zero && name == "cos" || a.imaginary == zero && (name in listOf("sin", "cos", "tan", "atan") || sign(addReal(a.real, one)) >= 0 && sign(addReal(one, negative(a.real))) >= 0)
+        val pureImaginary = a.real == zero && name in listOf("sin", "tan", "asin", "atan") &&
+            (name != "atan" || sign(addReal(one, negative(multiplyReal(a.imaginary, a.imaginary)))) > 0)
+        return decorate(Complex(if (pureImaginary) zero else TrigPart(source, false),
+            if (realOnly) zero else TrigPart(source, true)), source, a.depth + 1)
+    }
+    private fun trigDecimal(source: TrigFormula): DecimalPowers.Value = trigDecimals.getOrPut(source) {
+        DecimalTrigonometry.evaluate(source.name, DecimalPowers.Value(decimal(source.argument.real), decimal(source.argument.imaginary)))
     }
     /** No logarithm product/power identities are applied across complex branch cuts. */
     fun logarithm(value: Complex, base: Complex): Complex {
@@ -244,6 +310,7 @@ internal class SymbolicArithmetic {
     }
     private fun formulaText(formula: Formula): String {
         val result = when (formula) {
+            is TrigFormula -> "${formula.name}(${exactText(formula.argument)})"
             is LogFormula -> "log(${exactText(formula.value)},${exactText(formula.base)})"
             is PowerFormula -> "(${exactText(formula.base)})^(${exactText(formula.exponent)})"
             is BinaryFormula -> "(${exactText(formula.a)})${formula.operator}(${exactText(formula.b)})"
@@ -358,6 +425,7 @@ internal class SymbolicArithmetic {
         tick()
         when (a) {
             is Number -> field.decimal(a.value)
+            is TrigPart -> trigDecimal(a.source).let { if (a.imaginary) it.imaginary else it.real }
             is LogPart -> logDecimal(a.source).let { if (a.imaginary) it.imaginary else it.real }
             is PowerPart -> powerDecimal(a.source).let { if (a.imaginary) it.imaginary else it.real }
             is Symbol -> when (a.name) {
@@ -381,6 +449,7 @@ internal class SymbolicArithmetic {
         val result = when (a) {
             is Number -> field.exactText(a.value)
             // Internal sorting key only. A Complex containing these parts retains its Formula.
+            is TrigPart -> "#T${if (a.imaginary) "I" else "R"}${formulaText(a.source)}"
             is LogPart -> "#L${if (a.imaginary) "I" else "R"}${formulaText(a.source)}"
             is PowerPart -> "#${if (a.imaginary) "I" else "R"}${formulaText(a.source)}"
             is Symbol -> a.name.toString()

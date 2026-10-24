@@ -87,7 +87,7 @@ internal object DecimalPowers {
         require(exponent in -10000..10000) { "Logarithm magnitude limit" }
         return logSmall(value.scaleByPowerOfTen(-exponent)).add(logTen.multiply(BigDecimal(exponent), mc), mc)
     }
-    private fun exp(value: BigDecimal): BigDecimal {
+    internal fun exp(value: BigDecimal): BigDecimal {
         require(value <= BigDecimal(2300)) { "Exponential magnitude limit" }
         if (value < BigDecimal(-2300)) return BigDecimal.ZERO
         var reduced = value
@@ -105,7 +105,7 @@ internal object DecimalPowers {
         }
         error("Exponential convergence limit")
     }
-    private fun atan(value: BigDecimal): BigDecimal {
+    internal fun atan(value: BigDecimal): BigDecimal {
         if (value.signum() < 0) return atan(value.negate()).negate()
         if (value > BigDecimal.ONE) return pi.divide(two, mc).subtract(atan(BigDecimal.ONE.divide(value, mc)), mc)
         var reduced = value
@@ -132,7 +132,7 @@ internal object DecimalPowers {
         y.signum() < 0 -> pi.divide(two, mc).negate()
         else -> error("Undefined argument")
     }
-    private fun sinCos(angle: BigDecimal): Pair<BigDecimal, BigDecimal> {
+    internal fun sinCos(angle: BigDecimal): Pair<BigDecimal, BigDecimal> {
         require(angle.precision() - angle.scale() <= 128) { "Angular reduction limit" }
         var x = angle.remainder(pi.multiply(two, mc), mc)
         if (x > pi) x = x.subtract(pi.multiply(two, mc), mc)

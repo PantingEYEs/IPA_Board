@@ -22,6 +22,67 @@ class CalculatorImeTest {
     private val driver = ImeTestDriver()
     private val context get() = instrumentation.targetContext
 
+    @Test fun angleCandidatesRenderSelectAndContinueWhileScalarTrigResultsStayNumeric() = withKeyboard { scenario ->
+        key(5,3)
+        candidate("30°")
+        candidate("0.5236…")
+        candidate("π/6")
+        candidate("0.5774…")
+        candidate("√3/3")
+        select("30°")
+        editor(scenario,"30°")
+        key(5,4)
+        candidate("60°")
+        candidate("π/3")
+        select("60°")
+        editor(scenario,"60°")
+        key(2,3)
+        key(5,2)
+        candidate("0.5")
+        candidate("1/2")
+        select("1/2")
+        editor(scenario,"60°1/2")
+        key(2,1)
+        candidate("1.5")
+        key(2,3)
+    }
+
+    @Test fun tangentSlopeRendersSixConvertedCandidatesAndSelectedDegreeRemainsEditable() = withKeyboard { scenario ->
+        key(5,6)
+        candidate("45\u00b0")
+        candidate("0.7854\u2026")
+        candidate("\u03c0/4")
+        candidate("1")
+        val labels = setOf("45\u00b0", "0.7854\u2026", "\u03c0/4", "1")
+        val entries = mutableListOf<android.view.accessibility.AccessibilityNodeInfo>()
+        driver.find {
+            val label = it.contentDescription?.toString()
+            if (label in labels && it.text?.toString() == "$label " && it.isClickable) entries += it
+            false
+        }
+        assertEquals("Tangent must include degree, radian and slope pairs",6,entries.size)
+        select("45\u00b0")
+        editor(scenario,"45\u00b0")
+        key(5,4)
+        candidate("75\u00b0")
+        select("75\u00b0")
+        editor(scenario,"75\u00b0")
+        key(2,3)
+    }
+
+    @Test fun undefinedSlopeIsVisibleWithoutReplacingTheComposingAngle() = withKeyboard { scenario ->
+        key(5,5)
+        candidate("90°")
+        candidate("π/2")
+        candidate("Undefined")
+        select("Undefined")
+        editor(scenario,"90°")
+        select("90°")
+        editor(scenario,"90°")
+        key(2,3)
+        editor(scenario,"90°",composing=false)
+    }
+
     @Test fun decimalSelectionReplacesCompositionWithoutEllipsisAndCanBeCommitted() = withKeyboard { scenario ->
         key(1, 1)
         candidate("4.2426…")
@@ -213,7 +274,9 @@ class CalculatorImeTest {
                 RowLayout(1f, listOf(KeySlot(1f, "e"), KeySlot(1f, "π"), KeySlot(1f, "φ"),
                     KeySlot(1f, "i"), KeySlot(1f, "√(-2)"), KeySlot(1f, "sqrt(i)"))),
                 RowLayout(1f, listOf(KeySlot(1f, "2^3^2"), KeySlot(1f, "pow(2,1/2)"),
-                    KeySlot(1f, "(1+i)^2"), KeySlot(1f, "2^φ"), KeySlot(1f, "2^")))
+                    KeySlot(1f, "(1+i)^2"), KeySlot(1f, "2^φ"), KeySlot(1f, "2^"))),
+                RowLayout(1f, listOf(KeySlot(1f, "30°"), KeySlot(1f, "sin(30°)"), KeySlot(1f, "asin(1/2)"),
+                    KeySlot(1f, "+30°"), KeySlot(1f, "90°"), KeySlot(1f, "tan(45\u00b0)")))
             ))
             filename = LayoutFileManager.createLayout(context, layout.name, layout)
             PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(filename))

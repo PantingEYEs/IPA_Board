@@ -368,3 +368,25 @@ Shift / Caps Lock 指示由 `KeyboardWindowTest`（ui/full）验证真实控制�
 - 首轮新增用例中 `2*log(-1,e)` 的预期文本多写了乘号；实际结果遵循既有 `2π` 输出格式，已修正测试断言，未改变该格式。
 - `testDebugUnitTest assembleDebug lintDebug --offline` 通过，lint 0 错误、277 条既有警告。`git diff --check` 通过。
 - 本次修改解析/求值及候选生成，未运行设备回归，未连接或修改测试机。
+
+## 2026-10-24 三角、反三角与角度候选
+
+基准提交 `57cc9ea`。提供 `sin/cos/tan/asin/acos/atan`，普通三角参数默认弧度，`°` 后缀显式按角度解释数值。反三角结果携带角度单位；最终为一次角度时，依次显示角度、弧度、斜率各自的小数和精确式，共六项，相同文本保留，含 φ 也不再追加第七项。角度在 sin/cos 内或角度相除后消去，恢复普通数值候选；tan 产生斜率，仍须六项换算。单位不匹配的加减不计算。斜率为正切，正切极点显示两个不可替换预输入的 `Undefined` 占位项。
+
+- 高精度三角计算复用已有正弦/余弦、反正切、指数及对数实现；复数反三角公式参考 [NIST DLMF 4.23](https://dlmf.nist.gov/4.23)，割线上采用实轴上侧/虚轴右侧连续极限。常见角度按代数相等化简，不以小数接近代替精确证明，不应用 `atan(tan(z))=z` 等越过主值范围的恒等式。
+- JVM 194 项通过，0 失败、0 跳过；新增 `TrigonometryCalculatorTest` 6 项及 `AngleCalculatorTest` 5 项，覆盖精确角度、弧度默认值、角度消除/保留、函数参数数量、复数、极点、候选重复、φ、选中精确角度后继续运算、非法单位和容量回退。数值层与独立平台数学及 Python cmath 固定参考值比较，并检查反三角割线两侧。
+- 补充回归时按最终六项合同更新早期双候选预期；`sqrt((30°)^2)` 沿用已有符号 π 幂的未化简根式，测试验证单位及数值，不承诺新增根式化简能力。
+- 49 项 Python 工作流测试、46 个 instrumentation 类登记、93 项引擎资源哈希及 E5 重组校验通过。`testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug --offline` 通过；lint 0 错误、277 条既有警告。`git diff --check` 通过。
+- 独立临时 Android 15/API 35/arm64-v8a 模拟器通过保护工具执行 `calculator` 专项。首轮 `5d4e959a-f4e2-48f9-a7ff-5f5b3c752170`：IME 10 项中 9 项通过，Undefined 用例在 `awaitKeyboard` 等待窗口出现时超时，尚未执行功能断言；与既有等待问题症状相同，原因未确认，记录保留，未扩大等待时间。
+- 最终报告 `605dd324-8c10-41c8-9a5f-5d7231065580`：三个类共 30 项通过，0 失败、0 跳过（`CalculatorImeTest` 10、`CompositionControllerTest` 14、`ImeChromeTest` 6）。新增真实 IME 用例覆盖六项显示、选中角度后继续运算、角度消去后的数值候选和 Undefined 保护；控制器新增占位点击保持原文/修订号不变的检查。
+- 两轮原 APK、私有 CE/DE 数据均恢复并校验成功，备份已删除，`pending` 为空。首轮额外合成软件/私有数据往返校验通过；临时模拟器已关闭、AVD 已删除，未操作既有模拟器或实体手机。未运行完整设备套件，其他 API/ABI、签名 release 与实体设备未验证。
+
+### tan 斜率结果换算修正
+
+首版误将 tan 的输出当作普通标量，测试也错误地接受了两个数值候选；前述 194 项及设备通过记录不代表已覆盖此合同。按用户纠正，tan 的结果标记为斜率，最终输出同样为角度/弧度/斜率各两项。角度由主值 atan 换算，原始斜率的小数及精确式保留，例如 `tan(45°)` 与 `tan(225°)` 均输出 `45°、45°、0.7854…、π/4、1、1`。sin/cos 仍产生普通数值；斜率参与普通算术时保留其语义，由其他函数消费时按该函数的结果类型处理。若复数斜率为 ±i，反正切不存在有限值，角度/弧度四项显示 Undefined，保留原斜率两项。
+
+- 最终 JVM 195 项通过，0 失败、0 跳过；新增专项覆盖 tan 六项顺序、主值周期、零/负斜率、算术传播、其他函数消费与复数未定义角度。编译、AndroidTest APK 与 lint 通过，lint 0 错误、277 条既有警告。
+- 真实 IME 新增 `tangentSlopeRendersSixConvertedCandidatesAndSelectedDegreeRemainsEditable`，逐项检查六个候选卡片（含重复文本），选择换算后的角度继续计算；不再仅断言斜率数值。
+- 独立 API 35/arm64-v8a 模拟器首轮报告 `26c21d2c-4c3c-48f8-9ddc-83e758a379a6`：31 项中 22 通过、9 项 IME 用例在 awaitKeyboard 阶段超时，均未执行功能断言。报告保留，未更改等待预算或测试断言。
+- 复查报告 `ab59f444-3dd6-423f-8bb2-5603ddd2c9a3`：31 项中 30 通过、1 失败、0 跳过；新增 tan UI 用例通过，失败的既有 `nestedAndExactCandidatesRemainReusableAndInvalidInputKeepsLiteralText` 仍在 awaitKeyboard 阶段超时，原因未确认。不能将本次设备专项标为全通过；未继续重复整套测试。
+- 两轮均已恢复并校验原 APK 和私有数据，备份删除，pending 为空；临时模拟器及 AVD 已清理，未操作既有模拟器或实体手机。其他 API/ABI、完整设备套件与签名 release 未验证。

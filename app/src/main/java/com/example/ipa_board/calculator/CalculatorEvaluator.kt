@@ -10,6 +10,9 @@ import java.util.ArrayDeque
  * using BigDecimal. Bracket styles do not introduce different precedence levels.
  */
 object CalculatorEvaluator {
+    private val unaryFunctions = listOf("asin", "acos", "atan", "sin", "cos", "tan")
+    private fun unaryCode(name: String) = (0xE000 + unaryFunctions.indexOf(name)).toChar()
+    private fun unaryName(code: Char): String? = unaryFunctions.getOrNull(code.code - 0xE000)
 
     /**
      * Evaluates a mathematical expression string.
@@ -29,13 +32,13 @@ object CalculatorEvaluator {
     /** Decimal first, then applicable exact/constant forms, even when their texts are equal. */
     fun resultForms(expression: String): List<String> = try {
         evaluateResult(expression)?.let { result ->
-            listOfNotNull(result.decimal, result.exact, result.symbolic)
+            listOfNotNull(result.decimal, result.exact, result.symbolic) + result.additional
         }.orEmpty()
     } catch (_: Exception) {
         emptyList()
     }
 
-    private data class Result(val decimal: String, val exact: String? = null, val symbolic: String? = null)
+    private data class Result(val decimal: String, val exact: String? = null, val symbolic: String? = null, val additional: List<String> = emptyList())
 
     private fun evaluateResult(expression: String): Result? {
         val trimmed = expression.trim()
@@ -44,15 +47,25 @@ object CalculatorEvaluator {
         val tokens = tokenize(trimmed)
         if (tokens.isEmpty()) return null
         val rpn = shuntingYard(tokens)
-        return if (tokens.any { it is Token.Constant || (it is Token.BinaryFunction && it.operation in "^L") || (it is Token.Operator && it.op in "√^") }) {
+        return if (tokens.any { it is Token.Degree || it is Token.UnaryFunction || it is Token.Constant || (it is Token.BinaryFunction && it.operation in "^L") || (it is Token.Operator && it.op in "√^") }) {
             val expanded = SymbolicArithmetic()
-            val value = evalSymbolicRpn(rpn, expanded, expandPhi = true)
+            val evaluated = evalSymbolicRpn(rpn, expanded, expandPhi = true)
+            val value = evaluated.value
+            if (evaluated.anglePower == Rational.ONE) {
+                val forms = expanded.angleForms(value)
+                return Result(forms[0], forms[1], forms[2], forms.drop(3))
+            }
+            require(evaluated.anglePower == Rational.ZERO) { "Unsupported angular dimension" }
+            if (evaluated.isSlope) {
+                val forms = expanded.slopeForms(value)
+                return Result(forms[0], forms[1], forms[2], forms.drop(3))
+            }
             val decimal = expanded.decimalText(value)
-            val exact = if (expanded.nonIntegerPower || tokens.any { it is Token.BinaryFunction && it.operation == 'L' } || tokens.any { it is Token.Constant || (it is Token.Operator && it.op == '√') })
+            val exact = if (expanded.nonIntegerPower || tokens.any { it is Token.UnaryFunction } || tokens.any { it is Token.BinaryFunction && it.operation == 'L' } || tokens.any { it is Token.Constant || (it is Token.Operator && it.op == '√') })
                 expanded.exactText(value) else null
             val symbolic = if (tokens.any { it is Token.Constant && it.name == 'φ' }) {
                 val preserved = SymbolicArithmetic()
-                preserved.exactText(evalSymbolicRpn(rpn, preserved, expandPhi = false))
+                preserved.exactText(evalSymbolicRpn(rpn, preserved, expandPhi = false).value)
             } else null
             require(listOfNotNull(decimal, exact, symbolic).all { it.length <= 1000 }) { "Result length limit" }
             Result(decimal, exact, symbolic)
@@ -64,8 +77,10 @@ object CalculatorEvaluator {
     private sealed class Token {
         data class Number(val value: BigDecimal) : Token()
         data class Constant(val name: Char) : Token()
+        data class UnaryFunction(val name: String) : Token()
         data class BinaryFunction(val operation: Char) : Token()
         data object Comma : Token()
+        data object Degree : Token()
         data object Factorial : Token()
         data object Percent : Token() // Postfix division by 100; never a contextual percentage.
         data class Operator(val op: Char) : Token() // '+', '-', '×', '÷', '~' (unary minus), '√'
@@ -75,7 +90,7 @@ object CalculatorEvaluator {
 
     private fun tokenize(expr: String): List<Token> {
         val clean = expr.replace('*', '×').replace('/', '÷')
-        val special = clean.contains('√') || clean.contains("sqrt") || clean.contains("pow") || clean.contains("perm") || clean.contains("comb") || clean.contains("log") || clean.contains('!') || clean.contains('^') || clean.contains('%') || clean.any { it in "eπφi" }
+        val special = unaryFunctions.any { clean.contains(it) } || clean.contains('√') || clean.contains("sqrt") || clean.contains("pow") || clean.contains("perm") || clean.contains("comb") || clean.contains("log") || clean.contains('!') || clean.contains('°') || clean.contains('^') || clean.contains('%') || clean.any { it in "eπφi" }
         if (special) require(clean.length <= 4096) { "Radical expression length limit" }
         val tokens = mutableListOf<Token>()
         var i = 0
@@ -89,22 +104,34 @@ object CalculatorEvaluator {
             }
 
             if (c.isDigit() || c == '.') {
-                if (special && (tokens.lastOrNull() is Token.Constant || tokens.lastOrNull() is Token.Percent || tokens.lastOrNull() is Token.Factorial)) tokens.add(Token.Operator('×'))
+                if (special && (tokens.lastOrNull() is Token.Constant || tokens.lastOrNull() is Token.Percent || tokens.lastOrNull() is Token.Factorial || tokens.lastOrNull() is Token.Degree)) tokens.add(Token.Operator('×'))
                 val sb = StringBuilder()
                 while (i < len && (clean[i].isDigit() || clean[i] == '.')) {
                     sb.append(clean[i])
                     i++
                 }
                 tokens.add(Token.Number(BigDecimal(sb.toString())))
+            } else if (unaryFunctions.any { clean.startsWith(it, i) }) {
+                val name = unaryFunctions.first { clean.startsWith(it, i) }
+                i += name.length
+                while (i < len && clean[i].isWhitespace()) i++
+                require(i < len && clean[i] == '(') { "$name requires parentheses" }
+                if (tokens.lastOrNull().let { it is Token.Number || it is Token.CloseGroup || it is Token.Constant || it is Token.Percent || it is Token.Factorial || it is Token.Degree }) {
+                    tokens.add(Token.Operator('×'))
+                }
+                tokens.add(Token.UnaryFunction(name))
             } else if (listOf("pow", "perm", "comb", "log").any { clean.startsWith(it, i) }) {
                 val name = listOf("pow", "perm", "comb", "log").first { clean.startsWith(it, i) }
                 i += name.length
                 while (i < len && clean[i].isWhitespace()) i++
                 require(i < len && clean[i] == '(') { "$name requires parentheses" }
-                if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant || tokens.lastOrNull() is Token.Percent || tokens.lastOrNull() is Token.Factorial) {
+                if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant || tokens.lastOrNull() is Token.Percent || tokens.lastOrNull() is Token.Factorial || tokens.lastOrNull() is Token.Degree) {
                     tokens.add(Token.Operator('×'))
                 }
                 tokens.add(Token.BinaryFunction(when (name) { "perm" -> 'P'; "comb" -> 'C'; "log" -> 'L'; else -> '^' }))
+            } else if (c == '°') {
+                tokens.add(Token.Degree)
+                i++
             } else if (c == '!') {
                 tokens.add(Token.Factorial)
                 i++
@@ -120,12 +147,12 @@ object CalculatorEvaluator {
                     while (i < len && clean[i].isWhitespace()) i++
                     require(i < len && clean[i] == '(') { "sqrt requires parentheses" }
                 } else i++
-                if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant || tokens.lastOrNull() is Token.Percent || tokens.lastOrNull() is Token.Factorial) {
+                if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant || tokens.lastOrNull() is Token.Percent || tokens.lastOrNull() is Token.Factorial || tokens.lastOrNull() is Token.Degree) {
                     tokens.add(Token.Operator('×'))
                 }
                 tokens.add(Token.Operator('√'))
             } else if (c in "eπφi") {
-                if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant || tokens.lastOrNull() is Token.Percent || tokens.lastOrNull() is Token.Factorial) {
+                if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant || tokens.lastOrNull() is Token.Percent || tokens.lastOrNull() is Token.Factorial || tokens.lastOrNull() is Token.Degree) {
                     tokens.add(Token.Operator('×'))
                 }
                 tokens.add(Token.Constant(c))
@@ -137,7 +164,7 @@ object CalculatorEvaluator {
                 i++
             } else if (c in "([{") {
                 // Exact forms such as 2√2 and (1+√2)(1-√2) must remain reusable as input.
-                if (special && (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant || tokens.lastOrNull() is Token.Percent || tokens.lastOrNull() is Token.Factorial)) {
+                if (special && (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant || tokens.lastOrNull() is Token.Percent || tokens.lastOrNull() is Token.Factorial || tokens.lastOrNull() is Token.Degree)) {
                     tokens.add(Token.Operator('×'))
                 }
                 tokens.add(Token.OpenGroup(c))
@@ -182,10 +209,14 @@ object CalculatorEvaluator {
                     output.add(token)
                     expectingOperand = false
                 }
-                Token.Percent, Token.Factorial -> {
+                Token.Percent, Token.Factorial, Token.Degree -> {
                     require(!expectingOperand) { "Missing postfix operand" }
                     // Postfix binds directly to the completed operand, including a closed group.
                     output.add(token)
+                }
+                is Token.UnaryFunction -> {
+                    require(expectingOperand) { "Missing operator before function" }
+                    opStack.push(unaryCode(token.name))
                 }
                 is Token.BinaryFunction -> {
                     require(expectingOperand) { "Missing operator before function" }
@@ -193,7 +224,7 @@ object CalculatorEvaluator {
                 }
                 Token.Comma -> {
                     val group = groups.peek()
-                    require(!expectingOperand && group != null && group.function != null && group.commas == 0) { "Invalid binary function arguments" }
+                    require(!expectingOperand && group != null && group.function != null && unaryName(group.function) == null && group.commas == 0) { "Invalid binary function arguments" }
                     while (opStack.peek()?.let { it !in "([{" } == true) output.add(Token.Operator(opStack.pop()))
                     group.commas++
                     expectingOperand = true
@@ -215,7 +246,7 @@ object CalculatorEvaluator {
                 }
                 is Token.OpenGroup -> {
                     require(expectingOperand) { "Missing operator before group" }
-                    groups.push(Group(token.bracket, opStack.peek()?.takeIf { it in "pPCL" }))
+                    groups.push(Group(token.bracket, opStack.peek()?.takeIf { it in "pPCL" || unaryName(it) != null }))
                     opStack.push(token.bracket)
                 }
                 is Token.CloseGroup -> {
@@ -233,7 +264,7 @@ object CalculatorEvaluator {
                     require(opStack.isNotEmpty() && opStack.pop() == opening) { "Mismatched group" }
                     val group = groups.pop()
                     if (group.function != null) {
-                        require(group.commas == 1 && opStack.pop() == group.function) { "Function needs two arguments" }
+                        require(group.commas == (if (unaryName(group.function) != null) 0 else 1) && opStack.pop() == group.function) { "Invalid function argument count" }
                         output.add(Token.Operator(if (group.function == 'p') '^' else group.function))
                     } else if (opStack.peek() == '√') {
                         // A grouped root is complete before a following postfix operation.
@@ -301,37 +332,66 @@ object CalculatorEvaluator {
         return stack.pop()
     }
 
-    private fun evalSymbolicRpn(tokens: List<Token>, arithmetic: SymbolicArithmetic, expandPhi: Boolean): SymbolicArithmetic.Complex {
-        val stack = ArrayDeque<SymbolicArithmetic.Complex>()
+    private data class Quantity(val value: SymbolicArithmetic.Complex, val anglePower: Rational = Rational.ZERO, val isSlope: Boolean = false)
+
+    private fun evalSymbolicRpn(tokens: List<Token>, arithmetic: SymbolicArithmetic, expandPhi: Boolean): Quantity {
+        val stack = ArrayDeque<Quantity>()
+        fun scalar(q: Quantity) { require(q.anglePower == Rational.ZERO) { "Dimensionless operand required" } }
         for (token in tokens) {
             when (token) {
-                is Token.Number -> stack.push(arithmetic.number(token.value))
+                is Token.Number -> stack.push(Quantity(arithmetic.number(token.value)))
+                is Token.Constant -> stack.push(Quantity(arithmetic.constant(token.name, expandPhi)))
+                Token.Degree -> {
+                    require(stack.isNotEmpty()) { "Missing degree operand" }
+                    val q = stack.pop()
+                    require(q.anglePower == Rational.ZERO || q.anglePower == Rational.ONE) { "Invalid degree operand" }
+                    // ° interprets the preceding numerical magnitude as degrees; internally store radians.
+                    stack.push(Quantity(arithmetic.divide(arithmetic.multiply(q.value, arithmetic.constant('π', true)),
+                        arithmetic.number(BigDecimal(180))), Rational.ONE))
+                }
                 Token.Factorial -> {
                     require(stack.isNotEmpty()) { "Missing factorial operand" }
-                    stack.push(arithmetic.number(Combinatorics.factorial(arithmetic.nonNegativeInteger(stack.pop()))))
+                    val q = stack.pop(); scalar(q)
+                    stack.push(Quantity(arithmetic.number(Combinatorics.factorial(arithmetic.nonNegativeInteger(q.value)))))
                 }
                 Token.Percent -> {
                     require(stack.isNotEmpty()) { "Missing postfix operand" }
-                    stack.push(arithmetic.divide(stack.pop(), arithmetic.number(BigDecimal(100))))
+                    val q = stack.pop()
+                    stack.push(q.copy(value = arithmetic.divide(q.value, arithmetic.number(BigDecimal(100)))))
                 }
-                is Token.Constant -> stack.push(arithmetic.constant(token.name, expandPhi))
                 is Token.Operator -> {
                     require(stack.isNotEmpty()) { "Missing operand" }
                     val b = stack.pop()
-                    val result = when (token.op) {
-                        '~' -> arithmetic.negate(b)
-                        '√' -> arithmetic.sqrt(b)
+                    val function = unaryName(token.op)
+                    val result = when {
+                        function != null -> {
+                            val inverse = function.startsWith("a")
+                            if (inverse) scalar(b) else require(b.anglePower == Rational.ZERO || b.anglePower == Rational.ONE) { "Invalid trigonometric angle" }
+                            Quantity(arithmetic.trigonometric(function, b.value), if (inverse) Rational.ONE else Rational.ZERO, isSlope = function == "tan")
+                        }
+                        token.op == '~' -> b.copy(value = arithmetic.negate(b.value))
+                        token.op == '√' -> Quantity(arithmetic.sqrt(b.value), b.anglePower / Rational.of(BigDecimal(2)), b.isSlope)
                         else -> {
                             require(stack.isNotEmpty()) { "Missing operand" }
                             val a = stack.pop()
                             when (token.op) {
-                                'P', 'C' -> arithmetic.number(Combinatorics.choose(arithmetic.nonNegativeInteger(a), arithmetic.nonNegativeInteger(b), token.op == 'P'))
-                                '+' -> arithmetic.add(a, b)
-                                '-' -> arithmetic.subtract(a, b)
-                                '×' -> arithmetic.multiply(a, b)
-                                '÷' -> arithmetic.divide(a, b)
-                                '^' -> arithmetic.power(a, b)
-                                'L' -> arithmetic.logarithm(a, b)
+                                '+', '-' -> {
+                                    require(a.anglePower == b.anglePower) { "Incompatible angular dimensions" }
+                                    Quantity(if (token.op == '+') arithmetic.add(a.value, b.value) else arithmetic.subtract(a.value, b.value), a.anglePower, a.isSlope || b.isSlope)
+                                }
+                                '×' -> Quantity(arithmetic.multiply(a.value, b.value), a.anglePower + b.anglePower, a.isSlope || b.isSlope)
+                                '÷' -> Quantity(arithmetic.divide(a.value, b.value), a.anglePower - b.anglePower, a.isSlope || b.isSlope)
+                                '^' -> {
+                                    scalar(b)
+                                    val dimension = if (a.anglePower == Rational.ZERO) Rational.ZERO else
+                                        a.anglePower * requireNotNull(arithmetic.rationalReal(b.value)) { "Rational exponent required for angle" }
+                                    Quantity(arithmetic.power(a.value, b.value), dimension, a.isSlope)
+                                }
+                                'L', 'P', 'C' -> {
+                                    scalar(a); scalar(b)
+                                    Quantity(if (token.op == 'L') arithmetic.logarithm(a.value, b.value) else
+                                        arithmetic.number(Combinatorics.choose(arithmetic.nonNegativeInteger(a.value), arithmetic.nonNegativeInteger(b.value), token.op == 'P')))
+                                }
                                 else -> throw IllegalArgumentException("Unknown operator")
                             }
                         }

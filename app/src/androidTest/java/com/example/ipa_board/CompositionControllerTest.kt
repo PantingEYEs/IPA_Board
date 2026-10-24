@@ -11,6 +11,21 @@ import org.junit.Test
 
 class CompositionControllerTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    @Test fun undefinedSlopePlaceholderDoesNotReplaceComposition() {
+        instrumentation.runOnMainSync {
+            val editor = EditText(instrumentation.targetContext)
+            val ic = requireNotNull(editor.onCreateInputConnection(EditorInfo()))
+            val controller = CompositionController({ ic }, { _, _ -> }, {})
+            controller.input("90°")
+            val placeholder = Candidate("Undefined", "∑", rank = -5)
+            controller.updateCandidates(listOf(placeholder))
+            val revision = controller.revision
+            assertFalse(controller.select(placeholder))
+            assertEquals("90°", controller.raw)
+            assertEquals("90°", editor.text.toString())
+            assertEquals(revision, controller.revision)
+        }
+    }
     @Test fun mathSelectionRemovesApproximationMarkersFromAllComplexComponentsOnly() {
         instrumentation.runOnMainSync {
             val editor = EditText(instrumentation.targetContext)
