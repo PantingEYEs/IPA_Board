@@ -295,3 +295,13 @@ Shift / Caps Lock 指示由 `KeyboardWindowTest`（ui/full）验证真实控制�
 - 首轮完整回归报告 `app/build/reports/regression/b2cb176f-ebd3-4111-9dfe-e6a775e9351d/`：45 类、251 项执行，250 通过、1 失败、0 跳过，新增用例全部通过。旧 `widthSwapPreservesNativePinyinEncodingAndCandidateCommit` 在 `awaitKeyboard` 等待 IME 窗口前置条件时超时，尚未执行输入断言；历史有类似窗口等待现象，原因未确认，不记作通过，也未修改旧测试的断言或等待时间。该轮恢复校验通过，备份已删除。
 - 保持功能代码、断言和等待时间不变的第二轮完整报告 `app/build/reports/regression/9590e813-e4f8-4379-a42a-30620713c154/`：同为 45 类、251 项执行，250 通过、1 失败、0 跳过。前轮超时的用例本轮通过；`PopupActionsImeTest.originalPointerSelectsPopupTextAndFunctionWithoutLosingEditorFocus` 本轮在同一 `awaitKeyboard` 前置阶段超时，该用例前轮通过。新增 7 项在两轮均全部通过，但两轮完整结果都为失败，不能合并为一轮完整通过；窗口等待问题仍待调查。
 - 两轮完整回归均 `restored=true`，原软件及私有数据校验成功后删除备份，`pending` 为空；临时模拟器已关闭并清理 AVD。窗口等待问题另行调查，本次不修改既有功能键逻辑。未验证实体设备、其他 API/ABI、16KB 页设备或签名 release；共用 Unicode 预输入退格缺陷保持原状。
+
+## 2026-10-24 计算器括号分组（#18）
+
+验证对象为 #18 功能分支的未提交工作树，基准提交 `4dd7cfc`。此次仅修改纯 Kotlin 求值器及文档，沿用词法分析 → 调度场算法 → 逆波兰求值流程；不改候选服务、计算模式开关或键盘布局。
+
+- `CalculatorEvaluatorTest` 共 13 项通过，其中新增 7 项覆盖三种括号、全部内外层样式组合、嵌套优先级、分组前/内负号、原有小数格式与除零、空/错配/未闭合分组、禁止隐式乘法、末尾运算符预览及 2000 层嵌套。`1+2/3` 仍为 `1.6667…`，`(1+2)/3`、`[1+2]/3`、`{1+2}/3` 与 `{[1+2]*3}/9` 均为 `1`。
+- 最终工作树离线主机检查：135 项 JVM 测试通过（0 失败、0 跳过）；49 项流程工具测试通过，45 个设备测试类的套件登记校验通过；93 项引擎资源哈希与 E5 重组校验通过。
+- debug 应用与 instrumentation APK 编译通过；`lintDebug` 为 0 Error、277 Warning。`git diff --check` 通过。
+- 本次按纯计算规则选择 JVM 回归层，未连接或修改测试机，未执行设备回归、实体设备或签名 release 验证。既有设备测试结果不作为此次运行证据。
+- 未支持的非括号字符仍沿用旧有跳过行为；本次未修复所有未知语法的识别与回退。未新增科学函数、隐式乘法或括号专用默认按键。

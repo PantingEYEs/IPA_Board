@@ -6,7 +6,8 @@ import java.util.ArrayDeque
 
 /**
  * Calculator evaluator capable of evaluating basic four arithmetic operations
- * (+, -, *, /) with precision up to 4 decimal places using BigDecimal.
+ * (+, -, *, /) and nested (), [], {} groups with precision up to 4 decimal places
+ * using BigDecimal. Bracket styles do not introduce different precedence levels.
  */
 object CalculatorEvaluator {
 
@@ -34,7 +35,9 @@ object CalculatorEvaluator {
 
     private sealed class Token {
         data class Number(val value: BigDecimal) : Token()
-        data class Operator(val op: Char) : Token() // '+', '-', '×', '÷'
+        data class Operator(val op: Char) : Token() // '+', '-', '×', '÷', '~' (unary minus)
+        data class OpenGroup(val bracket: Char) : Token()
+        data class CloseGroup(val bracket: Char) : Token()
     }
 
     private fun tokenize(expr: String): List<Token> {
@@ -50,37 +53,23 @@ object CalculatorEvaluator {
                 continue
             }
 
-            // Check if '-' is a unary minus or binary subtraction
-            val isUnaryMinus = c == '-' && (tokens.isEmpty() || tokens.last() is Token.Operator)
-
-            if (c.isDigit() || c == '.' || isUnaryMinus) {
+            if (c.isDigit() || c == '.') {
                 val sb = StringBuilder()
-                if (isUnaryMinus) {
-                    sb.append('-')
-                    i++
-                    while (i < len && clean[i].isWhitespace()) i++
-                }
-
-                var hasDigitOrDot = false
                 while (i < len && (clean[i].isDigit() || clean[i] == '.')) {
                     sb.append(clean[i])
-                    hasDigitOrDot = true
                     i++
                 }
-
-                if (hasDigitOrDot) {
-                    val numStr = sb.toString()
-                    if (numStr == "-" || numStr == "." || numStr == "-.") {
-                        throw IllegalArgumentException("Invalid number format")
-                    }
-                    tokens.add(Token.Number(BigDecimal(numStr)))
-                } else {
-                    if (isUnaryMinus) {
-                        tokens.add(Token.Operator('-'))
-                    }
-                }
+                tokens.add(Token.Number(BigDecimal(sb.toString())))
             } else if (c == '+' || c == '-' || c == '×' || c == '÷') {
-                tokens.add(Token.Operator(c))
+                val isUnaryMinus = c == '-' &&
+                    (tokens.isEmpty() || tokens.last() is Token.Operator || tokens.last() is Token.OpenGroup)
+                tokens.add(Token.Operator(if (isUnaryMinus) '~' else c))
+                i++
+            } else if (c in "([{") {
+                tokens.add(Token.OpenGroup(c))
+                i++
+            } else if (c in ")]}") {
+                tokens.add(Token.CloseGroup(c))
                 i++
             } else {
                 i++
@@ -97,6 +86,7 @@ object CalculatorEvaluator {
     }
 
     private fun precedence(op: Char): Int = when (op) {
+        '~' -> 3
         '×', '÷' -> 2
         '+', '-' -> 1
         else -> 0
@@ -105,21 +95,55 @@ object CalculatorEvaluator {
     private fun shuntingYard(tokens: List<Token>): List<Token> {
         val output = mutableListOf<Token>()
         val opStack = ArrayDeque<Char>()
+        var expectingOperand = true
 
         for (token in tokens) {
             when (token) {
-                is Token.Number -> output.add(token)
+                is Token.Number -> {
+                    require(expectingOperand) { "Missing operator" }
+                    output.add(token)
+                    expectingOperand = false
+                }
                 is Token.Operator -> {
-                    while (opStack.isNotEmpty() && precedence(opStack.peek()!!) >= precedence(token.op)) {
+                    require(expectingOperand == (token.op == '~')) { "Missing operand" }
+                    // Unary minus associates right-to-left, including before a group.
+                    while (true) {
+                        val top = opStack.peek() ?: break
+                        val shouldPop = top !in "([{" &&
+                            (precedence(top) > precedence(token.op) ||
+                                (token.op != '~' && precedence(top) == precedence(token.op)))
+                        if (!shouldPop) break
                         output.add(Token.Operator(opStack.pop()))
                     }
                     opStack.push(token.op)
+                    expectingOperand = true
+                }
+                is Token.OpenGroup -> {
+                    require(expectingOperand) { "Missing operator before group" }
+                    opStack.push(token.bracket)
+                }
+                is Token.CloseGroup -> {
+                    require(!expectingOperand) { "Empty or incomplete group" }
+                    while (true) {
+                        val top = opStack.peek() ?: break
+                        if (top in "([{") break
+                        output.add(Token.Operator(opStack.pop()))
+                    }
+                    val opening = when (token.bracket) {
+                        ')' -> '('
+                        ']' -> '['
+                        else -> '{'
+                    }
+                    require(opStack.isNotEmpty() && opStack.pop() == opening) { "Mismatched group" }
                 }
             }
         }
 
+        require(!expectingOperand) { "Missing operand" }
         while (opStack.isNotEmpty()) {
-            output.add(Token.Operator(opStack.pop()))
+            val op = opStack.pop()
+            require(op !in "([{") { "Unclosed group" }
+            output.add(Token.Operator(op))
         }
 
         return output
@@ -133,6 +157,11 @@ object CalculatorEvaluator {
             when (token) {
                 is Token.Number -> stack.push(token.value)
                 is Token.Operator -> {
+                    if (token.op == '~') {
+                        require(stack.isNotEmpty()) { "Missing operand" }
+                        stack.push(stack.pop().negate())
+                        continue
+                    }
                     if (stack.size < 2) throw IllegalArgumentException("Invalid expression")
                     val b = stack.pop()
                     val a = stack.pop()
@@ -150,6 +179,7 @@ object CalculatorEvaluator {
                     }
                     stack.push(res)
                 }
+                else -> throw IllegalArgumentException("Unexpected group in RPN")
             }
         }
 
