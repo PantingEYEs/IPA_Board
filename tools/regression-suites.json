@@ -57,7 +57,8 @@
         "com.example.ipa_board.EngineDashboardTest",
         "com.example.ipa_board.PopupActionEditorTest",
         "com.example.ipa_board.PopupKeySettingsTest",
-        "com.example.ipa_board.PopupGestureEquivalenceTest"
+        "com.example.ipa_board.PopupGestureEquivalenceTest",
+        "com.example.ipa_board.MultifunctionBarTest"
       ]
     },
     "e2e": {
@@ -67,7 +68,8 @@
         "com.example.ipa_board.PageGroupImeTest",
         "com.example.ipa_board.EngineDashboardImeTest",
         "com.example.ipa_board.RemoteKeyboardModeImeTest",
-        "com.example.ipa_board.PopupActionsImeTest"
+        "com.example.ipa_board.PopupActionsImeTest",
+        "com.example.ipa_board.MultifunctionBarImeTest"
       ]
     },
     "semantic": {
@@ -119,7 +121,9 @@
         "com.example.ipa_board.PopupActionEditorTest",
         "com.example.ipa_board.PopupKeySettingsTest",
         "com.example.ipa_board.PopupGestureEquivalenceTest",
-        "com.example.ipa_board.PopupActionsImeTest"
+        "com.example.ipa_board.PopupActionsImeTest",
+        "com.example.ipa_board.MultifunctionBarTest",
+        "com.example.ipa_board.MultifunctionBarImeTest"
       ]
     },
     "ipa": {
@@ -170,6 +174,14 @@
         "com.example.ipa_board.KeyEditorTest",
         "com.example.ipa_board.KeyPressPreviewTest",
         "com.example.ipa_board.KeyboardConfigurationTest"
+      ]
+    },
+    "multifunction-bar": {
+      "classes": [
+        "com.example.ipa_board.MultifunctionBarTest",
+        "com.example.ipa_board.MultifunctionBarImeTest",
+        "com.example.ipa_board.ImeChromeTest",
+        "com.example.ipa_board.KeyboardInputControllerTest"
       ]
     }
   }

@@ -283,3 +283,15 @@ Shift / Caps Lock 指示由 `KeyboardWindowTest`（ui/full）验证真实控制�
 - 主机：128 项 JVM、49 项流程工具测试通过；debug 应用/测试 APK 编译、套件登记和 93 项资源哈希/E5 重组校验通过。lint 0 Error、276 Warning。
 - Android 15 / API 35 / ARM64 独立临时模拟器：`popup` 的 8 类 **49 项全部通过**，0 失败、0 跳过。报告 `app/build/reports/regression/8a5e6733-e315-47e3-aaa3-864fae80bf6b/summary.json` 为 `success=true`、`restored=true`、`roundtrip_verified=true`。包含实际 APK 及合成 CE/DE 私有数据往返恢复。
 - 原软件及私有数据已回滚校验，备份删除，`pending` 为空；临时模拟器已关闭并清理 AVD，未操作既有模拟器或实体手机。本轮未重复完整回归；此前 240 项完整结果对应 `beabc07` 的实现。其他 API/ABI、签名 release 及实体设备仍未验证，共用 Unicode 退格缺陷保持原状。
+
+## 2026-10-24 多功能栏共享预览与绑定（#9）
+
+基于 `5f5595c` 上的 #9 开发工作树，debug。Shortcut Management 与 IME 共用 `MultifunctionBarView`，六个固定位置可独立绑定全部现有功能或文本；status 和候选栏保持专用。配置采用稳定位置/动作标识，与键盘页 JSON 分离；按位置回退损坏或未知动作，编辑时保留其他位置和未知字段。保存后仅刷新工具栏，执行复用服务的现有按键入口；Continuous Delete 在配置的长按时间后重复，离开、松手、取消、重绑定或卸载视图后停止。
+
+- 主机：128 项 JVM、49 项流程工具测试通过；debug 应用/测试 APK 编译、45 类套件登记、93 项引擎资源哈希与 E5 重组校验通过。lint 为 0 Error、277 Warning；新增的可访问性提示来自平台 Button 普通点击经 `super.onTouchEvent` 分发，触摸及可访问点击均有实际用例，未禁用 lint。
+- 新增 7 项设备用例，分别登记到 `ui`、`e2e` 及 `full`；专项 `multifunction-bar` 同时包含原有 Chrome 和输入控制器合同。覆盖配置回退/持久化/未知字段、保存取消与页面重建、共享几何、长标签省略与完整绑定、全动作分发、同一模式在多个入口的状态同步、Shift/Ctrl/Caps Lock、面板/status/候选快照保留，以及全引擎关闭时实际文本输入、模式切换和持续删除。
+- 独立临时 Android 15 / API 35 / ARM64 模拟器，未操作已运行的模拟器或实体手机。首轮专项报告 `app/build/reports/regression/b2c5d683-1983-499c-bdcc-93b895cbd236/`：5 项执行，4 通过、1 失败，触摸 fixture 在平台 Button 排队的点击回调前读取计数。增加 UI 队列同步及布局就绪断言，未改变产品逻辑或放宽等待；该轮软件及合成 APK/CE/DE 私有数据往返恢复通过，备份已删除。
+- 第二轮报告 `app/build/reports/regression/1b7ec4e4-ffbc-434a-b3a4-3a07272a0d7a/`：32 项执行，31 通过、1 失败，新断言误认为关闭全半角转换后预输入显示保持不变。现按既有 `refreshOutput()` 行为验证从原始编码重绘，同时保留重绑定本身不得改变预输入的断言；未修改全半角实现。修正后的专项报告 `app/build/reports/regression/588ff91c-11fc-4391-bc67-f9a1d36c20ae/` 为 **32 项全部通过**；上述各轮均 `restored=true`，备份删除。
+- 首轮完整回归报告 `app/build/reports/regression/b2cb176f-ebd3-4111-9dfe-e6a775e9351d/`：45 类、251 项执行，250 通过、1 失败、0 跳过，新增用例全部通过。旧 `widthSwapPreservesNativePinyinEncodingAndCandidateCommit` 在 `awaitKeyboard` 等待 IME 窗口前置条件时超时，尚未执行输入断言；历史有类似窗口等待现象，原因未确认，不记作通过，也未修改旧测试的断言或等待时间。该轮恢复校验通过，备份已删除。
+- 保持功能代码、断言和等待时间不变的第二轮完整报告 `app/build/reports/regression/9590e813-e4f8-4379-a42a-30620713c154/`：同为 45 类、251 项执行，250 通过、1 失败、0 跳过。前轮超时的用例本轮通过；`PopupActionsImeTest.originalPointerSelectsPopupTextAndFunctionWithoutLosingEditorFocus` 本轮在同一 `awaitKeyboard` 前置阶段超时，该用例前轮通过。新增 7 项在两轮均全部通过，但两轮完整结果都为失败，不能合并为一轮完整通过；窗口等待问题仍待调查。
+- 两轮完整回归均 `restored=true`，原软件及私有数据校验成功后删除备份，`pending` 为空；临时模拟器已关闭并清理 AVD。窗口等待问题另行调查，本次不修改既有功能键逻辑。未验证实体设备、其他 API/ABI、16KB 页设备或签名 release；共用 Unicode 预输入退格缺陷保持原状。

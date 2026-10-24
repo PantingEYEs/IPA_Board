@@ -173,6 +173,11 @@ class IpaBoardService : InputMethodService() {
     }
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == MultifunctionBarSettings.KEY_BINDINGS) {
+            // Rebind only the toolbar: editing shortcuts must not reset modifiers, composition,
+            // the open panel, or its custom status controls.
+            chrome?.setBarBindings(MultifunctionBarSettings.load(this))
+        }
         if (key == RemoteKeyboardMode.KEY_SNAPSHOT) applySettings()
         if (key == EngineFeature.CALCULATOR.key) {
             chrome?.setCalculatorEnabled(calculatorEnabled())
@@ -211,6 +216,8 @@ class IpaBoardService : InputMethodService() {
         closeDashboardObservation()
         return ImeChromeView(this).also { view ->
             chrome = view
+            view.setBarBindings(MultifunctionBarSettings.load(this))
+            view.onKeyBinding = { handleKey(it.asKeySlot()) }
             view.onCalculatorToggle = {
                 toggleCalculator()
             }
@@ -337,6 +344,7 @@ class IpaBoardService : InputMethodService() {
         val height = (appearance.heightDp.coerceIn(100, availableDp) * density).toInt()
         view.setKeyboardHeight(height)
         view.setCalculatorEnabled(calculatorEnabled())
+        view.setModifiers(inputController.shiftState, inputController.ctrlEnabled)
         view.showPointerLocation = appearance.showPointerLocation
         val pathColor = try { Color.parseColor(appearance.pointerPathColor) } catch (_: Exception) { Color.WHITE }
         val axisColor = try { Color.parseColor(appearance.pointerAxisColor) } catch (_: Exception) { Color.WHITE }

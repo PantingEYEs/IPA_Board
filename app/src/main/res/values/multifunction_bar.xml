@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="multifunction_bar_title">Multifunction Bar</string>
+    <string name="multifunction_bar_help">Tap an entry to replace its function or text. The status area stays unchanged.</string>
+    <string name="multifunction_bar_edit">Edit Bar Entry</string>
+    <string name="multifunction_bar_function">Function</string>
+    <string name="multifunction_bar_text">Text (leave empty to unassign)</string>
+    <string name="multifunction_bar_status">Status</string>
+    <string name="multifunction_bar_save">Save</string>
+    <string name="multifunction_bar_cancel">Cancel</string>
+</resources>
