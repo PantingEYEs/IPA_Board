@@ -38,6 +38,22 @@ internal class SymbolicArithmetic {
     private val decimals = mutableMapOf<Real, BigDecimal>()
     private fun tick() { require(++work <= 20000) { "Symbolic expression work limit" } }
     fun number(n: BigDecimal) = Complex(Number(field.number(n)), zero)
+    fun requireReal(value: Complex) {
+        require(value.imaginary == zero) { "rand accepts and returns only real values" }
+    }
+    fun randomBetween(a: Complex, b: Complex, session: CalculatorSession, index: Int): Complex {
+        requireReal(a); requireReal(b)
+        val order = sign(addReal(a.real, negative(b.real)))
+        if (order == 0) {
+            require(a.real == b.real || a.real is Number && b.real is Number) { "Random interval precision limit" }
+            return a
+        }
+        val lower = if (order < 0) a else b
+        val upper = if (order < 0) b else a
+        val sampled = number(session.sample(index, decimal(lower.real), decimal(upper.real)))
+        require(sign(addReal(sampled.real, negative(lower.real))) >= 0 && sign(addReal(sampled.real, negative(upper.real))) < 0) { "Random interval precision limit" }
+        return sampled
+    }
     fun rationalReal(value: Complex): Rational? =
         if (value.formula == null && value.imaginary == zero && value.real is Number) field.rational(value.real.value) else null
 
@@ -477,8 +493,8 @@ internal class SymbolicArithmetic {
         val magnitude = if (isNegative) negative(a.imaginary) else a.imaginary
         return text(a.real) + (if (isNegative) "-" else "+") + "(${text(magnitude)})i"
     }
-    fun decimalText(a: Complex): String {
-        fun rounded(r: Real) = decimal(r).setScale(4, RoundingMode.HALF_UP).stripTrailingZeros()
+    fun decimalText(a: Complex, scale: Int = 4): String {
+        fun rounded(r: Real) = decimal(r).setScale(scale, RoundingMode.HALF_UP).stripTrailingZeros()
         fun approximate(r: Real, n: BigDecimal) = if (r is Number) field.rational(r.value)?.let { it != Rational.of(n) } ?: true else true
         val re = rounded(a.real)
         val im = rounded(a.imaginary)

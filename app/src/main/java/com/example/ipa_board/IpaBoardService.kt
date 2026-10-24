@@ -30,6 +30,7 @@ import com.example.ipa_board.SettingsConstants.KEY_CTRL_SHORTCUTS
 import java.util.Locale
 
 class IpaBoardService : InputMethodService() {
+    private val calculatorSession = CalculatorSession()
     private var chrome: ImeChromeView? = null
     private lateinit var prefs: SharedPreferences
     private val remoteKeyboardMode by lazy { RemoteKeyboardMode(prefs) }
@@ -292,7 +293,7 @@ class IpaBoardService : InputMethodService() {
         val raw = composition.raw
         val baseStatus = if (directOnly) "Direct Input" else engineStatus
 
-        val displayCandidates = CalculatorCandidates.merge(raw, calculatorEnabled(), composition.candidates)
+        val displayCandidates = CalculatorCandidates.merge(raw, calculatorEnabled(), composition.candidates, calculatorSession)
 
         composition.updateCandidates(displayCandidates)
         chrome?.render(raw, displayCandidates, baseStatus, composition.revision)
@@ -887,6 +888,7 @@ class IpaBoardService : InputMethodService() {
     }
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
+        calculatorSession.reset()
         AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT)
         inputController.reset()
         val type = attribute?.inputType ?: 0
@@ -900,6 +902,7 @@ class IpaBoardService : InputMethodService() {
     }
     override fun onStartInputView(editorInfo: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(editorInfo, restarting)
+        calculatorSession.reset()
         AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT_VIEW)
         clipboard.addPrimaryClipChangedListener(clipboardListener)
         composition.start()
@@ -935,6 +938,7 @@ class IpaBoardService : InputMethodService() {
         return super.onKeyUp(keyCode, event)
     }
     override fun onFinishInputView(finishingInput: Boolean) {
+        calculatorSession.reset()
         menuPopup?.dismiss()
         closeDashboardObservation()
         AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT_VIEW)
@@ -944,10 +948,12 @@ class IpaBoardService : InputMethodService() {
         super.onFinishInputView(finishingInput)
     }
     override fun onFinishInput() {
+        calculatorSession.reset()
         AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT)
         composition.finish(); engines.suspendSemantic(); inputController.reset(); super.onFinishInput()
     }
     override fun onDestroy() {
+        calculatorSession.reset()
         menuPopup?.dismiss()
         closeDashboardObservation()
         emojiClosed = true

@@ -22,6 +22,34 @@ class CalculatorImeTest {
     private val driver = ImeTestDriver()
     private val context get() = instrumentation.targetContext
 
+    @Test fun randomCandidateSurvivesSameCompositionRefreshAndCanContinueAsRealArithmetic() = withKeyboard { scenario ->
+        key(6,1)
+        val first = driver.awaitNode {
+            val label = it.contentDescription?.toString().orEmpty()
+            label.toBigDecimalOrNull() != null && it.text?.toString() == "$label " && it.isClickable
+        }.contentDescription.toString()
+        val number = first.toBigDecimal()
+        assertTrue(number >= java.math.BigDecimal.ZERO && number < java.math.BigDecimal.ONE)
+        repeat(2) {
+            click("\u5168\u89d2 / \u534a\u89d2\u8f6c\u6362")
+            editor(scenario,CharacterWidthConverter.swap("rand()"))
+            candidate(first)
+            click("\u5168\u89d2 / \u534a\u89d2\u8f6c\u6362")
+            editor(scenario,"rand()")
+            candidate(first)
+        }
+        select(first)
+        editor(scenario,first)
+        key(2,1)
+        candidate(number.add(java.math.BigDecimal.ONE).stripTrailingZeros().toPlainString())
+        key(2,3)
+        key(6,2)
+        editor(scenario,first+"+1rand(i,2)")
+        driver.awaitAbsent { it.contentDescription?.toString() == "Error" }
+        key(2,3)
+        editor(scenario,first+"+1rand(i,2)",composing=false)
+    }
+
     @Test fun angleCandidatesRenderSelectAndContinueWhileScalarTrigResultsStayNumeric() = withKeyboard { scenario ->
         key(5,3)
         candidate("30°")
@@ -276,7 +304,8 @@ class CalculatorImeTest {
                 RowLayout(1f, listOf(KeySlot(1f, "2^3^2"), KeySlot(1f, "pow(2,1/2)"),
                     KeySlot(1f, "(1+i)^2"), KeySlot(1f, "2^φ"), KeySlot(1f, "2^"))),
                 RowLayout(1f, listOf(KeySlot(1f, "30°"), KeySlot(1f, "sin(30°)"), KeySlot(1f, "asin(1/2)"),
-                    KeySlot(1f, "+30°"), KeySlot(1f, "90°"), KeySlot(1f, "tan(45\u00b0)")))
+                    KeySlot(1f, "+30°"), KeySlot(1f, "90°"), KeySlot(1f, "tan(45\u00b0)"))),
+                RowLayout(1f, listOf(KeySlot(1f, "rand()"), KeySlot(1f, "rand(i,2)")))
             ))
             filename = LayoutFileManager.createLayout(context, layout.name, layout)
             PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(filename))

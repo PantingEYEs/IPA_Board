@@ -30,8 +30,8 @@ object CalculatorEvaluator {
     }
 
     /** Decimal first, then applicable exact/constant forms, even when their texts are equal. */
-    fun resultForms(expression: String): List<String> = try {
-        evaluateResult(expression)?.let { result ->
+    fun resultForms(expression: String, session: CalculatorSession? = null): List<String> = try {
+        evaluateResult(expression, session)?.let { result ->
             listOfNotNull(result.decimal, result.exact, result.symbolic) + result.additional
         }.orEmpty()
     } catch (_: Exception) {
@@ -40,17 +40,27 @@ object CalculatorEvaluator {
 
     private data class Result(val decimal: String, val exact: String? = null, val symbolic: String? = null, val additional: List<String> = emptyList())
 
-    private fun evaluateResult(expression: String): Result? {
+    private fun evaluateResult(expression: String, session: CalculatorSession? = null): Result? {
+        session?.begin(expression)
         val trimmed = expression.trim()
         if (trimmed.isEmpty()) return null
 
         val tokens = tokenize(trimmed)
         if (tokens.isEmpty()) return null
         val rpn = shuntingYard(tokens)
-        return if (tokens.any { it is Token.Degree || it is Token.UnaryFunction || it is Token.Constant || (it is Token.BinaryFunction && it.operation in "^L") || (it is Token.Operator && it.op in "√^") }) {
+        val random = if (tokens.any { it is Token.BinaryFunction && it.operation == 'R' })
+            session ?: CalculatorSession().also { it.begin(expression) } else null
+        return if (tokens.any { it is Token.Degree || it is Token.UnaryFunction || it is Token.Constant || (it is Token.BinaryFunction && it.operation in "^LR") || (it is Token.Operator && it.op in "√^") }) {
             val expanded = SymbolicArithmetic()
-            val evaluated = evalSymbolicRpn(rpn, expanded, expandPhi = true)
+            val evaluated = evalSymbolicRpn(rpn, expanded, expandPhi = true, random = random)
             val value = evaluated.value
+            if (random != null) {
+                require(evaluated.anglePower == Rational.ZERO || evaluated.anglePower == Rational.ONE) { "Unsupported angular dimension" }
+                expanded.requireReal(value)
+                val decimal = expanded.decimalText(value, random.resultScale)
+                require(decimal.length <= 1000) { "Result length limit" }
+                return Result(decimal)
+            }
             if (evaluated.anglePower == Rational.ONE) {
                 val forms = expanded.angleForms(value)
                 return Result(forms[0], forms[1], forms[2], forms.drop(3))
@@ -90,7 +100,7 @@ object CalculatorEvaluator {
 
     private fun tokenize(expr: String): List<Token> {
         val clean = expr.replace('*', '×').replace('/', '÷')
-        val special = unaryFunctions.any { clean.contains(it) } || clean.contains('√') || clean.contains("sqrt") || clean.contains("pow") || clean.contains("perm") || clean.contains("comb") || clean.contains("log") || clean.contains('!') || clean.contains('°') || clean.contains('^') || clean.contains('%') || clean.any { it in "eπφi" }
+        val special = unaryFunctions.any { clean.contains(it) } || clean.contains('√') || clean.contains("sqrt") || clean.contains("pow") || clean.contains("perm") || clean.contains("comb") || clean.contains("log") || clean.contains("rand") || clean.contains('!') || clean.contains('°') || clean.contains('^') || clean.contains('%') || clean.any { it in "eπφi" }
         if (special) require(clean.length <= 4096) { "Radical expression length limit" }
         val tokens = mutableListOf<Token>()
         var i = 0
@@ -120,15 +130,15 @@ object CalculatorEvaluator {
                     tokens.add(Token.Operator('×'))
                 }
                 tokens.add(Token.UnaryFunction(name))
-            } else if (listOf("pow", "perm", "comb", "log").any { clean.startsWith(it, i) }) {
-                val name = listOf("pow", "perm", "comb", "log").first { clean.startsWith(it, i) }
+            } else if (listOf("pow", "perm", "comb", "log", "rand").any { clean.startsWith(it, i) }) {
+                val name = listOf("pow", "perm", "comb", "log", "rand").first { clean.startsWith(it, i) }
                 i += name.length
                 while (i < len && clean[i].isWhitespace()) i++
                 require(i < len && clean[i] == '(') { "$name requires parentheses" }
                 if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant || tokens.lastOrNull() is Token.Percent || tokens.lastOrNull() is Token.Factorial || tokens.lastOrNull() is Token.Degree) {
                     tokens.add(Token.Operator('×'))
                 }
-                tokens.add(Token.BinaryFunction(when (name) { "perm" -> 'P'; "comb" -> 'C'; "log" -> 'L'; else -> '^' }))
+                tokens.add(Token.BinaryFunction(when (name) { "perm" -> 'P'; "comb" -> 'C'; "log" -> 'L'; "rand" -> 'R'; else -> '^' }))
             } else if (c == '°') {
                 tokens.add(Token.Degree)
                 i++
@@ -198,11 +208,11 @@ object CalculatorEvaluator {
     private fun shuntingYard(tokens: List<Token>): List<Token> {
         val output = mutableListOf<Token>()
         val opStack = ArrayDeque<Char>()
-        data class Group(val bracket: Char, val function: Char?, var commas: Int = 0)
+        data class Group(val bracket: Char, val function: Char?, var commas: Int = 0, var firstMissing: Boolean = false)
         val groups = ArrayDeque<Group>()
         var expectingOperand = true
 
-        for (token in tokens) {
+        for ((index, token) in tokens.withIndex()) {
             when (token) {
                 is Token.Number, is Token.Constant -> {
                     require(expectingOperand) { "Missing operator" }
@@ -224,7 +234,12 @@ object CalculatorEvaluator {
                 }
                 Token.Comma -> {
                     val group = groups.peek()
-                    require(!expectingOperand && group != null && group.function != null && unaryName(group.function) == null && group.commas == 0) { "Invalid binary function arguments" }
+                    require(group != null && group.function != null && unaryName(group.function) == null && group.commas == 0) { "Invalid binary function arguments" }
+                    if (expectingOperand) {
+                        require(group.function == 'R' && tokens.getOrNull(index - 1) is Token.OpenGroup) { "Missing first argument" }
+                        output.add(Token.Number(BigDecimal.ZERO))
+                        group.firstMissing = true
+                    }
                     while (opStack.peek()?.let { it !in "([{" } == true) output.add(Token.Operator(opStack.pop()))
                     group.commas++
                     expectingOperand = true
@@ -246,10 +261,28 @@ object CalculatorEvaluator {
                 }
                 is Token.OpenGroup -> {
                     require(expectingOperand) { "Missing operator before group" }
-                    groups.push(Group(token.bracket, opStack.peek()?.takeIf { it in "pPCL" || unaryName(it) != null }))
+                    groups.push(Group(token.bracket, opStack.peek()?.takeIf { it in "pPCLR" || unaryName(it) != null }))
                     opStack.push(token.bracket)
                 }
                 is Token.CloseGroup -> {
+                    val frame = groups.peek()
+                    if (frame?.function == 'R') {
+                        if (frame.commas == 0) {
+                            if (expectingOperand) {
+                                require(tokens.getOrNull(index - 1) is Token.OpenGroup) { "Incomplete rand argument" }
+                                output.add(Token.Number(BigDecimal.ZERO))
+                                frame.firstMissing = true
+                            }
+                            while (opStack.peek()?.let { it !in "([{" } == true) output.add(Token.Operator(opStack.pop()))
+                            output.add(Token.Number(if (frame.firstMissing) BigDecimal.ONE else BigDecimal.ZERO))
+                            frame.commas = 1
+                            expectingOperand = false
+                        } else if (expectingOperand) {
+                            require(tokens.getOrNull(index - 1) == Token.Comma) { "Incomplete rand argument" }
+                            output.add(Token.Number(if (frame.firstMissing) BigDecimal.ONE else BigDecimal.ZERO))
+                            expectingOperand = false
+                        }
+                    }
                     require(!expectingOperand) { "Empty or incomplete group" }
                     while (true) {
                         val top = opStack.peek() ?: break
@@ -334,7 +367,8 @@ object CalculatorEvaluator {
 
     private data class Quantity(val value: SymbolicArithmetic.Complex, val anglePower: Rational = Rational.ZERO, val isSlope: Boolean = false)
 
-    private fun evalSymbolicRpn(tokens: List<Token>, arithmetic: SymbolicArithmetic, expandPhi: Boolean): Quantity {
+    private fun evalSymbolicRpn(tokens: List<Token>, arithmetic: SymbolicArithmetic, expandPhi: Boolean, random: CalculatorSession? = null): Quantity {
+        var randomIndex = 0
         val stack = ArrayDeque<Quantity>()
         fun scalar(q: Quantity) { require(q.anglePower == Rational.ZERO) { "Dimensionless operand required" } }
         for (token in tokens) {
@@ -386,6 +420,10 @@ object CalculatorEvaluator {
                                     val dimension = if (a.anglePower == Rational.ZERO) Rational.ZERO else
                                         a.anglePower * requireNotNull(arithmetic.rationalReal(b.value)) { "Rational exponent required for angle" }
                                     Quantity(arithmetic.power(a.value, b.value), dimension, a.isSlope)
+                                }
+                                'R' -> {
+                                    scalar(a); scalar(b)
+                                    Quantity(arithmetic.randomBetween(a.value, b.value, requireNotNull(random), randomIndex++))
                                 }
                                 'L', 'P', 'C' -> {
                                     scalar(a); scalar(b)
