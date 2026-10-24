@@ -90,6 +90,13 @@
         </LinearLayout>
 
         <Button
+            android:id="@+id/btn_choose_engines"
+            style="@style/ManagementButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/choose_engines" />
+
+        <Button
             android:id="@+id/btn_clear_layout"
             style="@style/ManagementButton"
             android:layout_width="match_parent"

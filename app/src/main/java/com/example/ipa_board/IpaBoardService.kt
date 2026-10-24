@@ -34,6 +34,7 @@ class IpaBoardService : InputMethodService() {
     private var chrome: ImeChromeView? = null
     private lateinit var prefs: SharedPreferences
     private val remoteKeyboardMode by lazy { RemoteKeyboardMode(prefs) }
+    private val pageEngineBindings by lazy { PageEngineBindingController(EngineSettings.preferences(this)) }
     private var widthSwapEnabled = false
     private val inputController = KeyboardInputController(::transformOutput)
     private lateinit var engines: EngineCoordinator
@@ -303,6 +304,15 @@ class IpaBoardService : InputMethodService() {
 
     private fun applySettings() {
         val view = chrome ?: return
+        val page = PageGroupManager.activeFilename(this)
+        val applied = pageEngineBindings.onPage(page, remoteKeyboardMode.active) {
+            page?.let { LayoutFileManager.loadLayout(this, it)?.engineBinding }
+        }
+        if (applied == PageEngineBindingController.Result.STORAGE_FAILED) {
+            // DIAGNOSTICS: removable fixed-code reporting; no page ID or engine values are logged.
+            AppDiagnostics.signal(DiagnosticComponent.IME, DiagnosticStage.SAVE, DiagnosticKind.IO)
+            Toast.makeText(this, R.string.page_engines_storage_failed, Toast.LENGTH_SHORT).show()
+        }
         inputController.shiftShortcuts = SettingsConstants.parseShortcutsJson(prefs.getString(KEY_SHIFT_SHORTCUTS, null))
         inputController.ctrlShortcuts = SettingsConstants.parseShortcutsJson(prefs.getString(KEY_CTRL_SHORTCUTS, null))
         val density = resources.displayMetrics.density

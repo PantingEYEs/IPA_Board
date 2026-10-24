@@ -1,11 +1,13 @@
 package com.example.ipa_board
 
+import com.example.ipa_board.ime.PageEngineBinding
 import org.json.JSONArray
 import org.json.JSONObject
 
 data class KeyboardLayout(
     val name: String,
-    val rows: List<RowLayout>
+    val rows: List<RowLayout>,
+    val engineBinding: PageEngineBinding? = null
 ) {
     init {
         require(rows.isNotEmpty() && rows.size <= 20) { "Layout must contain 1–20 rows" }
@@ -60,6 +62,7 @@ data class KeyboardLayout(
             rowsArr.put(row.toJsonObject())
         }
         obj.put("rows", rowsArr)
+        engineBinding?.let { obj.put("engineBinding", it.toJsonObject()) }
         return obj.toString()
     }
 
@@ -72,7 +75,7 @@ data class KeyboardLayout(
             for (i in 0 until rowsArr.length()) {
                 rows.add(RowLayout.fromJsonObject(rowsArr.getJSONObject(i)))
             }
-            return KeyboardLayout(name, rows)
+            return KeyboardLayout(name, rows, PageEngineBinding.fromJsonObject(obj.optJSONObject("engineBinding")))
         }
     }
 }

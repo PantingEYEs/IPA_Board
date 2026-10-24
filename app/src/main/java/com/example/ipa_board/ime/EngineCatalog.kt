@@ -20,6 +20,9 @@ data class EngineCategory(val id: String, val title: String, val engines: List<E
  * Package versions are explicitly labelled as sources, not claimed as native library versions.
  */
 object EngineCatalog {
+    fun configurable(appVersion: String = ""): List<EngineInfo> = categories(appVersion).flatMap { it.engines }
+        .filter { it.feature != null }.distinctBy { it.feature }
+
     private const val RIME_VERSION = "librime 1.17.0 · source: Trime 3.3.12 · rev 33e781402501"
     private const val MOZC_VERSION = "Source: Libre Japanese Input 0.1.2 · Mozc rev ddd9730b0683"
     private const val ENGLISH_VERSION = "Source: HeliBoard 4.1 · rev 9f5bb635c2e8 · en_US dictionary 54"

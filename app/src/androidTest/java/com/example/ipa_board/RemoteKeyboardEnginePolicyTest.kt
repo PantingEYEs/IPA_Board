@@ -115,6 +115,32 @@ class RemoteKeyboardEnginePolicyTest {
         } finally { fixture.close() }
     }
 
+    @Test fun pagePresetChangesRejectOldEngineRepliesAndKeepTheComposingText() {
+        val fixture=Fixture()
+        try {
+            instrumentation.runOnMainSync {
+                fixture.start(setOf(EngineFeature.CHINESE_CONVERSION,EngineFeature.ENGLISH_COMPLETION))
+                fixture.controller.input("hel")
+                fixture.context.connectPending()
+            }
+            instrumentation.waitForIdleSync()
+            val old=fixture.context.latest("EnglishService")
+            instrumentation.runOnMainSync {
+                val pages=PageEngineBindingController(fixture.prefs)
+                val off=PageEngineBinding(EngineFeature.entries.associate { it.key to false })
+                assertEquals(PageEngineBindingController.Result.APPLIED,pages.onPage("off",false) { off })
+                fixture.context.reply(old,"hello","EN",CandidateKind.COMPLETION)
+            }
+            instrumentation.waitForIdleSync()
+            instrumentation.runOnMainSync {
+                assertTrue(fixture.controller.candidates.isEmpty())
+                assertEquals("hel",fixture.controller.raw)
+                assertTrue(fixture.controller.literal())
+                assertEquals("hel",fixture.editor.text.toString())
+            }
+        } finally { fixture.close() }
+    }
+
     private inner class Fixture : AutoCloseable {
         val context = EngineContext(instrumentation.targetContext)
         val prefs = EngineSettings.preferences(context)

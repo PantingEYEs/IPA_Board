@@ -25,6 +25,9 @@ import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.graphics.ColorUtils
+import com.example.ipa_board.ime.EngineCatalog
+import com.example.ipa_board.ime.EngineSettings
+import com.example.ipa_board.ime.PageEngineBinding
 import org.json.JSONObject
 
 import androidx.viewpager2.widget.ViewPager2
@@ -189,6 +192,7 @@ class KeyboardPageActivity : Activity() {
         // 4. Action Buttons
         btnImport.setOnClickListener { startImport() }
         btnExport.setOnClickListener { startExport() }
+        pageSettingsView.findViewById<Button>(R.id.btn_choose_engines).setOnClickListener { showPageEnginesDialog() }
         pageSettingsView.findViewById<Button>(R.id.btn_rename_layout).setOnClickListener { showRenameLayoutDialog() }
         pageSettingsView.findViewById<Button>(R.id.btn_reorder_pages).setOnClickListener { showReorderPagesDialog() }
         pageSettingsView.findViewById<Button>(R.id.btn_new_layout).setOnClickListener { showNewLayoutDialog() }
@@ -344,6 +348,44 @@ class KeyboardPageActivity : Activity() {
                     dialog.dismiss()
                 } catch (e: IllegalArgumentException) { input.error = e.message }
             }
+        }
+        dialog.show()
+    }
+
+    private fun showPageEnginesDialog() {
+        val filename = editingFilename ?: return
+        val layout = LayoutFileManager.loadLayout(this, filename) ?: return
+        val engines = EngineCatalog.configurable()
+        val selected = engines.map { info ->
+            val feature = requireNotNull(info.feature)
+            layout.engineBinding?.states?.get(feature.key) ?: EngineSettings.enabled(this, feature)
+        }.toBooleanArray()
+        val builder = AlertDialog.Builder(this).setTitle(R.string.choose_engines)
+            .setMultiChoiceItems(engines.map { it.name }.toTypedArray(), selected) { _, index, checked -> selected[index] = checked }
+            .setNegativeButton("Cancel", null).setPositiveButton("Save", null)
+        if (layout.engineBinding != null) builder.setNeutralButton(R.string.clear_engine_binding, null)
+        val dialog = builder.create()
+        dialog.setOnShowListener {
+            fun save(binding: PageEngineBinding?) {
+                try {
+                    // Reload to preserve edits made elsewhere while the dialog was open.
+                    val current = requireNotNull(LayoutFileManager.loadLayout(this, filename))
+                    LayoutFileManager.saveLayout(this, filename, current.copy(engineBinding = binding))
+                    dialog.dismiss()
+                } catch (_: Exception) {
+                    Toast.makeText(this, R.string.page_engines_storage_failed, Toast.LENGTH_SHORT).show()
+                }
+            }
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val states = layout.engineBinding?.states.orEmpty().toMutableMap()
+                engines.forEachIndexed { index, info -> states[requireNotNull(info.feature).key] = selected[index] }
+                val binding = try { PageEngineBinding(states) } catch (_: IllegalArgumentException) {
+                    Toast.makeText(this, R.string.page_engines_storage_failed, Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                save(binding)
+            }
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setOnClickListener { save(null) }
         }
         dialog.show()
     }
@@ -562,7 +604,7 @@ class KeyboardPageActivity : Activity() {
         val layoutFile = editingFilename
         val hasPage = layoutFile != null && LayoutFileManager.loadLayout(this, layoutFile) != null
         previewContainer.visibility = if (hasPage) View.VISIBLE else View.GONE
-        listOf(R.id.btn_delete_layout, R.id.btn_rename_layout, R.id.btn_clear_layout, R.id.btn_export).forEach {
+        listOf(R.id.btn_delete_layout, R.id.btn_rename_layout, R.id.btn_clear_layout, R.id.btn_export, R.id.btn_choose_engines).forEach {
             findViewById<Button>(it).isEnabled = hasPage
         }
         val density = resources.displayMetrics.density
