@@ -29,7 +29,8 @@
         "com.example.ipa_board.IpaResourceManagerTest",
         "com.example.ipa_board.RemoteKeyboardModeTest",
         "com.example.ipa_board.RemoteKeyboardEnginePolicyTest",
-        "com.example.ipa_board.PopupConfigurationPersistenceTest"
+        "com.example.ipa_board.PopupConfigurationPersistenceTest",
+        "com.example.ipa_board.PageEngineBindingContractTest"
       ]
     },
     "engines": {
@@ -58,7 +59,8 @@
         "com.example.ipa_board.PopupActionEditorTest",
         "com.example.ipa_board.PopupKeySettingsTest",
         "com.example.ipa_board.PopupGestureEquivalenceTest",
-        "com.example.ipa_board.MultifunctionBarTest"
+        "com.example.ipa_board.MultifunctionBarTest",
+        "com.example.ipa_board.PageEngineBindingUiTest"
       ]
     },
     "e2e": {
@@ -70,7 +72,8 @@
         "com.example.ipa_board.RemoteKeyboardModeImeTest",
         "com.example.ipa_board.PopupActionsImeTest",
         "com.example.ipa_board.MultifunctionBarImeTest",
-        "com.example.ipa_board.CalculatorImeTest"
+        "com.example.ipa_board.CalculatorImeTest",
+        "com.example.ipa_board.PageEngineBindingImeTest"
       ]
     },
     "semantic": {
@@ -125,7 +128,10 @@
         "com.example.ipa_board.PopupActionsImeTest",
         "com.example.ipa_board.MultifunctionBarTest",
         "com.example.ipa_board.MultifunctionBarImeTest",
-        "com.example.ipa_board.CalculatorImeTest"
+        "com.example.ipa_board.CalculatorImeTest",
+        "com.example.ipa_board.PageEngineBindingContractTest",
+        "com.example.ipa_board.PageEngineBindingUiTest",
+        "com.example.ipa_board.PageEngineBindingImeTest"
       ]
     },
     "ipa": {
@@ -191,6 +197,17 @@
         "com.example.ipa_board.CalculatorImeTest",
         "com.example.ipa_board.CompositionControllerTest",
         "com.example.ipa_board.ImeChromeTest"
+      ]
+    },
+    "page-engines": {
+      "classes": [
+        "com.example.ipa_board.PageEngineBindingContractTest",
+        "com.example.ipa_board.PageEngineBindingUiTest",
+        "com.example.ipa_board.RemoteKeyboardModeTest",
+        "com.example.ipa_board.RemoteKeyboardEnginePolicyTest",
+        "com.example.ipa_board.PageGroupTest",
+        "com.example.ipa_board.PageGroupUiTest",
+        "com.example.ipa_board.PageEngineBindingImeTest"
       ]
     }
   }

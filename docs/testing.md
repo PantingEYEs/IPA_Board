@@ -96,6 +96,8 @@ IPA 接入增加 `ipa` 套件，覆盖离线下载事务、哈希/路径拒绝�
 
 `remote-keyboard` 专项覆盖 #4 Phase 1：`RemoteKeyboardModeTest` 验证独立 Preferences 的原子快照、精确恢复、原始缺失键、四种状态组合、重复周期、控制器重建、连续写入失败及损坏快照；`RemoteKeyboardEnginePolicyTest` 使用离线 IPC 验证批量配置只应用一次、关闭后解绑与旧回复拒绝、手动重开引擎及原文提交。这两类登记于 platform/full。`RemoteKeyboardModeImeTest` 登记于 e2e/full，使用测试自有编辑器验证绑定键、独立短按/长按、左右滑动、Shift/Ctrl 快捷键、模式指示、重开输入会话及预输入不丢失；复用配置、引擎开关和控制器用例。控制器重建与输入会话重开不等同于实机强制终止验证，第三方远程应用和实际网络连接也不在自动测试范围。
 
+`page-engines` 专项覆盖 #22：JVM 验证页面进入与 Remote 退出触发条件；`PageEngineBindingContractTest` 登记于 platform/full，验证完整开关、未绑定/空选择、手动覆盖、Remote 快照保护、失败回退与布局兼容；`PageEngineBindingUiTest` 登记于 ui/full，验证 Choose Engines 的名称、保存/取消/清除、页面重建及重命名/跨组/导入；`PageEngineBindingImeTest` 登记于 e2e/full，使用自有编辑器验证真实切页、重绘、全关闭字面提交与 Remote 退出的当前页应用。复用 Remote、离线 IPC 和页组测试，旧请求回退不依赖真实引擎或网络。
+
 `popup` 专项覆盖 #20：JVM 保护 even-odd 几何、面积重心/零面积、重叠过滤和共享长按状态；`PopupConfigurationPersistenceTest` 登记于 platform/full，保护旧配置与双模式配置序列化；`PopupActionEditorTest`、`PopupKeySettingsTest`、`PopupGestureEquivalenceTest` 登记于 ui/full，覆盖图形编辑、四种变形、对象选择、图层、缩放、历史与操作 Undo、模式切换后的草稿保留、八种手势等价以及屏幕裁剪。`PopupActionsImeTest` 登记于 e2e/full，以系统注入的原始触摸流跨越真实键盘与浮窗，验证 Unicode/功能输入、编辑器焦点和离窗取消后的回返；复用旧按键编辑、经典预览和配置测试。截图/绘制检查仅针对测试自有视图，不读取其他应用窗口。
 
 `popup-ime` 仅选择 `PopupActionsImeTest`，用于快速定位真实窗口坐标、原始触摸流和 Classic 对照；提交前仍按影响范围运行 `popup` 或 `full`。
@@ -400,3 +402,17 @@ Shift / Caps Lock 指示由 `KeyboardWindowTest`（ui/full）验证真实控制�
 - `testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug --offline` 通过；lint 0 错误、277 条既有警告。`git diff --check` 通过。
 - 通过保护工具在独立临时 Android 15/API 35/arm64-v8a 模拟器执行 calculator 专项，报告 `5ab8456b-c4ab-4b3b-b345-939c6c46c5a4`：三个类共 32 项通过，0 失败、0 跳过（IME 12、控制器 14、界面组件 6）。新增真实 IME 用例通过全半角重绘触发同一原始预输入的再次查询，检查随机候选保持不变、选中后继续实数运算及复数参数按字面回退。
 - 原 APK 与私有数据均已恢复并校验，备份删除，pending 为空；临时模拟器已关闭、AVD 已清理。未操作既有模拟器或实体手机，未执行完整设备套件、其他 API/ABI 或签名 release 验证。本轮未重复合成 CE/DE 往返自检。
+
+## 2026-10-24 按页完整引擎状态绑定（#22）
+
+验证对象为 #22 分支的未提交工作树，基准提交 `078d94f`。Page Settings 新增 Choose Engines，复用 Engine Management 的功能名称与独立开关粒度，Save 保存完整配置，Cancel 不保存；Clear Binding 返回未绑定状态，不更改当前引擎开关。可选绑定存于页面 JSON，旧页保持未绑定，显式空选择全部关闭；未知标识保留而不写入偏好，损坏的可选绑定不影响布局本身。
+
+运行时在首次进入页面、页面切换或 Remote Keyboard 退出时应用；同页重绘和绑定编辑不反复执行，未绑定目标页不覆盖当前状态。Remote 期间暂停，不覆盖其恢复记录；退出先恢复原状态，再应用当前页绑定。完整开关通过一次 Preferences 提交传递给既有协调器，存储失败提示并尽力恢复之前的配置；同步 commit 的 lint 豁免仅限需要检查返回值的事务方法。
+
+- JVM 204 项通过，0 失败、0 跳过：新增 `PageEngineEntryPolicyTest` 3 项覆盖进入/重绘、空组与 Remote 初始/退出状态。
+- 49 项 Python 工作流测试通过；49 个 instrumentation 类登记校验、93 项引擎资源哈希及 E5 重组校验通过。`testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug --offline` 通过；lint 0 错误、277 条既有警告。`git diff --check` 通过。
+- 新设备合同用例 8 项验证完整配置可开启既有全局关闭项、未绑定和全关闭、同页手动状态、Remote 快照与未绑定退出、写入失败回滚、无效恢复记录、布局 JSON 与未知功能；界面 3 项验证名称/持久化/取消、空选择与清除、重命名/跨组/导入后独立编辑。
+- 新真实 IME 用例 2 项验证实际绑定页/未绑定页/全关闭页转换、Shift/布局重绘保留手动引擎开关、Remote 中切页及当前绑定/未绑定页退出，并保持 Unicode 预输入与字面提交。既有 `RemoteKeyboardEnginePolicyTest` 增加 1 项离线 IPC 用例，证明页绑定关闭引擎后丢弃旧回复且保留原文。
+- 独立临时 Android 15/API 35/arm64-v8a 模拟器首轮报告 `f800d801-17fa-487e-b966-8e256399af0a`：36 项中 35 通过、1 失败、0 跳过。界面用例在切换 Page Settings 后尝试滚动时目标尚不可见；测试改为无动画设置 ViewPager 目标页并等待主线程空闲，再执行原滚动/断言，未改产品行为或放宽等待时限。该失败记录保留。
+- 最终报告 `482695cf-b763-4401-94a3-4b7592cc10fb`：七个类共 36/36 通过，0 失败、0 跳过，`success=true`、`restored=true`。包括绑定合同 8、管理界面 3、Remote 模式 12、IPC 策略 3、页组合同 7、页组界面 1、真实 IME 2。
+- 两轮均恢复并校验原 APK 与私有 CE/DE 数据，备份删除，pending 为空；首轮额外的合成软件/私有数据往返校验通过。临时模拟器已关闭、AVD 已清理，未操作既有模拟器或实体手机。未执行本次 full 套件、其他 API/ABI、签名 release 或实体设备验证。

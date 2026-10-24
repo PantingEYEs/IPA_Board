@@ -22,6 +22,23 @@ object EngineSettings {
     fun setEnabled(context: Context, feature: EngineFeature, value: Boolean) {
         preferences(context).edit().putBoolean(feature.key, value).apply()
     }
+    /** One preference transaction means listeners see a complete policy, never per-switch intermediates. */
+    @android.annotation.SuppressLint("ApplySharedPref") // commit's result is required for failure rollback.
+    internal fun applyStates(prefs: SharedPreferences, states: Map<EngineFeature, Boolean>): Boolean = synchronized(prefs) {
+        val before = try { prefs.all } catch (_: RuntimeException) { return false }
+        if (states.keys.any { before.containsKey(it.key) && before[it.key] !is Boolean }) return false
+        if (states.all { (feature, value) -> before[feature.key] == value }) return true
+        fun commit(update: SharedPreferences.Editor.() -> Unit) = try {
+            prefs.edit().apply(update).commit()
+        } catch (_: RuntimeException) { false }
+        if (commit { states.forEach { (feature, value) -> putBoolean(feature.key, value) } }) return true
+        // A failed commit can already have changed memory; best-effort rollback preserves unset defaults.
+        commit { states.keys.forEach { feature ->
+            val old = before[feature.key]
+            if (old is Boolean) putBoolean(feature.key, old) else remove(feature.key)
+        } }
+        false
+    }
     fun isKey(key: String?) = EngineFeature.entries.any { it.key == key }
     internal fun snapshot(prefs: SharedPreferences) = EngineQueryPolicy(EngineFeature.entries.associateWith { enabled(prefs, it) })
 }
