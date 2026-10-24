@@ -288,45 +288,11 @@ class IpaBoardService : InputMethodService() {
         composition.updateCandidates(composition.candidates.filter { it.language != "∑" })
         refreshCandidates()
     }
-    private fun getMathCandidate(raw: String): Candidate? {
-        if (!calculatorEnabled()) return null
-        val trimmed = raw.trim()
-        if (trimmed.isEmpty()) return null
-
-        val mathOps = setOf('+', '-', '*', '/', '×', '÷')
-        val opsCount = trimmed.count { it in mathOps }
-        if (opsCount == 0) return null
-
-        if (opsCount == 1 && trimmed.startsWith("-") && trimmed.substring(1).all { it.isDigit() || it == '.' }) {
-            return null
-        }
-
-        val hasDigit = trimmed.any { it.isDigit() }
-        if (!hasDigit) return null
-
-        val evalRes = CalculatorEvaluator.evaluate(trimmed)
-        if (evalRes.isEmpty() || evalRes == "Error" || evalRes == "除数不能为0") {
-            return null
-        }
-
-        val firstNum = trimmed.takeWhile { it.isDigit() || it == '.' || it == '-' }
-        if (evalRes == firstNum || evalRes == trimmed) {
-            return null
-        }
-
-        return Candidate(evalRes, "∑", rank = -1)
-    }
-
     private fun refreshCandidates() {
         val raw = composition.raw
         val baseStatus = if (directOnly) "Direct Input" else engineStatus
 
-        val mathCand = getMathCandidate(raw)
-        val displayCandidates = if (mathCand != null) {
-            listOf(mathCand) + composition.candidates.filter { it.text != mathCand.text }
-        } else {
-            composition.candidates
-        }
+        val displayCandidates = CalculatorCandidates.merge(raw, calculatorEnabled(), composition.candidates)
 
         composition.updateCandidates(displayCandidates)
         chrome?.render(raw, displayCandidates, baseStatus, composition.revision)

@@ -6,7 +6,7 @@ import java.util.ArrayDeque
 
 /**
  * Calculator evaluator capable of evaluating basic four arithmetic operations
- * (+, -, *, /) and nested (), [], {} groups with precision up to 4 decimal places
+ * (+, -, *, /), real square roots and nested (), [], {} groups with precision up to 4 decimal places
  * using BigDecimal. Bracket styles do not introduce different precedence levels.
  */
 object CalculatorEvaluator {
@@ -17,15 +17,8 @@ object CalculatorEvaluator {
      * or an error message if invalid or division by zero occurs.
      */
     fun evaluate(expression: String): String {
-        val trimmed = expression.trim()
-        if (trimmed.isEmpty()) return ""
-
         return try {
-            val tokens = tokenize(trimmed)
-            if (tokens.isEmpty()) return ""
-            val rpn = shuntingYard(tokens)
-            val result = evalRpn(rpn)
-            formatResult(result)
+            evaluateResult(expression)?.decimal.orEmpty()
         } catch (e: ArithmeticException) {
             "除数不能为0"
         } catch (e: Exception) {
@@ -33,15 +26,44 @@ object CalculatorEvaluator {
         }
     }
 
+    /** Decimal first, exact form second for root expressions, even when the texts are equal. */
+    fun resultForms(expression: String): List<String> = try {
+        evaluateResult(expression)?.let { result ->
+            listOfNotNull(result.decimal, result.exact)
+        }.orEmpty()
+    } catch (_: Exception) {
+        emptyList()
+    }
+
+    private data class Result(val decimal: String, val exact: String? = null)
+
+    private fun evaluateResult(expression: String): Result? {
+        val trimmed = expression.trim()
+        if (trimmed.isEmpty()) return null
+
+        val tokens = tokenize(trimmed)
+        if (tokens.isEmpty()) return null
+        val rpn = shuntingYard(tokens)
+        return if (tokens.any { it is Token.Operator && it.op == '√' }) {
+            val arithmetic = RadicalArithmetic()
+            val result = evalRadicalRpn(rpn, arithmetic)
+            Result(arithmetic.decimalText(result), arithmetic.exactText(result))
+        } else {
+            Result(formatResult(evalRpn(rpn)))
+        }
+    }
+
     private sealed class Token {
         data class Number(val value: BigDecimal) : Token()
-        data class Operator(val op: Char) : Token() // '+', '-', '×', '÷', '~' (unary minus)
+        data class Operator(val op: Char) : Token() // '+', '-', '×', '÷', '~' (unary minus), '√'
         data class OpenGroup(val bracket: Char) : Token()
         data class CloseGroup(val bracket: Char) : Token()
     }
 
     private fun tokenize(expr: String): List<Token> {
         val clean = expr.replace('*', '×').replace('/', '÷')
+        val hasRoot = clean.contains('√') || clean.contains("sqrt")
+        if (hasRoot) require(clean.length <= 4096) { "Radical expression length limit" }
         val tokens = mutableListOf<Token>()
         var i = 0
         val len = clean.length
@@ -60,25 +82,40 @@ object CalculatorEvaluator {
                     i++
                 }
                 tokens.add(Token.Number(BigDecimal(sb.toString())))
+            } else if (c == '√' || clean.startsWith("sqrt", i)) {
+                if (c != '√') {
+                    i += 4
+                    while (i < len && clean[i].isWhitespace()) i++
+                    require(i < len && clean[i] == '(') { "sqrt requires parentheses" }
+                } else i++
+                if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup) {
+                    tokens.add(Token.Operator('×'))
+                }
+                tokens.add(Token.Operator('√'))
             } else if (c == '+' || c == '-' || c == '×' || c == '÷') {
                 val isUnaryMinus = c == '-' &&
                     (tokens.isEmpty() || tokens.last() is Token.Operator || tokens.last() is Token.OpenGroup)
                 tokens.add(Token.Operator(if (isUnaryMinus) '~' else c))
                 i++
             } else if (c in "([{") {
+                // Exact forms such as 2√2 and (1+√2)(1-√2) must remain reusable as input.
+                if (hasRoot && (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup)) {
+                    tokens.add(Token.Operator('×'))
+                }
                 tokens.add(Token.OpenGroup(c))
                 i++
             } else if (c in ")]}") {
                 tokens.add(Token.CloseGroup(c))
                 i++
             } else {
+                require(!hasRoot) { "Unsupported character in radical expression" }
                 i++
             }
         }
 
         // Drop trailing operators for evaluation (e.g. "5 +" -> "5")
         val resultTokens = tokens.toMutableList()
-        while (resultTokens.isNotEmpty() && resultTokens.last() is Token.Operator) {
+        while (resultTokens.lastOrNull().let { it is Token.Operator && it.op != '√' }) {
             resultTokens.removeAt(resultTokens.size - 1)
         }
 
@@ -86,6 +123,7 @@ object CalculatorEvaluator {
     }
 
     private fun precedence(op: Char): Int = when (op) {
+        '√' -> 4
         '~' -> 3
         '×', '÷' -> 2
         '+', '-' -> 1
@@ -105,13 +143,14 @@ object CalculatorEvaluator {
                     expectingOperand = false
                 }
                 is Token.Operator -> {
-                    require(expectingOperand == (token.op == '~')) { "Missing operand" }
-                    // Unary minus associates right-to-left, including before a group.
+                    val unary = token.op == '~' || token.op == '√'
+                    require(expectingOperand == unary) { "Missing operand" }
+                    // Prefix operations associate right-to-left, including before a group.
                     while (true) {
                         val top = opStack.peek() ?: break
-                        val shouldPop = top !in "([{" &&
+                        val shouldPop = !unary && top !in "([{" &&
                             (precedence(top) > precedence(token.op) ||
-                                (token.op != '~' && precedence(top) == precedence(token.op)))
+                                precedence(top) == precedence(token.op))
                         if (!shouldPop) break
                         output.add(Token.Operator(opStack.pop()))
                     }
@@ -184,6 +223,38 @@ object CalculatorEvaluator {
         }
 
         if (stack.size != 1) throw IllegalArgumentException("Invalid expression evaluation")
+        return stack.pop()
+    }
+
+    private fun evalRadicalRpn(tokens: List<Token>, arithmetic: RadicalArithmetic): RadicalArithmetic.Value {
+        val stack = ArrayDeque<RadicalArithmetic.Value>()
+        for (token in tokens) {
+            when (token) {
+                is Token.Number -> stack.push(arithmetic.number(token.value))
+                is Token.Operator -> {
+                    require(stack.isNotEmpty()) { "Missing operand" }
+                    val b = stack.pop()
+                    val result = when (token.op) {
+                        '~' -> arithmetic.negate(b)
+                        '√' -> arithmetic.sqrt(b)
+                        else -> {
+                            require(stack.isNotEmpty()) { "Missing operand" }
+                            val a = stack.pop()
+                            when (token.op) {
+                                '+' -> arithmetic.add(a, b)
+                                '-' -> arithmetic.subtract(a, b)
+                                '×' -> arithmetic.multiply(a, b)
+                                '÷' -> arithmetic.divide(a, b)
+                                else -> throw IllegalArgumentException("Unknown operator")
+                            }
+                        }
+                    }
+                    stack.push(result)
+                }
+                else -> throw IllegalArgumentException("Unexpected group in RPN")
+            }
+        }
+        require(stack.size == 1) { "Invalid expression" }
         return stack.pop()
     }
 
