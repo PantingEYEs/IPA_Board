@@ -8,8 +8,13 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import com.example.ipa_board.MultifunctionBarView
+import com.example.ipa_board.MultifunctionBarSlot
+import com.example.ipa_board.MultifunctionBarBinding
+import com.example.ipa_board.KeyAction
+import com.example.ipa_board.ShiftState
 
-/** IME-only chrome. Never passed to KeyboardRenderer or serialized with a layout. */
+/** IME chrome, with a toolbar layout shared by Shortcut Management. Outside keyboard-page JSON. */
 class ImeChromeView(context: Context) : LinearLayout(context) {
     enum class Panel { KEYBOARD, CANDIDATES, CLIPBOARD, PAGES, EMOJI, KAOMOJI, CALCULATOR, ENGINE_DASHBOARD }
     val keyboardHost = LinearLayout(context).apply { orientation = VERTICAL }
@@ -22,8 +27,9 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         minimumWidth = dp(57)
         setPadding(dp(4), 0, dp(4), 0)
     }
-    val statusContainer = FrameLayout(context)
-    val status = TextView(context)
+    val multifunctionBar = MultifunctionBarView(context)
+    val statusContainer = multifunctionBar.statusContainer
+    val status = multifunctionBar.status
     private var customStatusView: View? = null
     var onStatusClick: (() -> Unit)? = null
         set(value) {
@@ -42,31 +48,27 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     var onPanel: (Panel) -> Unit = {}
     var onCalculatorToggle: () -> Unit = {}
     var onRemoteKeyboardToggle: () -> Unit = {}
-    private val remoteKeyboardBtn = toolbarButton("⌁", "Remote Keyboard Mode") { onRemoteKeyboardToggle() }
     var onWidthSwapToggle: (() -> Unit)? = null
-    private val widthSwapBtn = toolbarButton("◩", "全角 / 半角转换") { onWidthSwapToggle?.invoke() }
-    private val calcBtn = toolbarButton("∑", "Calculator") { onCalculatorToggle() }
+    var onKeyBinding: ((MultifunctionBarBinding) -> Unit)? = null
 
     init {
         orientation = VERTICAL
         setBackgroundColor(Color.rgb(0, 0, 0))
-        val toolbar = LinearLayout(context).apply {
-            addView(toolbarButton("⧉", "Clipboard") { toggle(Panel.CLIPBOARD) })
-            addView(toolbarButton("⊞", "Keyboard Overview") { toggle(Panel.PAGES) })
-            addView(toolbarButton("顔", "顔文字") { toggle(Panel.KAOMOJI) })
-            status.setTextColor(Color.LTGRAY)
-            status.textSize = 10f
-            status.gravity = Gravity.CENTER_VERTICAL
-            status.setOnClickListener { onStatusClick?.invoke() }
-            statusContainer.addView(status, FrameLayout.LayoutParams(-1, -1).apply {
-                setMargins(dp(6), 0, dp(6), 0)
-            })
-            addView(statusContainer, LayoutParams(0, dp(28), 1f))
-            addView(remoteKeyboardBtn)
-            addView(widthSwapBtn)
-            addView(calcBtn)
+        status.setOnClickListener { onStatusClick?.invoke() }
+        multifunctionBar.onSlotClick = { slot ->
+            val binding = multifunctionBar.bindingAt(slot)
+            val callback = onKeyBinding
+            if (callback != null) callback(binding) else when (binding.action) {
+                KeyAction.CLIPBOARD -> toggle(Panel.CLIPBOARD)
+                KeyAction.PAGES -> toggle(Panel.PAGES)
+                KeyAction.KAOMOJI -> toggle(Panel.KAOMOJI)
+                KeyAction.REMOTE_KEYBOARD -> onRemoteKeyboardToggle()
+                KeyAction.WIDTH_SWAP -> onWidthSwapToggle?.invoke()
+                KeyAction.CALCULATOR -> onCalculatorToggle()
+                else -> Unit
+            }
         }
-        addView(toolbar, LayoutParams(-1, dp(28)))
+        addView(multifunctionBar)
         val strip = LinearLayout(context)
         val horizontal = HorizontalScrollView(context).apply { isHorizontalScrollBarEnabled = false; addView(candidateRow) }
         strip.addView(horizontal, LayoutParams(0, dp(28), 1f))
@@ -106,21 +108,19 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     }
 
     fun setCalculatorEnabled(enabled: Boolean) {
-        calcBtn.alpha = if (enabled) 1.0f else 0.5f
+        multifunctionBar.setCalculatorEnabled(enabled)
     }
 
     fun setRemoteKeyboardEnabled(enabled: Boolean) {
-        remoteKeyboardBtn.isSelected = enabled
-        remoteKeyboardBtn.stateDescription = context.getString(if (enabled)
-            com.example.ipa_board.R.string.remote_keyboard_on else com.example.ipa_board.R.string.remote_keyboard_off)
-        remoteKeyboardBtn.alpha = if (enabled) 1f else 0.5f
+        multifunctionBar.setRemoteKeyboardEnabled(enabled)
     }
 
     fun setWidthSwapEnabled(enabled: Boolean) {
-        widthSwapBtn.isSelected = enabled
-        widthSwapBtn.stateDescription = if (enabled) "开启" else "关闭"
-        widthSwapBtn.alpha = if (enabled) 1.0f else 0.5f
+        multifunctionBar.setWidthSwapEnabled(enabled)
     }
+
+    fun setBarBindings(bindings: Map<MultifunctionBarSlot, MultifunctionBarBinding>) = multifunctionBar.setBindings(bindings)
+    fun setModifiers(shift: ShiftState, ctrl: Boolean) = multifunctionBar.setModifiers(shift, ctrl)
 
 
 
@@ -268,21 +268,6 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         text = label; contentDescription = description; isAllCaps = false; textSize = 10f
         setTextColor(Color.WHITE); setBackgroundColor(Color.TRANSPARENT)
         minHeight = dp(20); minimumHeight = dp(20); minWidth = dp(48)
-        setOnClickListener { click() }
-    }
-    private fun toolbarButton(label: String, description: String, click: () -> Unit) = Button(context).apply {
-        text = label
-        contentDescription = description
-        isAllCaps = false
-        textSize = 12f
-        setTextColor(Color.WHITE)
-        setBackgroundColor(Color.TRANSPARENT)
-        setPadding(dp(4), 0, dp(4), 0)
-        minHeight = dp(28)
-        minimumHeight = dp(28)
-        minWidth = dp(50)
-        minimumWidth = dp(50)
-        gravity = Gravity.CENTER
         setOnClickListener { click() }
     }
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()

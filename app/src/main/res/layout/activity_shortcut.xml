@@ -32,36 +32,67 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <LinearLayout
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:text="@string/multifunction_bar_title"
+        android:textColor="@color/management_text"
+        android:textSize="@dimen/management_section_size" />
 
-        <TextView
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:text="@string/multifunction_bar_help"
+        android:textColor="@color/management_text_secondary"
+        android:textSize="@dimen/management_caption_size" />
+
+    <FrameLayout
+        android:id="@+id/multifunction_bar_preview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:background="@color/management_surface" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Configure key shortcuts for modifier actions"
-            android:textColor="@color/management_text_secondary"
-            android:textSize="@dimen/management_caption_size"
-            android:layout_marginBottom="20dp"/>
+            android:orientation="vertical"
+            android:padding="16dp">
 
-        <Button style="@style/ManagementButton"
-            android:id="@+id/btn_manage_shift_shortcuts"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Shift Shortcuts"
-            android:textSize="@dimen/management_caption_size"
-            android:layout_marginBottom="16dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Configure key shortcuts for modifier actions"
+                android:textColor="@color/management_text_secondary"
+                android:textSize="@dimen/management_caption_size"
+                android:layout_marginBottom="20dp"/>
 
-        <Button style="@style/ManagementButton"
-            android:id="@+id/btn_manage_ctrl_shortcuts"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Ctrl Shortcuts"
-            android:textSize="@dimen/management_caption_size"
-            android:layout_marginBottom="16dp" />
+            <Button style="@style/ManagementButton"
+                android:id="@+id/btn_manage_shift_shortcuts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Shift Shortcuts"
+                android:textSize="@dimen/management_caption_size"
+                android:layout_marginBottom="16dp" />
 
-    </LinearLayout>
+            <Button style="@style/ManagementButton"
+                android:id="@+id/btn_manage_ctrl_shortcuts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Ctrl Shortcuts"
+                android:textSize="@dimen/management_caption_size"
+                android:layout_marginBottom="16dp" />
+
+        </LinearLayout>
+    </ScrollView>
 
 </LinearLayout>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="sp_bar_key_type" type="id" />
+    <item name="et_bar_key_text" type="id" />
+    <item name="sp_bar_text_behavior" type="id" />
+</resources>
