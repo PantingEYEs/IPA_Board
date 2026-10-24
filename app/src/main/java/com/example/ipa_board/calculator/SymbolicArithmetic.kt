@@ -32,6 +32,13 @@ internal class SymbolicArithmetic {
     private val decimals = mutableMapOf<Real, BigDecimal>()
     private fun tick() { require(++work <= 20000) { "Symbolic expression work limit" } }
     fun number(n: BigDecimal) = Complex(Number(field.number(n)), zero)
+    // Discrete operations require an exact real integer; never round approximate values.
+    fun nonNegativeInteger(value: Complex): BigDecimal {
+        require(value.formula == null && value.imaginary == zero && value.real is Number) { "Exact integer required" }
+        val rational = field.rational(value.real.value)
+        require(rational != null && rational.denominator == java.math.BigInteger.ONE && rational.numerator.signum() >= 0) { "Nonnegative integer required" }
+        return BigDecimal(rational.numerator)
+    }
     fun constant(name: Char, expandPhi: Boolean): Complex = when (name) {
         'i' -> Complex(zero, one)
         'φ' -> if (expandPhi) Complex(divideReal(addReal(one, Number(field.sqrt(field.number(BigDecimal(5))))), two), zero)
