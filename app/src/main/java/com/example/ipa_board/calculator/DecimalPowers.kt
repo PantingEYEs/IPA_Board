@@ -47,6 +47,22 @@ internal object DecimalPowers {
         val (sin, cos) = sinCos(imaginary)
         return checked(Value(radius.multiply(cos, mc), radius.multiply(sin, mc)))
     }
+    /** Principal Log(x)/Log(base), using the same upper negative-real cut as powers. */
+    fun logarithm(value: Value, base: Value): Value {
+        fun principal(z: Value): Value {
+            checked(z)
+            val norm = z.real.multiply(z.real, mc).add(z.imaginary.multiply(z.imaginary, mc), mc)
+            require(norm.signum() > 0) { "Undefined logarithm of zero" }
+            return Value(log(norm).divide(two, mc), atan2(z.imaginary, z.real))
+        }
+        val a = principal(value)
+        val b = principal(base)
+        val norm = b.real.multiply(b.real, mc).add(b.imaginary.multiply(b.imaginary, mc), mc)
+        require(norm.signum() > 0) { "Logarithm base must not equal one" }
+        return checked(Value(
+            a.real.multiply(b.real, mc).add(a.imaginary.multiply(b.imaginary, mc), mc).divide(norm, mc),
+            a.imaginary.multiply(b.real, mc).subtract(a.real.multiply(b.imaginary, mc), mc).divide(norm, mc)))
+    }
     private fun logSmall(value: BigDecimal): BigDecimal {
         var reduced = value
         repeat(8) { reduced = reduced.sqrt(mc) }

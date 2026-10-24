@@ -44,11 +44,11 @@ object CalculatorEvaluator {
         val tokens = tokenize(trimmed)
         if (tokens.isEmpty()) return null
         val rpn = shuntingYard(tokens)
-        return if (tokens.any { it is Token.Constant || (it is Token.BinaryFunction && it.operation == '^') || (it is Token.Operator && it.op in "√^") }) {
+        return if (tokens.any { it is Token.Constant || (it is Token.BinaryFunction && it.operation in "^L") || (it is Token.Operator && it.op in "√^") }) {
             val expanded = SymbolicArithmetic()
             val value = evalSymbolicRpn(rpn, expanded, expandPhi = true)
             val decimal = expanded.decimalText(value)
-            val exact = if (expanded.nonIntegerPower || tokens.any { it is Token.Constant || (it is Token.Operator && it.op == '√') })
+            val exact = if (expanded.nonIntegerPower || tokens.any { it is Token.BinaryFunction && it.operation == 'L' } || tokens.any { it is Token.Constant || (it is Token.Operator && it.op == '√') })
                 expanded.exactText(value) else null
             val symbolic = if (tokens.any { it is Token.Constant && it.name == 'φ' }) {
                 val preserved = SymbolicArithmetic()
@@ -75,7 +75,7 @@ object CalculatorEvaluator {
 
     private fun tokenize(expr: String): List<Token> {
         val clean = expr.replace('*', '×').replace('/', '÷')
-        val special = clean.contains('√') || clean.contains("sqrt") || clean.contains("pow") || clean.contains("perm") || clean.contains("comb") || clean.contains('!') || clean.contains('^') || clean.contains('%') || clean.any { it in "eπφi" }
+        val special = clean.contains('√') || clean.contains("sqrt") || clean.contains("pow") || clean.contains("perm") || clean.contains("comb") || clean.contains("log") || clean.contains('!') || clean.contains('^') || clean.contains('%') || clean.any { it in "eπφi" }
         if (special) require(clean.length <= 4096) { "Radical expression length limit" }
         val tokens = mutableListOf<Token>()
         var i = 0
@@ -96,15 +96,15 @@ object CalculatorEvaluator {
                     i++
                 }
                 tokens.add(Token.Number(BigDecimal(sb.toString())))
-            } else if (listOf("pow", "perm", "comb").any { clean.startsWith(it, i) }) {
-                val name = listOf("pow", "perm", "comb").first { clean.startsWith(it, i) }
+            } else if (listOf("pow", "perm", "comb", "log").any { clean.startsWith(it, i) }) {
+                val name = listOf("pow", "perm", "comb", "log").first { clean.startsWith(it, i) }
                 i += name.length
                 while (i < len && clean[i].isWhitespace()) i++
                 require(i < len && clean[i] == '(') { "$name requires parentheses" }
                 if (tokens.lastOrNull() is Token.Number || tokens.lastOrNull() is Token.CloseGroup || tokens.lastOrNull() is Token.Constant || tokens.lastOrNull() is Token.Percent || tokens.lastOrNull() is Token.Factorial) {
                     tokens.add(Token.Operator('×'))
                 }
-                tokens.add(Token.BinaryFunction(when (name) { "perm" -> 'P'; "comb" -> 'C'; else -> '^' }))
+                tokens.add(Token.BinaryFunction(when (name) { "perm" -> 'P'; "comb" -> 'C'; "log" -> 'L'; else -> '^' }))
             } else if (c == '!') {
                 tokens.add(Token.Factorial)
                 i++
@@ -215,7 +215,7 @@ object CalculatorEvaluator {
                 }
                 is Token.OpenGroup -> {
                     require(expectingOperand) { "Missing operator before group" }
-                    groups.push(Group(token.bracket, opStack.peek()?.takeIf { it in "pPC" }))
+                    groups.push(Group(token.bracket, opStack.peek()?.takeIf { it in "pPCL" }))
                     opStack.push(token.bracket)
                 }
                 is Token.CloseGroup -> {
@@ -331,6 +331,7 @@ object CalculatorEvaluator {
                                 '×' -> arithmetic.multiply(a, b)
                                 '÷' -> arithmetic.divide(a, b)
                                 '^' -> arithmetic.power(a, b)
+                                'L' -> arithmetic.logarithm(a, b)
                                 else -> throw IllegalArgumentException("Unknown operator")
                             }
                         }

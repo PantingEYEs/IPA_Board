@@ -358,3 +358,13 @@ Shift / Caps Lock 指示由 `KeyboardWindowTest`（ui/full）验证真实控制�
 - JVM 177 项通过，0 失败、0 跳过。新增 `CombinatoricsCalculatorTest` 5 项，覆盖零值/边界、嵌套函数、阶乘优先级及隐式乘法、精确大整数、符号参数与候选数量、非法输入与容量回退；用 0..12 的独立阶乘恒等式逐项核对排列和组合结果。
 - `testDebugUnitTest assembleDebug lintDebug --offline` 通过；lint 0 错误、277 条既有警告。最终另调整错误提示及注释措辞，不改变行为。
 - 本次仅修改主机可验证的计算逻辑与候选入口，未运行设备回归，未连接或修改测试机。
+
+## 2026-10-24 双参数对数
+
+基准提交 `9a3029e`。按用户确认仅提供 `log(x,b)`，不添加 ln 或单参数 log 对数语法。复数计算采用 `Log(x)/Log(b)`，与幂共用负实轴上侧主值约定，辐角范围 `(-π,π]`；定义参考 [NIST DLMF 4.2](https://dlmf.nist.gov/4.2)。真数为零、底数为零或一时回退为空候选。
+
+- JVM 183 项通过，0 失败、0 跳过；新增 `LogarithmCalculatorTest` 6 项，覆盖必填底数、可证明的有理数化简、嵌套/混合运算、φ 三候选、虚部格式、精确候选重新输入、无效参数及旧候选清理。
+- 数值层以平台 Math.log 比值检查 15 组正实数参数，以 Python cmath 固定参考值检查两个复数象限组合，并验证负实轴两侧的主值不连续；不根据近似相等来认定精确化简。
+- 首轮新增用例中 `2*log(-1,e)` 的预期文本多写了乘号；实际结果遵循既有 `2π` 输出格式，已修正测试断言，未改变该格式。
+- `testDebugUnitTest assembleDebug lintDebug --offline` 通过，lint 0 错误、277 条既有警告。`git diff --check` 通过。
+- 本次修改解析/求值及候选生成，未运行设备回归，未连接或修改测试机。

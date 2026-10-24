@@ -18,6 +18,8 @@ internal class SymbolicArithmetic {
     data class PowerFormula(val base: Complex, val exponent: Complex, val integer: Int?) : Formula
     data class BinaryFormula(val operator: Char, val a: Complex, val b: Complex) : Formula
     data class UnaryFormula(val operator: Char, val a: Complex) : Formula
+    data class LogFormula(val value: Complex, val base: Complex) : Formula
+    data class LogPart(val source: LogFormula, val imaginary: Boolean) : Real
     data class PowerPart(val source: PowerFormula, val imaginary: Boolean) : Real
     data class Complex(val real: Real, val imaginary: Real, val formula: Formula? = null, val depth: Int = 0)
     private val field = RadicalArithmetic()
@@ -27,6 +29,7 @@ internal class SymbolicArithmetic {
     private val two = Number(field.number(BigDecimal(2)))
     var nonIntegerPower = false
         private set
+    private val logDecimals = mutableMapOf<LogFormula, DecimalPowers.Value>()
     private val powerDecimals = mutableMapOf<PowerFormula, DecimalPowers.Value>()
     private var work = 0
     private val decimals = mutableMapOf<Real, BigDecimal>()
@@ -162,7 +165,7 @@ internal class SymbolicArithmetic {
         is Sum -> a.terms.all(::algebraic)
         is Product -> a.factors.all(::algebraic)
         is Quotient -> algebraic(a.numerator) && algebraic(a.denominator)
-        is PowerPart -> false
+        is PowerPart, is LogPart -> false
     }
     private fun piMultiple(a: Real): Rational? = when {
         a == zero -> Rational.ZERO
@@ -188,6 +191,43 @@ internal class SymbolicArithmetic {
         val n = angle.numerator.mod(angle.denominator * BigInteger.TWO).toInt()
         return integerPower(unit, n)
     }
+    /** No logarithm product/power identities are applied across complex branch cuts. */
+    fun logarithm(value: Complex, base: Complex): Complex {
+        tick()
+        val source = LogFormula(value, base)
+        logDecimal(source) // Validate zero arguments, unit base, magnitude and convergence first.
+        if (value == Complex(one, zero)) return Complex(zero, zero)
+        if (value == base) return Complex(one, zero)
+        if (value.formula == null && base.formula == null && value.imaginary == zero && base.imaginary == zero &&
+            value.real is Number && base.real is Number) {
+            val x = field.rational(value.real.value)
+            val b = field.rational(base.real.value)
+            if (x != null && b != null) ExactLogarithms.rational(x, b)?.let {
+                return Complex(Number(field.divide(field.number(BigDecimal(it.numerator)), field.number(BigDecimal(it.denominator)))), zero)
+            }
+        }
+        fun naturalExact(a: Complex): Complex? = when (a) {
+            Complex(one, zero) -> Complex(zero, zero)
+            Complex(Symbol('e'), zero) -> Complex(one, zero)
+            Complex(negative(one), zero) -> Complex(zero, Symbol('π'))
+            Complex(zero, one) -> Complex(zero, divideReal(Symbol('π'), two))
+            Complex(zero, negative(one)) -> Complex(zero, negative(divideReal(Symbol('π'), two)))
+            else -> null
+        }
+        val numerator = naturalExact(value)
+        val denominator = naturalExact(base)
+        if (numerator != null && denominator != null) return divide(numerator, denominator)
+        val depth = 1 + maxOf(value.depth, base.depth)
+        val realOnly = value.imaginary == zero && base.imaginary == zero && sign(value.real) > 0 && sign(base.real) > 0
+        val purelyImaginary = numerator != null && numerator.real == zero &&
+            base.imaginary == zero && sign(base.real) > 0
+        return decorate(Complex(if (purelyImaginary) zero else LogPart(source, false),
+            if (realOnly) zero else LogPart(source, true)), source, depth)
+    }
+    private fun logDecimal(source: LogFormula): DecimalPowers.Value = logDecimals.getOrPut(source) {
+        DecimalPowers.logarithm(DecimalPowers.Value(decimal(source.value.real), decimal(source.value.imaginary)),
+            DecimalPowers.Value(decimal(source.base.real), decimal(source.base.imaginary)))
+    }
     private fun formalPower(a: Complex, b: Complex, integer: Int?): Complex {
         val depth = 1 + maxOf(a.depth, b.depth)
         require(depth <= 16) { "Power expression depth limit" }
@@ -204,6 +244,7 @@ internal class SymbolicArithmetic {
     }
     private fun formulaText(formula: Formula): String {
         val result = when (formula) {
+            is LogFormula -> "log(${exactText(formula.value)},${exactText(formula.base)})"
             is PowerFormula -> "(${exactText(formula.base)})^(${exactText(formula.exponent)})"
             is BinaryFormula -> "(${exactText(formula.a)})${formula.operator}(${exactText(formula.b)})"
             is UnaryFormula -> if (formula.operator == '√') "sqrt(${exactText(formula.a)})" else "-(${exactText(formula.a)})"
@@ -317,6 +358,7 @@ internal class SymbolicArithmetic {
         tick()
         when (a) {
             is Number -> field.decimal(a.value)
+            is LogPart -> logDecimal(a.source).let { if (a.imaginary) it.imaginary else it.real }
             is PowerPart -> powerDecimal(a.source).let { if (a.imaginary) it.imaginary else it.real }
             is Symbol -> when (a.name) {
                 'e' -> MathematicalConstants.e
@@ -339,6 +381,7 @@ internal class SymbolicArithmetic {
         val result = when (a) {
             is Number -> field.exactText(a.value)
             // Internal sorting key only. A Complex containing these parts retains its Formula.
+            is LogPart -> "#L${if (a.imaginary) "I" else "R"}${formulaText(a.source)}"
             is PowerPart -> "#${if (a.imaginary) "I" else "R"}${formulaText(a.source)}"
             is Symbol -> a.name.toString()
             is Root -> if (a.radicand is Symbol) "√${text(a.radicand)}" else "√(${text(a.radicand)})"
