@@ -20,11 +20,20 @@ data class EngineCategory(val id: String, val title: String, val engines: List<E
  * Package versions are explicitly labelled as sources, not claimed as native library versions.
  */
 object EngineCatalog {
+    fun configurable(appVersion: String = ""): List<EngineInfo> = categories(appVersion).flatMap { it.engines }
+        .filter { it.feature != null }.distinctBy { it.feature }
+
     private const val RIME_VERSION = "librime 1.17.0 · source: Trime 3.3.12 · rev 33e781402501"
     private const val MOZC_VERSION = "Source: Libre Japanese Input 0.1.2 · Mozc rev ddd9730b0683"
     private const val ENGLISH_VERSION = "Source: HeliBoard 4.1 · rev 9f5bb635c2e8 · en_US dictionary 54"
 
     fun categories(appVersion: String): List<EngineCategory> = listOf(
+        EngineCategory("ipa", "IPA Engines", listOf(
+            EngineInfo("IPA Engine · Phonetic graph", "Development · remote package and dictionary versions in IPA resource management",
+                detail = "Experimental IPA-to-text lookup for English, Simplified/Traditional Chinese and Japanese. No next-word prediction.",
+                feature = EngineFeature.IPA_CONVERSION,
+                offBehavior = "Off: omit IPA graph candidates; other engines and literal input remain available.")
+        )),
         EngineCategory("syllable", "Syllable Engines", listOf(
             EngineInfo("Rime · Pinyin & Zhuyin (Chinese)", "$RIME_VERSION · Luna Pinyin 0.26 · Bopomofo 3.1", detail = "Chinese conversion from Pinyin or Zhuyin symbols, with five-tone filtering and optional omitted tones. Pinyin includes schema-defined spelling and key correction.", feature = EngineFeature.CHINESE_CONVERSION, offBehavior = "Off: omit Pinyin and Zhuyin conversion candidates; literal input and Chinese prediction stay available.", versionSources = listOf(EngineVersionSource.RIME, EngineVersionSource.TRIME)),
             EngineInfo("Mozc (Japanese)", MOZC_VERSION, feature = EngineFeature.JAPANESE_CONVERSION, offBehavior = "Off: Japanese conversion candidates are omitted; literal input and prediction stay available.", versionSources = listOf(EngineVersionSource.LIBRE_JAPANESE))

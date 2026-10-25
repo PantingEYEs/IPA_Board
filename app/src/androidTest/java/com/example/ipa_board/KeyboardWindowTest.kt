@@ -159,7 +159,7 @@ class KeyboardWindowTest {
                 KeySlot(1f, "a"), KeySlot(1f, action = KeyAction.SHIFT),
                 KeySlot(1f, action = KeyAction.CTRL), KeySlot(1f, action = KeyAction.BACKSPACE)
             ))))
-            KeyboardRenderer.render(context, keyboard, layout, 210, Color.WHITE, true, true)
+            KeyboardRenderer.render(context, keyboard, layout, 210, Color.WHITE, shiftState = ShiftState.SINGLE, ctrlEnabled = true)
             val row = keyboard.getChildAt(0) as ViewGroup
             fun label(index: Int) = ((row.getChildAt(index) as ViewGroup).getChildAt(0) as TextView).text.toString()
             assertEquals("A", label(0))
@@ -169,6 +169,56 @@ class KeyboardWindowTest {
             assertTrue(row.getChildAt(1).isSelected)
             assertTrue(row.getChildAt(2).isSelected)
             assertFalse(row.getChildAt(3).isSelected)
+        }
+    }
+
+    @Test fun capsLockIndicationFollowsTheControllerAndPreservesCustomSymbolColors() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val context = instrumentation.targetContext
+            val keyboard = FrameLayout(context)
+            val layout = KeyboardLayout("Caps indicator", listOf(RowLayout(1f, listOf(
+                KeySlot(1f, action = KeyAction.SHIFT), KeySlot(1f, "a")
+            ))))
+            for ((color, grid) in listOf(Color.WHITE to true, Color.CYAN to false)) {
+                val controller = KeyboardInputController()
+                val connection = android.view.inputmethod.BaseInputConnection(View(context), true)
+                fun render(label: String, description: String, selected: Boolean, bold: Boolean) {
+                    KeyboardRenderer.render(context, keyboard, layout, 210, color,
+                        shiftState = controller.shiftState, showGrid = grid)
+                    val row = keyboard.getChildAt(0) as ViewGroup
+                    val shift = row.getChildAt(0) as KeyPreviewFrameLayout
+                    val text = shift.getChildAt(0) as TextView
+                    assertEquals(label, text.text.toString())
+                    assertEquals(description, shift.stateDescription.toString())
+                    assertEquals(selected, shift.isSelected)
+                    assertEquals(bold, text.typeface?.isBold == true)
+                    assertEquals(color, text.currentTextColor)
+                    assertEquals(if (controller.shiftEnabled) "A" else "a",
+                        ((row.getChildAt(1) as ViewGroup).getChildAt(0) as TextView).text.toString())
+                    assertEquals(if (bold) "Caps Lock" else "Shift", shift.tapPreview)
+                }
+                val shift = KeySlot(1f, action = KeyAction.SHIFT)
+                render("Shift", "Shift off", false, false)
+                controller.handle(shift, connection, null)
+                render("Shift •", "Shift once", true, false)
+                controller.handle(KeySlot(1f, "a"), connection, null)
+                render("Shift", "Shift off", false, false)
+                controller.handle(shift, connection, null)
+                controller.handle(shift, connection, null)
+                render("Caps Lock •", "Caps Lock", true, true)
+                controller.handle(KeySlot(1f, "a"), connection, null)
+                controller.handle(KeySlot(1f, "b"), connection, null)
+                render("Caps Lock •", "Caps Lock", true, true)
+                controller.handle(shift, connection, null)
+                render("Shift", "Shift off", false, false)
+                controller.handle(KeySlot(1f, "c"), connection, null)
+                assertEquals("AABc", connection.editable.toString())
+                controller.handle(shift, connection, null)
+                controller.handle(shift, connection, null)
+                controller.reset()
+                render("Shift", "Shift off", false, false)
+            }
         }
     }
 

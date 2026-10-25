@@ -18,6 +18,7 @@ import android.view.inputmethod.EditorInfo
 import android.widget.*
 import com.example.ipa_board.ime.*
 import com.example.ipa_board.emoji.*
+import com.example.ipa_board.diagnostics.*
 import com.example.ipa_board.kaomoji.*
 import com.example.ipa_board.clipboard.*
 import com.example.ipa_board.calculator.*
@@ -29,8 +30,11 @@ import com.example.ipa_board.SettingsConstants.KEY_CTRL_SHORTCUTS
 import java.util.Locale
 
 class IpaBoardService : InputMethodService() {
+    private val calculatorSession = CalculatorSession()
     private var chrome: ImeChromeView? = null
     private lateinit var prefs: SharedPreferences
+    private val remoteKeyboardMode by lazy { RemoteKeyboardMode(prefs) }
+    private val pageEngineBindings by lazy { PageEngineBindingController(EngineSettings.preferences(this)) }
     private var widthSwapEnabled = false
     private val inputController = KeyboardInputController(::transformOutput)
     private lateinit var engines: EngineCoordinator
@@ -46,10 +50,13 @@ class IpaBoardService : InputMethodService() {
     private var directOnly = false
     private var consumedPanelBack = false
     private var panelBackRegistered = false
-    private val panelBackCallback = android.window.OnBackInvokedCallback { chrome?.showPanel(ImeChromeView.Panel.KEYBOARD) }
+    private var menuPopup: PopupWindow? = null
+    private val panelBackCallback = android.window.OnBackInvokedCallback { returnFromPanel() }
     private val clipboard by lazy { getSystemService(ClipboardManager::class.java) }
     private val clipboardRepository by lazy { ClipboardRepository(this) }
     private var clipboardPanel: ClipboardPanelView? = null
+    private var dashboardPanel: EngineDashboardView? = null
+    private var stopDashboardObservation: (() -> Unit)? = null
 
     private data class QuickPasteState(
         val text: String,
@@ -168,6 +175,12 @@ class IpaBoardService : InputMethodService() {
     }
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == MultifunctionBarSettings.KEY_BINDINGS) {
+            // Rebind only the toolbar: editing shortcuts must not reset modifiers, composition,
+            // the open panel, or its custom status controls.
+            chrome?.setBarBindings(MultifunctionBarSettings.load(this))
+        }
+        if (key == RemoteKeyboardMode.KEY_SNAPSHOT) applySettings()
         if (key == EngineFeature.CALCULATOR.key) {
             chrome?.setCalculatorEnabled(calculatorEnabled())
             composition.updateCandidates(composition.candidates.filter { it.language != "∑" })
@@ -184,6 +197,8 @@ class IpaBoardService : InputMethodService() {
     }
     override fun onCreate() {
         super.onCreate()
+        // DIAGNOSTICS: initialize the local log sink before any IME lifecycle points are emitted.
+        AppDiagnostics.configure(this)
         LayoutFileManager.initDefaultLayout(this)
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
@@ -198,17 +213,24 @@ class IpaBoardService : InputMethodService() {
         }
     }
     override fun onCreateInputView(): View {
+        menuPopup?.dismiss()
         clipboardPanel = null
+        closeDashboardObservation()
         return ImeChromeView(this).also { view ->
             chrome = view
+            view.setBarBindings(MultifunctionBarSettings.load(this))
+            view.onKeyBinding = { handleKey(it.asKeySlot()) }
             view.onCalculatorToggle = {
                 toggleCalculator()
             }
+            view.onRemoteKeyboardToggle = { toggleRemoteKeyboard() }
             view.onWidthSwapToggle = { toggleWidthSwap() }
             view.onCandidate = { candidate, generation -> if (composition.select(candidate, generation)) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
             view.onLiteral = { if (composition.literal()) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
             view.onPanel = { panel ->
+                menuPopup?.dismiss()
                 updatePanelBack(panel != ImeChromeView.Panel.KEYBOARD)
+                if (panel != ImeChromeView.Panel.ENGINE_DASHBOARD) closeDashboardObservation()
                 if (panel != ImeChromeView.Panel.CLIPBOARD) {
                     clipboardPanel?.commitPendingDelete()
                     clipboardPanel = null
@@ -218,6 +240,7 @@ class IpaBoardService : InputMethodService() {
                         showClipboard()
                         updateQuickPasteStatus()
                     }
+                    ImeChromeView.Panel.ENGINE_DASHBOARD -> showEngineDashboard()
                     ImeChromeView.Panel.PAGES -> showPages()
                     ImeChromeView.Panel.EMOJI -> showEmoji()
                     ImeChromeView.Panel.KAOMOJI -> showKaomojiPanel()
@@ -237,6 +260,26 @@ class IpaBoardService : InputMethodService() {
         chrome?.setWidthSwapEnabled(widthSwapEnabled)
         composition.refreshOutput()
     }
+    private fun toggleRemoteKeyboard() {
+        val result = remoteKeyboardMode.toggle()
+        // DIAGNOSTICS: removable fixed-code reporting; never log the saved engine choices.
+        if (result == RemoteKeyboardMode.Result.STORAGE_FAILED) {
+            AppDiagnostics.signal(DiagnosticComponent.IME, DiagnosticStage.SAVE, DiagnosticKind.IO)
+        } else if (result == RemoteKeyboardMode.Result.INVALID_STATE) {
+            AppDiagnostics.signal(DiagnosticComponent.IME, DiagnosticStage.LOAD, DiagnosticKind.INVALID_DATA)
+        }
+        val message = when (result) {
+            RemoteKeyboardMode.Result.ENABLED -> R.string.remote_keyboard_enabled
+            RemoteKeyboardMode.Result.RESTORED -> R.string.remote_keyboard_restored
+            RemoteKeyboardMode.Result.STORAGE_FAILED -> R.string.remote_keyboard_storage_failed
+            RemoteKeyboardMode.Result.INVALID_STATE -> R.string.remote_keyboard_invalid_state
+            RemoteKeyboardMode.Result.UNCHANGED -> return
+        }
+        // Keep the pending input intact. EngineCoordinator observes the atomic preference change,
+        // re-queries the current composition and rejects replies from the previous request.
+        applySettings()
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
     private fun toggleCalculator() {
         if (!EngineSettings.enabled(this, EngineFeature.CALCULATOR)) {
             Toast.makeText(this, "Calculator is disabled in Engine Management", Toast.LENGTH_SHORT).show()
@@ -247,45 +290,11 @@ class IpaBoardService : InputMethodService() {
         composition.updateCandidates(composition.candidates.filter { it.language != "∑" })
         refreshCandidates()
     }
-    private fun getMathCandidate(raw: String): Candidate? {
-        if (!calculatorEnabled()) return null
-        val trimmed = raw.trim()
-        if (trimmed.isEmpty()) return null
-
-        val mathOps = setOf('+', '-', '*', '/', '×', '÷')
-        val opsCount = trimmed.count { it in mathOps }
-        if (opsCount == 0) return null
-
-        if (opsCount == 1 && trimmed.startsWith("-") && trimmed.substring(1).all { it.isDigit() || it == '.' }) {
-            return null
-        }
-
-        val hasDigit = trimmed.any { it.isDigit() }
-        if (!hasDigit) return null
-
-        val evalRes = CalculatorEvaluator.evaluate(trimmed)
-        if (evalRes.isEmpty() || evalRes == "Error" || evalRes == "除数不能为0") {
-            return null
-        }
-
-        val firstNum = trimmed.takeWhile { it.isDigit() || it == '.' || it == '-' }
-        if (evalRes == firstNum || evalRes == trimmed) {
-            return null
-        }
-
-        return Candidate(evalRes, "∑", rank = -1)
-    }
-
     private fun refreshCandidates() {
         val raw = composition.raw
         val baseStatus = if (directOnly) "Direct Input" else engineStatus
 
-        val mathCand = getMathCandidate(raw)
-        val displayCandidates = if (mathCand != null) {
-            listOf(mathCand) + composition.candidates.filter { it.text != mathCand.text }
-        } else {
-            composition.candidates
-        }
+        val displayCandidates = CalculatorCandidates.merge(raw, calculatorEnabled(), composition.candidates, calculatorSession)
 
         composition.updateCandidates(displayCandidates)
         chrome?.render(raw, displayCandidates, baseStatus, composition.revision)
@@ -295,6 +304,15 @@ class IpaBoardService : InputMethodService() {
 
     private fun applySettings() {
         val view = chrome ?: return
+        val page = PageGroupManager.activeFilename(this)
+        val applied = pageEngineBindings.onPage(page, remoteKeyboardMode.active) {
+            page?.let { LayoutFileManager.loadLayout(this, it)?.engineBinding }
+        }
+        if (applied == PageEngineBindingController.Result.STORAGE_FAILED) {
+            // DIAGNOSTICS: removable fixed-code reporting; no page ID or engine values are logged.
+            AppDiagnostics.signal(DiagnosticComponent.IME, DiagnosticStage.SAVE, DiagnosticKind.IO)
+            Toast.makeText(this, R.string.page_engines_storage_failed, Toast.LENGTH_SHORT).show()
+        }
         inputController.shiftShortcuts = SettingsConstants.parseShortcutsJson(prefs.getString(KEY_SHIFT_SHORTCUTS, null))
         inputController.ctrlShortcuts = SettingsConstants.parseShortcutsJson(prefs.getString(KEY_CTRL_SHORTCUTS, null))
         val density = resources.displayMetrics.density
@@ -303,14 +321,26 @@ class IpaBoardService : InputMethodService() {
         val height = (appearance.heightDp.coerceIn(100, availableDp) * density).toInt()
         view.setKeyboardHeight(height)
         view.setCalculatorEnabled(calculatorEnabled())
+        view.setModifiers(inputController.shiftState, inputController.ctrlEnabled)
+        view.showPointerLocation = appearance.showPointerLocation
+        val pathColor = try { Color.parseColor(appearance.pointerPathColor) } catch (_: Exception) { Color.WHITE }
+        val axisColor = try { Color.parseColor(appearance.pointerAxisColor) } catch (_: Exception) { Color.WHITE }
+        val crosshairColor = try { Color.parseColor(appearance.pointerCrosshairColor) } catch (_: Exception) { Color.RED }
+        view.setPointerColors(pathColor, axisColor, crosshairColor, appearance.usePointerDifferenceBlend)
+        view.setRemoteKeyboardEnabled(remoteKeyboardMode.active)
         view.setWidthSwapEnabled(widthSwapEnabled)
         view.keyboardHost.setBackgroundColor(Color.parseColor(appearance.backgroundColor))
         val layout = LayoutFileManager.activeLayout(this)
+        val popupBgColor = try { Color.parseColor(appearance.popupBackgroundColor) } catch (_: Exception) { Color.WHITE }
+        val popupSymbolColor = try { Color.parseColor(appearance.popupSymbolColor) } catch (_: Exception) { Color.BLACK }
         KeyboardRenderer.render(this, view.keyboardHost, layout, height, Color.parseColor(appearance.symbolColor),
-            inputController.shiftEnabled, inputController.ctrlEnabled,
+            popupBgColor = popupBgColor,
+            popupSymbolColor = popupSymbolColor,
+            shiftState = inputController.shiftState, ctrlEnabled = inputController.ctrlEnabled,
             showKeyPreview = true,
             fontSizeSp = appearance.fontSizeSp,
             showGrid = appearance.showGrid,
+            remoteKeyboardEnabled = remoteKeyboardMode.active,
             onKeyQuickSwipeItemClick = { _, _, slot, item -> handleLongPressItem(slot, item) },
             onKeyLongItemClick = { _, _, slot, item -> handleLongPressItem(slot, item) },
             onKeyLongClick = { _, _, slot -> handleLongPress(slot) }) { _, _, slot -> handleKey(slot) }
@@ -346,6 +376,14 @@ class IpaBoardService : InputMethodService() {
 
     private fun handleKey(slot: KeySlot) {
         when (slot.action) {
+            KeyAction.REMOTE_KEYBOARD -> {
+                toggleRemoteKeyboard()
+                return
+            }
+            KeyAction.ENGINE_DASHBOARD -> {
+                chrome?.showPanel(ImeChromeView.Panel.ENGINE_DASHBOARD)
+                return
+            }
             KeyAction.EMOJI -> {
                 chrome?.showPanel(ImeChromeView.Panel.EMOJI)
                 return
@@ -406,6 +444,8 @@ class IpaBoardService : InputMethodService() {
                 applySettings()
             }
             when (activeShortcut) {
+                KeyAction.REMOTE_KEYBOARD -> { consumeModifiers(); toggleRemoteKeyboard(); return }
+                KeyAction.ENGINE_DASHBOARD -> { consumeModifiers(); chrome?.showPanel(ImeChromeView.Panel.ENGINE_DASHBOARD); return }
                 KeyAction.EMOJI -> { consumeModifiers(); chrome?.showPanel(ImeChromeView.Panel.EMOJI); return }
                 KeyAction.KAOMOJI -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.KAOMOJI) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.KAOMOJI); return }
                 KeyAction.WIDTH_SWAP -> { consumeModifiers(); toggleWidthSwap(); return }
@@ -504,15 +544,9 @@ class IpaBoardService : InputMethodService() {
 
     private fun showEmojiCategoryMenu(picker: EmojiPickerView) {
         val view = chrome ?: return
-        val popup = PopupMenu(this, view.status)
-        picker.categories.forEachIndexed { index, category ->
-            popup.menu.add(0, index, index, category)
+        showSingleChoicePopup(view.statusContainer, picker.categories, picker.currentCategoryIndex) { index ->
+            picker.scrollToCategory(index)
         }
-        popup.setOnMenuItemClickListener { item ->
-            picker.filterCategory(item.itemId)
-            true
-        }
-        popup.show()
     }
 
     private fun showKaomojiPanel() {
@@ -754,20 +788,51 @@ class IpaBoardService : InputMethodService() {
 
         updatePopupUI()
 
+        val scrollRoot = ScrollView(context).apply {
+            overScrollMode = View.OVER_SCROLL_NEVER
+            addView(root)
+        }
+
         val popup = PopupWindow(
-            root,
+            scrollRoot,
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
+            false
         ).apply {
             isOutsideTouchable = true
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            enterTransition = android.transition.Slide(Gravity.TOP)
+            exitTransition = android.transition.Slide(Gravity.TOP)
         }
 
-        popup.showAsDropDown(anchorView)
+        showImeMenu(popup, anchorView)
     }
 
 
+
+    private fun closeDashboardObservation() {
+        stopDashboardObservation?.invoke()
+        stopDashboardObservation = null
+        dashboardPanel = null
+    }
+
+    private fun showEngineDashboard() {
+        val view = chrome ?: return
+        closeDashboardObservation()
+        val dashboard = EngineDashboardView(this) {
+            try {
+                startActivity(android.content.Intent(this, SettingsActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (_: android.content.ActivityNotFoundException) {
+                Toast.makeText(this, R.string.engine_dashboard_settings_unavailable, Toast.LENGTH_SHORT).show()
+            }
+        }
+        dashboardPanel = dashboard
+        view.showContent(getString(R.string.engine_dashboard_title), dashboard)
+        stopDashboardObservation = engines.observeRuntime {
+            if (chrome === view && view.panel == ImeChromeView.Panel.ENGINE_DASHBOARD)
+                dashboard.render({ EngineSettings.enabled(this, it) }, engines.runtimeSnapshot())
+        }
+    }
 
     private fun showClipboard() {
         val view = chrome ?: return
@@ -799,8 +864,13 @@ class IpaBoardService : InputMethodService() {
                 addView(TextView(this@IpaBoardService).apply { text = (if (file == active) "✓ " else "") + pageName; setTextColor(Color.WHITE); textSize = 15f })
                 val preview = LinearLayout(this@IpaBoardService).apply { orientation = LinearLayout.VERTICAL; importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS }
                 preview.setBackgroundColor(Color.parseColor(group.appearance.backgroundColor))
+                val popupBgColor = try { Color.parseColor(group.appearance.popupBackgroundColor) } catch (_: Exception) { Color.WHITE }
+                val popupSymbolColor = try { Color.parseColor(group.appearance.popupSymbolColor) } catch (_: Exception) { Color.BLACK }
                 KeyboardRenderer.render(this@IpaBoardService, preview, layout, (80 * resources.displayMetrics.density).toInt(),
-                    Color.parseColor(group.appearance.symbolColor), fontSizeSp = group.appearance.fontSizeSp, showGrid = group.appearance.showGrid)
+                    Color.parseColor(group.appearance.symbolColor),
+                    popupBgColor = popupBgColor,
+                    popupSymbolColor = popupSymbolColor,
+                    fontSizeSp = group.appearance.fontSizeSp, showGrid = group.appearance.showGrid)
                 addView(preview)
                 setOnClickListener {
                     PageGroupManager.selectPage(this@IpaBoardService, file)
@@ -817,22 +887,19 @@ class IpaBoardService : InputMethodService() {
         view.showContent(PageGroupManager.label(this, group) + " ▾", ScrollView(this).apply { addView(grid) })
         view.onStatusClick = {
             val state = PageGroupManager.state(this)
-            PopupMenu(this, view.status).apply {
-                state.groups.forEachIndexed { index, item -> menu.add(0, index, index, "$index · ${item.name}").apply {
-                    isCheckable = true
-                    isChecked = item.id == state.activeGroupId
-                } }
-                setOnMenuItemClickListener { item ->
-                    PageGroupManager.select(this@IpaBoardService, state.groups[item.itemId].id)
-                    applySettings()
-                    showPages()
-                    true
-                }
-            }.show()
+            val items = state.groups.mapIndexed { index, item -> "$index · ${item.name}" }
+            val selectedIndex = state.groups.indexOfFirst { it.id == state.activeGroupId }
+            showSingleChoicePopup(view.statusContainer, items, selectedIndex) { index ->
+                PageGroupManager.select(this@IpaBoardService, state.groups[index].id)
+                applySettings()
+                showPages()
+            }
         }
     }
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
+        calculatorSession.reset()
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT)
         inputController.reset()
         val type = attribute?.inputType ?: 0
         val variation = type and InputType.TYPE_MASK_VARIATION
@@ -845,11 +912,15 @@ class IpaBoardService : InputMethodService() {
     }
     override fun onStartInputView(editorInfo: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(editorInfo, restarting)
+        calculatorSession.reset()
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT_VIEW)
         clipboard.addPrimaryClipChangedListener(clipboardListener)
+        composition.start()
         applySettings()
     }
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.SELECTION_CHANGE)
         composition.externalSelection(newSelStart, newSelEnd, candidatesEnd)
     }
     override fun onEvaluateFullscreenMode() = false
@@ -860,10 +931,15 @@ class IpaBoardService : InputMethodService() {
         ) else window.onBackInvokedDispatcher.unregisterOnBackInvokedCallback(panelBackCallback)
         panelBackRegistered = open
     }
+    private fun returnFromPanel() {
+        val popup = menuPopup
+        if (popup?.isShowing == true) popup.dismiss()
+        else chrome?.showPanel(ImeChromeView.Panel.KEYBOARD)
+    }
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK && chrome?.panel != null && chrome?.panel != ImeChromeView.Panel.KEYBOARD) {
             consumedPanelBack = true
-            chrome?.showPanel(ImeChromeView.Panel.KEYBOARD); event.startTracking(); return true
+            returnFromPanel(); event.startTracking(); return true
         }
         return super.onKeyDown(keyCode, event)
     }
@@ -872,13 +948,24 @@ class IpaBoardService : InputMethodService() {
         return super.onKeyUp(keyCode, event)
     }
     override fun onFinishInputView(finishingInput: Boolean) {
+        calculatorSession.reset()
+        menuPopup?.dismiss()
+        closeDashboardObservation()
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT_VIEW)
         clipboard.removePrimaryClipChangedListener(clipboardListener)
         chrome?.showPanel(ImeChromeView.Panel.KEYBOARD)
         composition.finish(); engines.suspendSemantic(); inputController.reset()
         super.onFinishInputView(finishingInput)
     }
-    override fun onFinishInput() { composition.finish(); engines.suspendSemantic(); inputController.reset(); super.onFinishInput() }
+    override fun onFinishInput() {
+        calculatorSession.reset()
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT)
+        composition.finish(); engines.suspendSemantic(); inputController.reset(); super.onFinishInput()
+    }
     override fun onDestroy() {
+        calculatorSession.reset()
+        menuPopup?.dismiss()
+        closeDashboardObservation()
         emojiClosed = true
         emojiRequest++
         emojiExecutor.shutdownNow()
@@ -888,6 +975,81 @@ class IpaBoardService : InputMethodService() {
         engines.close(); prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
         super.onDestroy()
     }
+
+    private fun showSingleChoicePopup(anchorView: View, items: List<String>, selectedIndex: Int, onItemSelected: (Int) -> Unit) {
+        val context = this
+        val density = resources.displayMetrics.density
+        fun dp(v: Int) = (v * density).toInt()
+
+        val root = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.parseColor("#1C1C1E"))
+            setPadding(0, dp(8), 0, dp(8))
+        }
+
+        var popup: PopupWindow? = null
+
+        items.forEachIndexed { index, itemText ->
+            val isSelected = index == selectedIndex
+            val itemContainer = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(16), dp(12), dp(16), dp(12))
+                isClickable = true
+                isFocusable = true
+                this.isSelected = isSelected
+                
+                addView(TextView(context).apply {
+                    text = if (isSelected) "✓" else " "
+                    setTextColor(Color.parseColor("#007AFF"))
+                    textSize = 14f
+                    layoutParams = LinearLayout.LayoutParams(dp(24), LinearLayout.LayoutParams.WRAP_CONTENT)
+                })
+
+                addView(TextView(context).apply {
+                    text = itemText
+                    setTextColor(if (isSelected) Color.WHITE else Color.parseColor("#EBEBEB"))
+                    textSize = 14f
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                })
+
+                setOnClickListener {
+                    popup?.dismiss()
+                    onItemSelected(index)
+                }
+            }
+            root.addView(itemContainer)
+        }
+
+        val scrollRoot = ScrollView(context).apply {
+            overScrollMode = View.OVER_SCROLL_NEVER
+            addView(root)
+        }
+
+        popup = PopupWindow(
+            scrollRoot,
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            false
+        ).apply {
+            isOutsideTouchable = true
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            enterTransition = android.transition.Slide(Gravity.TOP)
+            exitTransition = android.transition.Slide(Gravity.TOP)
+        }
+        showImeMenu(popup, anchorView)
+    }
+
+    private fun showImeMenu(popup: PopupWindow, anchor: View) {
+        menuPopup?.dismiss()
+        // A focusable IME popup becomes a new input target and restarts the editor session.
+        // Keep input focus with the editor; the panel's Back handler dismisses this menu first.
+        popup.inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
+        popup.setOnDismissListener { if (menuPopup === popup) menuPopup = null }
+        menuPopup = popup
+        popup.showAsDropDown(anchor)
+    }
+
 }
 
 /** Preserve the IME host layout parameter type. Also used by the layout renderer tests. */

@@ -106,7 +106,7 @@ class KeyboardInputController(private val transformOutput: (String) -> String = 
             KeyAction.COPY -> connection.performContextMenuAction(R.id.copy)
             KeyAction.CUT -> connection.performContextMenuAction(R.id.cut)
             KeyAction.PASTE -> connection.performContextMenuAction(R.id.paste)
-            KeyAction.EMOJI, KeyAction.KAOMOJI, KeyAction.WIDTH_SWAP, KeyAction.CALCULATOR, KeyAction.CANDIDATES, KeyAction.CLIPBOARD, KeyAction.PAGES, KeyAction.PREV_PAGE, KeyAction.NEXT_PAGE -> false // IME actions are handled by IpaBoardService.
+            KeyAction.REMOTE_KEYBOARD, KeyAction.ENGINE_DASHBOARD, KeyAction.EMOJI, KeyAction.KAOMOJI, KeyAction.WIDTH_SWAP, KeyAction.CALCULATOR, KeyAction.CANDIDATES, KeyAction.CLIPBOARD, KeyAction.PAGES, KeyAction.PREV_PAGE, KeyAction.NEXT_PAGE -> false // IME actions are handled by IpaBoardService.
             else -> true
         }
         if (handled && (slot.action == KeyAction.TEXT) && slot.text.isNotEmpty()) {

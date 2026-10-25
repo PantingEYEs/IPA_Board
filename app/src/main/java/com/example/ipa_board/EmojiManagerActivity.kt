@@ -15,6 +15,16 @@ class EmojiManagerActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_emoji)
 
+        val root = findViewById<android.view.View>(R.id.emoji_root)
+        root.setOnApplyWindowInsetsListener { view, windowInsets ->
+            val insets = windowInsets.getInsets(
+                android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()
+            )
+            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)
+            windowInsets
+        }
+        root.requestApplyInsets()
+
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener { finish() }
 
         setupEmojiUpdateControls()

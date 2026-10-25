@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/ipa_management_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/management_background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp">
+
+        <ImageButton
+            android:id="@+id/btn_back"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="12dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="@string/engine_back" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/ipa_management_title"
+            android:textSize="@dimen/management_title_size"
+            android:textColor="@color/management_text"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="24dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ipa_management_development"
+                android:textSize="@dimen/management_body_size"
+                android:textColor="@color/management_text" />
+
+            <TextView
+                android:id="@+id/ipa_management_abi_notice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="8dp"
+                android:text="@string/ipa_management_unsupported_device"
+                android:textSize="@dimen/management_caption_size"
+                android:textColor="@color/management_text_secondary"
+                android:visibility="gone" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="20dp"
+                android:text="@string/ipa_management_local_title"
+                android:textSize="@dimen/management_section_size"
+                android:textColor="@color/management_text" />
+
+            <TextView
+                android:id="@+id/ipa_management_local_versions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="8dp"
+                android:text="@string/ipa_management_local_pending"
+                android:textSize="@dimen/management_body_size"
+                android:textColor="@color/management_text" />
+
+            <TextView
+                android:id="@+id/ipa_management_local_files"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="4dp"
+                android:textSize="@dimen/management_caption_size"
+                android:textColor="@color/management_text_secondary" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="20dp"
+                android:text="@string/ipa_management_remote_title"
+                android:textSize="@dimen/management_section_size"
+                android:textColor="@color/management_text" />
+
+            <TextView
+                android:id="@+id/ipa_management_remote_versions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:text="@string/ipa_management_remote_unchecked"
+                android:textSize="@dimen/management_body_size"
+                android:textColor="@color/management_text" />
+
+            <Button
+                android:id="@+id/ipa_management_check"
+                style="@style/ManagementButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/ipa_management_check" />
+
+            <Button
+                android:id="@+id/ipa_management_update_engine"
+                style="@style/ManagementButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/ipa_management_update_engine" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="8dp"
+                android:text="@string/ipa_management_update_engine_help"
+                android:textSize="@dimen/management_caption_size"
+                android:textColor="@color/management_text_secondary" />
+
+            <Button
+                android:id="@+id/ipa_management_update_dictionary"
+                style="@style/ManagementButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/ipa_management_update_dictionary" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="8dp"
+                android:text="@string/ipa_management_update_dictionary_help"
+                android:textSize="@dimen/management_caption_size"
+                android:textColor="@color/management_text_secondary" />
+
+            <ProgressBar
+                android:id="@+id/ipa_management_progress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:indeterminate="true"
+                android:indeterminateTint="@color/management_text_secondary"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/ipa_management_operation_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="8dp"
+                android:accessibilityLiveRegion="polite"
+                android:textSize="@dimen/management_body_size"
+                android:textColor="@color/management_text" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

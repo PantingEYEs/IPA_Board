@@ -3,9 +3,12 @@ package com.example.ipa_board
 import android.app.Activity
 import android.app.AlertDialog
 import android.os.Bundle
+import android.text.InputFilter
+import android.view.View
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.AdapterView
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -16,12 +19,31 @@ import android.widget.TextView
 import android.widget.Toast
 
 class ShortcutManagerActivity : Activity() {
+    private lateinit var barPreview: MultifunctionBarView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_shortcut)
 
+        val root = findViewById<android.view.View>(R.id.shortcut_root)
+        root.setOnApplyWindowInsetsListener { view, windowInsets ->
+            val insets = windowInsets.getInsets(
+                android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()
+            )
+            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)
+            windowInsets
+        }
+        root.requestApplyInsets()
+
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener { finish() }
+
+        barPreview = MultifunctionBarView(this).apply {
+            editing = true
+            status.setText(R.string.multifunction_bar_status)
+            onSlotClick = { showBarKeyEditor(it) }
+        }
+        findViewById<ViewGroup>(R.id.multifunction_bar_preview).addView(barPreview)
+        refreshBarPreview()
 
         findViewById<Button>(R.id.btn_manage_shift_shortcuts).setOnClickListener {
             showShortcutManagerDialog(isShift = true)
@@ -30,6 +52,70 @@ class ShortcutManagerActivity : Activity() {
         findViewById<Button>(R.id.btn_manage_ctrl_shortcuts).setOnClickListener {
             showShortcutManagerDialog(isShift = false)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshBarPreview()
+    }
+
+    private fun refreshBarPreview() {
+        if (::barPreview.isInitialized) barPreview.setBindings(MultifunctionBarSettings.load(this))
+    }
+
+    private fun showBarKeyEditor(slot: MultifunctionBarSlot) {
+        val binding = MultifunctionBarSettings.load(this).getValue(slot)
+        val actions = KeyAction.entries
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val padding = (24 * resources.displayMetrics.density).toInt()
+            setPadding(padding, padding / 2, padding, padding / 2)
+        }
+        val types = Spinner(this).apply {
+            id = R.id.sp_bar_key_type
+            contentDescription = getString(R.string.multifunction_bar_function)
+            adapter = ArrayAdapter(this@ShortcutManagerActivity, android.R.layout.simple_spinner_dropdown_item, actions.map { it.title })
+            setSelection(actions.indexOf(binding.action))
+        }
+        val text = EditText(this).apply {
+            id = R.id.et_bar_key_text
+            hint = getString(R.string.multifunction_bar_text)
+            filters = arrayOf(InputFilter.LengthFilter(1000))
+            setText(binding.text)
+        }
+        val behavior = Spinner(this).apply {
+            id = R.id.sp_bar_text_behavior
+            adapter = ArrayAdapter(this@ShortcutManagerActivity, android.R.layout.simple_spinner_dropdown_item, TextBehavior.entries.map { it.title })
+            setSelection(TextBehavior.entries.indexOf(binding.textBehavior))
+        }
+        val help = TextView(this).apply { textSize = 14f }
+        fun updateEditor() {
+            val action = actions[types.selectedItemPosition]
+            text.visibility = if (action == KeyAction.TEXT) View.VISIBLE else View.GONE
+            behavior.visibility = text.visibility
+            help.text = action.help
+        }
+        types.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = updateEditor()
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+        container.addView(types)
+        container.addView(text)
+        container.addView(behavior)
+        container.addView(help)
+        updateEditor()
+        // The dialog owns its draft. Cancel/back never writes preferences or executes a binding.
+        AlertDialog.Builder(this)
+            .setTitle(R.string.multifunction_bar_edit)
+            .setView(ScrollView(this).apply { addView(container) })
+            .setNegativeButton(R.string.multifunction_bar_cancel, null)
+            .setPositiveButton(R.string.multifunction_bar_save) { _, _ ->
+                val action = actions[types.selectedItemPosition]
+                MultifunctionBarSettings.save(this, slot, MultifunctionBarBinding(action,
+                    if (action == KeyAction.TEXT) text.text.toString() else "",
+                    if (action == KeyAction.TEXT) TextBehavior.entries[behavior.selectedItemPosition] else TextBehavior.LITERAL))
+                refreshBarPreview()
+            }.show()
     }
 
     private fun showShortcutManagerDialog(isShift: Boolean) {

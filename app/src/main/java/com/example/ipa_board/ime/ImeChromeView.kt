@@ -8,18 +8,28 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import com.example.ipa_board.MultifunctionBarView
+import com.example.ipa_board.MultifunctionBarSlot
+import com.example.ipa_board.MultifunctionBarBinding
+import com.example.ipa_board.KeyAction
+import com.example.ipa_board.ShiftState
 
-/** IME-only chrome. Never passed to KeyboardRenderer or serialized with a layout. */
+/** IME chrome, with a toolbar layout shared by Shortcut Management. Outside keyboard-page JSON. */
 class ImeChromeView(context: Context) : LinearLayout(context) {
-    enum class Panel { KEYBOARD, CANDIDATES, CLIPBOARD, PAGES, EMOJI, KAOMOJI, CALCULATOR }
+    enum class Panel { KEYBOARD, CANDIDATES, CLIPBOARD, PAGES, EMOJI, KAOMOJI, CALCULATOR, ENGINE_DASHBOARD }
     val keyboardHost = LinearLayout(context).apply { orientation = VERTICAL }
     private val body = FrameLayout(context)
     private val overlay = LinearLayout(context).apply { orientation = VERTICAL }
     private val candidateRow = LinearLayout(context)
     private var candidateMinimumWidth = dp(48)
-    private val expand = button("⋯", "Expand") { showPanel(if (panel == Panel.KEYBOARD) Panel.CANDIDATES else Panel.KEYBOARD) }
-    val statusContainer = FrameLayout(context)
-    val status = TextView(context)
+    private val expand = button("⋯", "Expand") { showPanel(if (panel == Panel.KEYBOARD) Panel.CANDIDATES else Panel.KEYBOARD) }.apply {
+        minWidth = dp(57)
+        minimumWidth = dp(57)
+        setPadding(dp(4), 0, dp(4), 0)
+    }
+    val multifunctionBar = MultifunctionBarView(context)
+    val statusContainer = multifunctionBar.statusContainer
+    val status = multifunctionBar.status
     private var customStatusView: View? = null
     var onStatusClick: (() -> Unit)? = null
         set(value) {
@@ -37,39 +47,39 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     var onLiteral: () -> Unit = {}
     var onPanel: (Panel) -> Unit = {}
     var onCalculatorToggle: () -> Unit = {}
+    var onRemoteKeyboardToggle: () -> Unit = {}
     var onWidthSwapToggle: (() -> Unit)? = null
-    private val widthSwapBtn = toolbarButton("◩", "全角 / 半角转换") { onWidthSwapToggle?.invoke() }
-    private val calcBtn = toolbarButton("∑", "Calculator") { onCalculatorToggle() }
+    var onKeyBinding: ((MultifunctionBarBinding) -> Unit)? = null
 
     init {
         orientation = VERTICAL
         setBackgroundColor(Color.rgb(0, 0, 0))
-        val toolbar = LinearLayout(context).apply {
-            addView(toolbarButton("⧉", "Clipboard") { toggle(Panel.CLIPBOARD) })
-            addView(toolbarButton("⊞", "Keyboard Overview") { toggle(Panel.PAGES) })
-            addView(toolbarButton("顔", "顔文字") { toggle(Panel.KAOMOJI) })
-            status.setTextColor(Color.LTGRAY)
-            status.textSize = 10f
-            status.gravity = Gravity.CENTER_VERTICAL
-            status.setOnClickListener { onStatusClick?.invoke() }
-            statusContainer.addView(status, FrameLayout.LayoutParams(-1, -1).apply {
-                setMargins(dp(6), 0, dp(6), 0)
-            })
-            addView(statusContainer, LayoutParams(0, dp(28), 1f))
-            addView(widthSwapBtn)
-            addView(calcBtn)
+        status.setOnClickListener { onStatusClick?.invoke() }
+        multifunctionBar.onSlotClick = { slot ->
+            val binding = multifunctionBar.bindingAt(slot)
+            val callback = onKeyBinding
+            if (callback != null) callback(binding) else when (binding.action) {
+                KeyAction.CLIPBOARD -> toggle(Panel.CLIPBOARD)
+                KeyAction.PAGES -> toggle(Panel.PAGES)
+                KeyAction.KAOMOJI -> toggle(Panel.KAOMOJI)
+                KeyAction.REMOTE_KEYBOARD -> onRemoteKeyboardToggle()
+                KeyAction.WIDTH_SWAP -> onWidthSwapToggle?.invoke()
+                KeyAction.CALCULATOR -> onCalculatorToggle()
+                else -> Unit
+            }
         }
-        addView(toolbar, LayoutParams(-1, dp(28)))
+        addView(multifunctionBar)
         val strip = LinearLayout(context)
         val horizontal = HorizontalScrollView(context).apply { isHorizontalScrollBarEnabled = false; addView(candidateRow) }
         strip.addView(horizontal, LayoutParams(0, dp(28), 1f))
-        strip.addView(expand, LayoutParams(LayoutParams.WRAP_CONTENT, dp(26)))//candidate drop down / return
+        strip.addView(expand, LayoutParams(LayoutParams.WRAP_CONTENT, dp(28)))//candidate drop down / return
         addView(strip)
         body.addView(keyboardHost, FrameLayout.LayoutParams(-1, -1))
         overlay.setBackgroundColor(Color.rgb(0, 0, 0))
         overlay.isClickable = true
         body.addView(overlay, FrameLayout.LayoutParams(-1, -1))
         addView(body, LayoutParams(-1, dp(210)))
+        setRemoteKeyboardEnabled(false)
         setWidthSwapEnabled(false)
         setCalculatorEnabled(false)
         showPanel(Panel.KEYBOARD)
@@ -98,14 +108,19 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     }
 
     fun setCalculatorEnabled(enabled: Boolean) {
-        calcBtn.alpha = if (enabled) 1.0f else 0.5f
+        multifunctionBar.setCalculatorEnabled(enabled)
+    }
+
+    fun setRemoteKeyboardEnabled(enabled: Boolean) {
+        multifunctionBar.setRemoteKeyboardEnabled(enabled)
     }
 
     fun setWidthSwapEnabled(enabled: Boolean) {
-        widthSwapBtn.isSelected = enabled
-        widthSwapBtn.stateDescription = if (enabled) "开启" else "关闭"
-        widthSwapBtn.alpha = if (enabled) 1.0f else 0.5f
+        multifunctionBar.setWidthSwapEnabled(enabled)
     }
+
+    fun setBarBindings(bindings: Map<MultifunctionBarSlot, MultifunctionBarBinding>) = multifunctionBar.setBindings(bindings)
+    fun setModifiers(shift: ShiftState, ctrl: Boolean) = multifunctionBar.setModifiers(shift, ctrl)
 
 
 
@@ -255,20 +270,123 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         minHeight = dp(20); minimumHeight = dp(20); minWidth = dp(48)
         setOnClickListener { click() }
     }
-    private fun toolbarButton(label: String, description: String, click: () -> Unit) = Button(context).apply {
-        text = label
-        contentDescription = description
-        isAllCaps = false
-        textSize = 12f
-        setTextColor(Color.WHITE)
-        setBackgroundColor(Color.TRANSPARENT)
-        setPadding(dp(4), 0, dp(4), 0)
-        minHeight = dp(28)
-        minimumHeight = dp(28)
-        minWidth = dp(32)
-        minimumWidth = dp(32)
-        gravity = Gravity.CENTER
-        setOnClickListener { click() }
-    }
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+
+    internal val pointerPaths = mutableMapOf<Int, android.graphics.Path>()
+    internal val currentPointers = mutableMapOf<Int, android.graphics.PointF>()
+    internal val pointerPaint = android.graphics.Paint().apply {
+        color = 0xFFFFFFFF.toInt()
+        strokeWidth = 0f // 0 means a hairline (1 pixel regardless of density or scaling)
+        style = android.graphics.Paint.Style.STROKE
+        isAntiAlias = true
+    }
+    internal val pointPaint = android.graphics.Paint().apply {
+        color = 0xFFFF0000.toInt()
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = resources.displayMetrics.density // 1dp
+        isAntiAlias = true
+    }
+    internal val axisPaint = android.graphics.Paint().apply {
+        color = 0xFFFFFFFF.toInt()
+        strokeWidth = 0f
+        style = android.graphics.Paint.Style.STROKE
+        isAntiAlias = true
+    }
+
+    var showPointerLocation = false
+        set(value) {
+            field = value
+            if (!value) {
+                pointerPaths.clear()
+                currentPointers.clear()
+            }
+            invalidate()
+        }
+
+    fun setPointerColors(pathColor: Int, axisColor: Int, crosshairColor: Int, differenceBlend: Boolean = false) {
+        if (differenceBlend) {
+            pointerPaint.color = android.graphics.Color.WHITE
+            pointerPaint.blendMode = android.graphics.BlendMode.DIFFERENCE
+            axisPaint.color = android.graphics.Color.WHITE
+            axisPaint.blendMode = android.graphics.BlendMode.DIFFERENCE
+        } else {
+            pointerPaint.color = pathColor
+            pointerPaint.blendMode = null
+            axisPaint.color = axisColor
+            axisPaint.blendMode = null
+        }
+        pointPaint.color = crosshairColor
+        pointPaint.blendMode = null
+        invalidate()
+    }
+
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+        if (showPointerLocation) {
+            val action = ev.actionMasked
+            val pointerIndex = ev.actionIndex
+            val pointerId = ev.getPointerId(pointerIndex)
+
+            when (action) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    // Start of a new touch sequence, clear previous retained paths
+                    pointerPaths.clear()
+                    currentPointers.clear()
+                    val path = android.graphics.Path()
+                    path.moveTo(ev.getX(pointerIndex), ev.getY(pointerIndex))
+                    pointerPaths[pointerId] = path
+                    currentPointers[pointerId] = android.graphics.PointF(ev.getX(pointerIndex), ev.getY(pointerIndex))
+                }
+                android.view.MotionEvent.ACTION_POINTER_DOWN -> {
+                    val path = android.graphics.Path()
+                    path.moveTo(ev.getX(pointerIndex), ev.getY(pointerIndex))
+                    pointerPaths[pointerId] = path
+                    currentPointers[pointerId] = android.graphics.PointF(ev.getX(pointerIndex), ev.getY(pointerIndex))
+                }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    val historySize = ev.historySize
+                    for (h in 0 until historySize) {
+                        for (i in 0 until ev.pointerCount) {
+                            val id = ev.getPointerId(i)
+                            val hx = ev.getHistoricalX(i, h)
+                            val hy = ev.getHistoricalY(i, h)
+                            pointerPaths[id]?.lineTo(hx, hy)
+                        }
+                    }
+                    for (i in 0 until ev.pointerCount) {
+                        val id = ev.getPointerId(i)
+                        val x = ev.getX(i)
+                        val y = ev.getY(i)
+                        pointerPaths[id]?.lineTo(x, y)
+                        currentPointers[id]?.set(x, y)
+                    }
+                }
+                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_POINTER_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                    // Only remove the current pointer so the crosshair disappears, but keep the path
+                    currentPointers.remove(pointerId)
+                }
+            }
+            invalidate()
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
+    override fun dispatchDraw(canvas: android.graphics.Canvas) {
+        super.dispatchDraw(canvas)
+        if (showPointerLocation) {
+            for (path in pointerPaths.values) {
+                canvas.drawPath(path, pointerPaint)
+            }
+            val crossSize = 10f * resources.displayMetrics.density
+            val width = width.toFloat()
+            val height = height.toFloat()
+
+            for (p in currentPointers.values) {
+                canvas.drawLine(0f, p.y, width, p.y, axisPaint)
+                canvas.drawLine(p.x, 0f, p.x, height, axisPaint)
+                canvas.drawLine(p.x - crossSize, p.y, p.x + crossSize, p.y, pointPaint)
+                canvas.drawLine(p.x, p.y - crossSize, p.x, p.y + crossSize, pointPaint)
+            }
+        }
+    }
+
 }

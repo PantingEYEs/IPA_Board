@@ -62,6 +62,7 @@ class EngineSettingsContractTest {
 
     @Test fun optionalProcessorsCannotReactivateDisabledLanguageEngines() {
         val coreFeatures = listOf(
+            EngineFeature.IPA_CONVERSION,
             EngineFeature.CHINESE_CONVERSION, EngineFeature.CHINESE_PREDICTION,
             EngineFeature.JAPANESE_CONVERSION, EngineFeature.JAPANESE_PREDICTION,
             EngineFeature.ENGLISH_COMPLETION, EngineFeature.ENGLISH_CORRECTION, EngineFeature.ENGLISH_PREDICTION)
@@ -75,7 +76,7 @@ class EngineSettingsContractTest {
         assertTrue(policy.enabled(EngineFeature.SEMANTIC))
         assertTrue(policy.enabled(EngineFeature.RANKING))
         assertTrue(policy.enabled(EngineFeature.SEGMENTATION))
-        for (language in listOf("ZH", "JA", "EN")) {
+        for (language in listOf("ZH", "JA", "EN", "IPA")) {
             assertFalse("$language runtime must stay off", policy.needsRuntime(language))
             assertFalse("$language conversion must stay off", policy.wantsQuery(language, false))
             assertFalse("$language prediction must stay off", policy.wantsQuery(language, true))

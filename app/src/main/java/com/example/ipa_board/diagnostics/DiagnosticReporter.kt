@@ -3,7 +3,7 @@ package com.example.ipa_board.diagnostics
 import java.io.IOException
 
 /** DIAGNOSTICS: fixed vocabulary only. Never add input, paths, messages or Throwable to events. */
-enum class DiagnosticComponent { RIME, MOZC, ENGLISH, SEMANTIC, LAYOUT, EMOJI, KAOMOJI, SMS, VERSION_LOOKUP }
+enum class DiagnosticComponent { RIME, MOZC, ENGLISH, IPA, SEMANTIC, LAYOUT, EMOJI, KAOMOJI, SMS, VERSION_LOOKUP, IME }
 
 enum class DiagnosticStage(val label: String, val traceLifecycle: Boolean = true) {
     BIND("service binding"), UNBIND("service release"), CONNECT("service connection"),
@@ -18,7 +18,10 @@ enum class DiagnosticStage(val label: String, val traceLifecycle: Boolean = true
     CUSTOM_OPS("tokenizer library"), MODEL("model"), CALIBRATION("model calibration"),
     QUERY("candidate query", false), INFERENCE("semantic inference", false), CLOSE("runtime cleanup"), CLEANUP("temporary cleanup", false),
     LOAD("data loading", false), SAVE("data saving", false), UPDATE("catalog update"),
-    VERSION_CHECK("version lookup", false)
+    VERSION_CHECK("version lookup", false),
+    START_INPUT("start input", false), START_INPUT_VIEW("start input view", false),
+    FINISH_INPUT_VIEW("finish input view", false), FINISH_INPUT("finish input", false),
+    SELECTION_CHANGE("selection change", false), COMPOSITION("composition state", false)
 }
 
 enum class DiagnosticKind {
@@ -56,6 +59,11 @@ class DiagnosticReporter(private val clock: () -> Long, private val sink: (Diagn
     private val recentFailures = LinkedHashMap<DiagnosticIssue, Long>()
     @Volatile var enabled = false
         @Synchronized set(value) { field = value; if (!value) recentFailures.clear() }
+
+    /** DIAGNOSTICS: an explicit point event, independent of automatic operation start/ready tracing. */
+    fun trace(component: DiagnosticComponent, stage: DiagnosticStage) {
+        emit(DiagnosticEvent(component, stage, DiagnosticOutcome.READY))
+    }
 
     fun <T> atStage(component: DiagnosticComponent, stage: DiagnosticStage, operation: () -> T): T {
         if (stage.traceLifecycle) emit(DiagnosticEvent(component, stage, DiagnosticOutcome.START))

@@ -7,8 +7,20 @@ import org.junit.Test
 class EngineQueryPolicyTest {
     @Test fun defaultsPreserveNativeFeaturesAndKeepSemanticOptIn() {
         val policy = EngineQueryPolicy()
-        assertTrue(listOf("ZH", "JA", "EN").all { policy.needsRuntime(it) })
+        assertTrue(listOf("ZH", "JA", "EN", "IPA").all { policy.needsRuntime(it) })
         assertFalse(policy.enabled(EngineFeature.SEMANTIC))
+    }
+    @Test fun ipaHasOneIndependentConversionSwitchAndNeverPredicts() {
+        val defaults = EngineQueryPolicy()
+        assertTrue(defaults.wantsQuery("IPA", false))
+        assertFalse(defaults.wantsQuery("IPA", true))
+        val ipaOff = EngineQueryPolicy(mapOf(EngineFeature.IPA_CONVERSION to false))
+        assertFalse(ipaOff.needsRuntime("IPA"))
+        assertTrue(ipaOff.needsRuntime("ZH"))
+        val otherConversionsOff = EngineQueryPolicy(mapOf(EngineFeature.CHINESE_CONVERSION to false,
+            EngineFeature.JAPANESE_CONVERSION to false, EngineFeature.ENGLISH_COMPLETION to false,
+            EngineFeature.ENGLISH_CORRECTION to false))
+        assertTrue(otherConversionsOff.wantsQuery("IPA", false))
     }
     @Test fun conversionAndPredictionAreIndependentForEachLanguage() {
         for ((language, conversion, prediction) in listOf(

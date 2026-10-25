@@ -38,6 +38,15 @@ class SettingsActivity : Activity() {
         }
 
         val scroll = findViewById<View>(R.id.settings_scroll)
+        scroll.setOnApplyWindowInsetsListener { view, windowInsets ->
+            val insets = windowInsets.getInsets(
+                android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()
+            )
+            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)
+            windowInsets
+        }
+        scroll.requestApplyInsets()
+
         val topSpace = findViewById<View>(R.id.settings_top_space)
         scroll.addOnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
             val spacing = ((bottom - top) * 0.12f).toInt()

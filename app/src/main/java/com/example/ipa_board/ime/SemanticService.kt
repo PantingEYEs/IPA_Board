@@ -13,7 +13,12 @@ class SemanticService : Service() {
     private var engine: SemanticEngine? = null
     private var unavailable: DiagnosticIssue? = null
     private val generation = AtomicLong()
+    private val runtimeReporter = EngineRuntimeReporter()
     private val requests = Messenger(Handler(Looper.getMainLooper()) { message ->
+        if (message.what == EngineRuntimeReporting.SUBSCRIBE) {
+            runtimeReporter.subscribe(message.replyTo)
+            return@Handler true
+        }
         val data = Bundle(message.data)
         // DIAGNOSTICS: control/cancel messages also update an in-flight worker's log gate.
         AppDiagnostics.configure(data)
@@ -32,11 +37,17 @@ class SemanticService : Service() {
                 if (unavailable != null) putFailure(output, unavailable!!)
                 else {
                     // DIAGNOSTICS: loading and inference have distinct fixed stages and fallback.
-                    if (engine == null) engine = AppDiagnostics.atStage(DiagnosticComponent.SEMANTIC, DiagnosticStage.INITIALIZE) { SemanticEngine(this) }
+                    if (engine == null) {
+                        runtimeReporter.update(EngineRuntimeState.INITIALIZING)
+                        engine = AppDiagnostics.atStage(DiagnosticComponent.SEMANTIC, DiagnosticStage.INITIALIZE) { SemanticEngine(this) }
+                    }
+                    runtimeReporter.update(EngineRuntimeState.BUSY)
                     val scores = AppDiagnostics.atStage(DiagnosticComponent.SEMANTIC, DiagnosticStage.INFERENCE) {
                         engine!!.score(data.getString("beforeCursor").orEmpty(), data.getString("afterCursor").orEmpty(),
                             texts.map { it.take(1000) }, cancelled = { generation.get() != epoch })
-                    } ?: return@post
+                    }
+                    runtimeReporter.update(EngineRuntimeState.READY)
+                    if (scores == null) return@post
                     output.putStringArrayList("id", data.getStringArrayList("id"))
                     output.putFloatArray("similarity", scores)
                 }
@@ -60,12 +71,15 @@ class SemanticService : Service() {
         true
     })
     private fun putFailure(output: Bundle, issue: DiagnosticIssue) {
+        runtimeReporter.update(EngineRuntimeState.UNAVAILABLE)
         output.putBoolean("error", true)
         output.putString("errorCode", issue.code)
     }
     override fun onCreate() { super.onCreate(); worker.start(); work = Handler(worker.looper) }
     override fun onBind(intent: Intent): IBinder = requests.binder
+    override fun onUnbind(intent: Intent): Boolean { runtimeReporter.clearObservers(); return super.onUnbind(intent) }
     override fun onDestroy() {
+        runtimeReporter.clearObservers()
         generation.incrementAndGet(); work.removeCallbacksAndMessages(null)
         work.post {
             // DIAGNOSTICS: retain cleanup completion even when a runtime close operation fails.

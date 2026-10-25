@@ -25,7 +25,14 @@ import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.graphics.ColorUtils
+import com.example.ipa_board.ime.EngineCatalog
+import com.example.ipa_board.ime.EngineSettings
+import com.example.ipa_board.ime.PageEngineBinding
 import org.json.JSONObject
+
+import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayoutMediator
 
 class KeyboardPageActivity : Activity() {
 
@@ -38,16 +45,37 @@ class KeyboardPageActivity : Activity() {
     private lateinit var spGroups: Spinner
     private lateinit var allPages: CheckBox
     private lateinit var showGrid: CheckBox
+    private lateinit var showPointerLocation: CheckBox
+    private lateinit var usePointerDifferenceBlend: CheckBox
     private var editingFilename: String? = null
     private var displayedGroupId: String? = null
 
-    private lateinit var rgColorTarget: RadioGroup
+    private lateinit var spColorTarget: Spinner
     private lateinit var sbHue: SeekBar
     private lateinit var sbSaturation: SeekBar
     private lateinit var sbLightness: SeekBar
     private lateinit var tvHueLabel: TextView
     private lateinit var tvSaturationLabel: TextView
     private lateinit var tvLightnessLabel: TextView
+
+    private lateinit var tabLayout: TabLayout
+    private lateinit var viewPager: ViewPager2
+    private lateinit var groupSettingsView: View
+    private lateinit var pageSettingsView: View
+
+    override fun <T : View?> findViewById(id: Int): T {
+        val view = super.findViewById<T>(id)
+        if (view != null) return view
+        if (::groupSettingsView.isInitialized) {
+            val v = groupSettingsView.findViewById<T>(id)
+            if (v != null) return v
+        }
+        if (::pageSettingsView.isInitialized) {
+            val v = pageSettingsView.findViewById<T>(id)
+            if (v != null) return v
+        }
+        return view
+    }
 
     private val MIN_HEIGHT_DP = 150
     private val IMPORT_REQUEST_CODE = 123
@@ -63,33 +91,59 @@ class KeyboardPageActivity : Activity() {
         clearedLayout = lastNonConfigurationInstance as? ClearedLayout
         setContentView(R.layout.activity_keyboard_page)
 
+        val rootLayout = findViewById<View>(R.id.root_layout)
+        rootLayout.setOnApplyWindowInsetsListener { view, windowInsets ->
+            val insets = windowInsets.getInsets(
+                android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()
+            )
+            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)
+            windowInsets
+        }
+        rootLayout.requestApplyInsets()
+
         LayoutFileManager.initDefaultLayout(this)
 
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener { finish() }
 
         previewContainer = findViewById(R.id.keyboard_container)
-        spLayouts = findViewById(R.id.sp_layouts)
-        spGroups = findViewById(R.id.sp_page_groups)
+        tabLayout = findViewById(R.id.tab_layout)
+        viewPager = findViewById(R.id.view_pager)
+
+        groupSettingsView = layoutInflater.inflate(R.layout.layout_group_settings, null)
+        pageSettingsView = layoutInflater.inflate(R.layout.layout_page_settings, null)
+
+        viewPager.adapter = SettingsPagerAdapter(listOf(groupSettingsView, pageSettingsView))
+        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+            tab.text = if (position == 0) "Group Settings" else "Page Settings"
+        }.attach()
+
+        spLayouts = pageSettingsView.findViewById(R.id.sp_layouts)
+        spGroups = groupSettingsView.findViewById(R.id.sp_page_groups)
         spGroups.isSaveEnabled = false
         spLayouts.isSaveEnabled = false
-        showGrid = findViewById(R.id.cb_show_grid)
+        showGrid = groupSettingsView.findViewById(R.id.cb_show_grid)
         showGrid.isSaveEnabled = false
-        allPages = findViewById(R.id.cb_all_pages)
+        showPointerLocation = groupSettingsView.findViewById(R.id.cb_show_pointer_location)
+        showPointerLocation.isSaveEnabled = false
+        usePointerDifferenceBlend = groupSettingsView.findViewById(R.id.cb_use_pointer_difference_blend)
+        usePointerDifferenceBlend.isSaveEnabled = false
+        allPages = groupSettingsView.findViewById(R.id.cb_all_pages)
         allPages.isChecked = savedInstanceState?.getBoolean("all_pages") ?: false
         allPages.setOnCheckedChangeListener { _, _ -> updateLayoutSpinner(); refreshPreview() }
-        tvHeightValue = findViewById(R.id.tv_height_value)
-        sbHeight = findViewById(R.id.sb_height)
+        tvHeightValue = groupSettingsView.findViewById(R.id.tv_height_value)
+        sbHeight = groupSettingsView.findViewById(R.id.sb_height)
 
-        rgColorTarget = findViewById(R.id.rg_color_target)
-        sbHue = findViewById(R.id.sb_hue)
-        sbSaturation = findViewById(R.id.sb_saturation)
-        sbLightness = findViewById(R.id.sb_lightness)
-        tvHueLabel = findViewById(R.id.tv_hue_label)
-        tvSaturationLabel = findViewById(R.id.tv_saturation_label)
-        tvLightnessLabel = findViewById(R.id.tv_lightness_label)
+        spColorTarget = groupSettingsView.findViewById(R.id.sp_color_target)
+        spColorTarget.isSaveEnabled = false
+        sbHue = groupSettingsView.findViewById(R.id.sb_hue)
+        sbSaturation = groupSettingsView.findViewById(R.id.sb_saturation)
+        sbLightness = groupSettingsView.findViewById(R.id.sb_lightness)
+        tvHueLabel = groupSettingsView.findViewById(R.id.tv_hue_label)
+        tvSaturationLabel = groupSettingsView.findViewById(R.id.tv_saturation_label)
+        tvLightnessLabel = groupSettingsView.findViewById(R.id.tv_lightness_label)
 
-        val btnImport = findViewById<Button>(R.id.btn_import)
-        val btnExport = findViewById<Button>(R.id.btn_export)
+        val btnImport = pageSettingsView.findViewById<Button>(R.id.btn_import)
+        val btnExport = pageSettingsView.findViewById<Button>(R.id.btn_export)
 
         // 1. Color Setup (HSL)
         setupColorControls()
@@ -111,8 +165,8 @@ class KeyboardPageActivity : Activity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        val fontSizeSlider = findViewById<SeekBar>(R.id.sb_font_size)
-        val fontSizeValue = findViewById<TextView>(R.id.tv_font_size_value)
+        val fontSizeSlider = groupSettingsView.findViewById<SeekBar>(R.id.sb_font_size)
+        val fontSizeValue = groupSettingsView.findViewById<TextView>(R.id.tv_font_size_value)
         val currentFontSize = PageGroupManager.active(this).appearance.fontSizeSp
         fontSizeSlider.max = SettingsConstants.MAX_KEYBOARD_FONT_SIZE - SettingsConstants.MIN_KEYBOARD_FONT_SIZE
         fontSizeSlider.progress = currentFontSize - SettingsConstants.MIN_KEYBOARD_FONT_SIZE
@@ -138,15 +192,16 @@ class KeyboardPageActivity : Activity() {
         // 4. Action Buttons
         btnImport.setOnClickListener { startImport() }
         btnExport.setOnClickListener { startExport() }
-        findViewById<Button>(R.id.btn_rename_layout).setOnClickListener { showRenameLayoutDialog() }
-        findViewById<Button>(R.id.btn_reorder_pages).setOnClickListener { showReorderPagesDialog() }
-        findViewById<Button>(R.id.btn_new_layout).setOnClickListener { showNewLayoutDialog() }
-        findViewById<Button>(R.id.btn_delete_layout).setOnClickListener { deleteCurrentLayout() }
-        findViewById<Button>(R.id.btn_clear_layout).setOnClickListener { clearCurrentLayout() }
-        findViewById<Button>(R.id.btn_undo_clear).setOnClickListener { undoClear() }
-        findViewById<Button>(R.id.btn_new_group).setOnClickListener { showGroupNameDialog(false) }
-        findViewById<Button>(R.id.btn_rename_group).setOnClickListener { showGroupNameDialog(true) }
-        findViewById<Button>(R.id.btn_delete_group).setOnClickListener {
+        pageSettingsView.findViewById<Button>(R.id.btn_choose_engines).setOnClickListener { showPageEnginesDialog() }
+        pageSettingsView.findViewById<Button>(R.id.btn_rename_layout).setOnClickListener { showRenameLayoutDialog() }
+        pageSettingsView.findViewById<Button>(R.id.btn_reorder_pages).setOnClickListener { showReorderPagesDialog() }
+        pageSettingsView.findViewById<Button>(R.id.btn_new_layout).setOnClickListener { showNewLayoutDialog() }
+        pageSettingsView.findViewById<Button>(R.id.btn_delete_layout).setOnClickListener { deleteCurrentLayout() }
+        pageSettingsView.findViewById<Button>(R.id.btn_clear_layout).setOnClickListener { clearCurrentLayout() }
+        pageSettingsView.findViewById<Button>(R.id.btn_undo_clear).setOnClickListener { undoClear() }
+        groupSettingsView.findViewById<Button>(R.id.btn_new_group).setOnClickListener { showGroupNameDialog(false) }
+        groupSettingsView.findViewById<Button>(R.id.btn_rename_group).setOnClickListener { showGroupNameDialog(true) }
+        groupSettingsView.findViewById<Button>(R.id.btn_delete_group).setOnClickListener {
             val group = PageGroupManager.active(this)
             AlertDialog.Builder(this).setTitle(R.string.delete_page_group)
                 .setMessage(getString(R.string.delete_group_message, PageGroupManager.label(this, group)))
@@ -156,8 +211,8 @@ class KeyboardPageActivity : Activity() {
                     refreshGroupUi()
                 }.show()
         }
-        findViewById<Button>(R.id.btn_reorder_groups).setOnClickListener { showReorderGroupsDialog() }
-        findViewById<Button>(R.id.btn_group_pages).setOnClickListener { showGroupPagesDialog() }
+        groupSettingsView.findViewById<Button>(R.id.btn_reorder_groups).setOnClickListener { showReorderGroupsDialog() }
+        groupSettingsView.findViewById<Button>(R.id.btn_group_pages).setOnClickListener { showGroupPagesDialog() }
         refreshPreview()
     }
 
@@ -208,7 +263,16 @@ class KeyboardPageActivity : Activity() {
 
     private fun refreshColorSliders() {
         val appearance = PageGroupManager.active(this).appearance
-        val hex = if (rgColorTarget.checkedRadioButtonId == R.id.rb_target_bg) appearance.backgroundColor else appearance.symbolColor
+        val hex = when (spColorTarget.selectedItemPosition) {
+            0 -> appearance.backgroundColor
+            1 -> appearance.symbolColor
+            2 -> appearance.popupBackgroundColor
+            3 -> appearance.popupSymbolColor
+            4 -> appearance.pointerPathColor
+            5 -> appearance.pointerAxisColor
+            6 -> appearance.pointerCrosshairColor
+            else -> appearance.backgroundColor
+        }
         val hsl = FloatArray(3)
         ColorUtils.colorToHSL(Color.parseColor(hex), hsl)
         sbHue.progress = hsl[0].toInt()
@@ -239,7 +303,7 @@ class KeyboardPageActivity : Activity() {
         findViewById<Button>(R.id.btn_reorder_groups).isEnabled = state.groups.size > 1
         val members = PageGroupManager.pages(this, state.active)
         findViewById<TextView>(R.id.tv_group_summary).text = getString(R.string.group_page_count, members.size)
-        findViewById<TextView>(R.id.tv_group_appearance).text = getString(R.string.group_appearance, PageGroupManager.label(this, state.active))
+        findViewById<TextView>(R.id.tv_group_appearance).text = getString(R.string.group_appearance)
         sbHeight.progress = state.active.appearance.heightDp - MIN_HEIGHT_DP
         tvHeightValue.text = "${state.active.appearance.heightDp}dp"
         findViewById<SeekBar>(R.id.sb_font_size).progress = state.active.appearance.fontSizeSp - SettingsConstants.MIN_KEYBOARD_FONT_SIZE
@@ -248,6 +312,18 @@ class KeyboardPageActivity : Activity() {
         showGrid.isChecked = state.active.appearance.showGrid
         showGrid.setOnCheckedChangeListener { _, checked ->
             updateAppearance { it.copy(showGrid = checked) }
+            refreshPreview()
+        }
+        showPointerLocation.setOnCheckedChangeListener(null)
+        showPointerLocation.isChecked = state.active.appearance.showPointerLocation
+        showPointerLocation.setOnCheckedChangeListener { _, checked ->
+            updateAppearance { it.copy(showPointerLocation = checked) }
+            refreshPreview()
+        }
+        usePointerDifferenceBlend.setOnCheckedChangeListener(null)
+        usePointerDifferenceBlend.isChecked = state.active.appearance.usePointerDifferenceBlend
+        usePointerDifferenceBlend.setOnCheckedChangeListener { _, checked ->
+            updateAppearance { it.copy(usePointerDifferenceBlend = checked) }
             refreshPreview()
         }
         refreshColorSliders()
@@ -272,6 +348,44 @@ class KeyboardPageActivity : Activity() {
                     dialog.dismiss()
                 } catch (e: IllegalArgumentException) { input.error = e.message }
             }
+        }
+        dialog.show()
+    }
+
+    private fun showPageEnginesDialog() {
+        val filename = editingFilename ?: return
+        val layout = LayoutFileManager.loadLayout(this, filename) ?: return
+        val engines = EngineCatalog.configurable()
+        val selected = engines.map { info ->
+            val feature = requireNotNull(info.feature)
+            layout.engineBinding?.states?.get(feature.key) ?: EngineSettings.enabled(this, feature)
+        }.toBooleanArray()
+        val builder = AlertDialog.Builder(this).setTitle(R.string.choose_engines)
+            .setMultiChoiceItems(engines.map { it.name }.toTypedArray(), selected) { _, index, checked -> selected[index] = checked }
+            .setNegativeButton("Cancel", null).setPositiveButton("Save", null)
+        if (layout.engineBinding != null) builder.setNeutralButton(R.string.clear_engine_binding, null)
+        val dialog = builder.create()
+        dialog.setOnShowListener {
+            fun save(binding: PageEngineBinding?) {
+                try {
+                    // Reload to preserve edits made elsewhere while the dialog was open.
+                    val current = requireNotNull(LayoutFileManager.loadLayout(this, filename))
+                    LayoutFileManager.saveLayout(this, filename, current.copy(engineBinding = binding))
+                    dialog.dismiss()
+                } catch (_: Exception) {
+                    Toast.makeText(this, R.string.page_engines_storage_failed, Toast.LENGTH_SHORT).show()
+                }
+            }
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val states = layout.engineBinding?.states.orEmpty().toMutableMap()
+                engines.forEachIndexed { index, info -> states[requireNotNull(info.feature).key] = selected[index] }
+                val binding = try { PageEngineBinding(states) } catch (_: IllegalArgumentException) {
+                    Toast.makeText(this, R.string.page_engines_storage_failed, Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                save(binding)
+            }
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setOnClickListener { save(null) }
         }
         dialog.show()
     }
@@ -318,7 +432,23 @@ class KeyboardPageActivity : Activity() {
     }
 
     private fun setupColorControls() {
-        rgColorTarget.setOnCheckedChangeListener { _, _ -> refreshColorSliders() }
+        val targets = listOf(
+            getString(R.string.color_target_keyboard_bg),
+            getString(R.string.color_target_keyboard_symbol),
+            getString(R.string.color_target_popup_bg),
+            getString(R.string.color_target_popup_symbol),
+            getString(R.string.color_target_pointer_path),
+            getString(R.string.color_target_pointer_axis),
+            getString(R.string.color_target_pointer_crosshair)
+        )
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, targets)
+        spColorTarget.adapter = adapter
+        spColorTarget.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                refreshColorSliders()
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
 
         val hslListener = object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -330,8 +460,18 @@ class KeyboardPageActivity : Activity() {
                     val color = ColorUtils.HSLToColor(floatArrayOf(h, s, l))
                     val hex = String.format("#%06X", 0xFFFFFF and color)
                     
-                    updateAppearance { if (rgColorTarget.checkedRadioButtonId == R.id.rb_target_bg)
-                        it.copy(backgroundColor = hex) else it.copy(symbolColor = hex) }
+                    updateAppearance {
+                        when (spColorTarget.selectedItemPosition) {
+                            0 -> it.copy(backgroundColor = hex)
+                            1 -> it.copy(symbolColor = hex)
+                            2 -> it.copy(popupBackgroundColor = hex)
+                            3 -> it.copy(popupSymbolColor = hex)
+                            4 -> it.copy(pointerPathColor = hex)
+                            5 -> it.copy(pointerAxisColor = hex)
+                            6 -> it.copy(pointerCrosshairColor = hex)
+                            else -> it
+                        }
+                    }
                     
                     updateLabels(h, s, l)
                     refreshPreview()
@@ -356,9 +496,15 @@ class KeyboardPageActivity : Activity() {
 
     private fun updateLayoutSpinner() {
         val files = if (allPages.isChecked) LayoutFileManager.getLayoutOrder(this) else PageGroupManager.pages(this)
-        val displayNames = files.map { it.removeSuffix(".json") }
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, displayNames)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        val displayNames = files.map { filename ->
+            val displayName = filename.removeSuffix(".json")
+            if (filename !in PageGroupManager.pages(this)) {
+                getString(R.string.ungrouped_preview, displayName)
+            } else {
+                displayName
+            }
+        }
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, displayNames)
         spLayouts.onItemSelectedListener = null
         spLayouts.adapter = adapter
 
@@ -458,7 +604,7 @@ class KeyboardPageActivity : Activity() {
         val layoutFile = editingFilename
         val hasPage = layoutFile != null && LayoutFileManager.loadLayout(this, layoutFile) != null
         previewContainer.visibility = if (hasPage) View.VISIBLE else View.GONE
-        listOf(R.id.btn_delete_layout, R.id.btn_rename_layout, R.id.btn_clear_layout, R.id.btn_export).forEach {
+        listOf(R.id.btn_delete_layout, R.id.btn_rename_layout, R.id.btn_clear_layout, R.id.btn_export, R.id.btn_choose_engines).forEach {
             findViewById<Button>(it).isEnabled = hasPage
         }
         val density = resources.displayMetrics.density
@@ -469,19 +615,18 @@ class KeyboardPageActivity : Activity() {
 
         val bgColor = try { Color.parseColor(bgColorHex) } catch (e: Exception) { Color.BLACK }
         val symbolColor = try { Color.parseColor(symbolColorHex) } catch (e: Exception) { Color.WHITE }
+        val popupBgColor = try { Color.parseColor(appearance.popupBackgroundColor) } catch (e: Exception) { Color.WHITE }
+        val popupSymbolColor = try { Color.parseColor(appearance.popupSymbolColor) } catch (e: Exception) { Color.BLACK }
         
         previewContainer.setBackgroundColor(bgColor)
 
         val layout = layoutFile?.let { LayoutFileManager.loadLayout(this, it) } ?: SettingsConstants.DEFAULT_LAYOUT
-        val displayName = if (hasPage) layoutFile!!.removeSuffix(".json") else ""
-        findViewById<TextView>(R.id.tv_layout_name).text = when {
-            !hasPage -> getString(R.string.empty_group_hint)
-            layoutFile !in PageGroupManager.pages(this) -> getString(R.string.ungrouped_preview, displayName)
-            else -> getString(R.string.current_page_name, displayName)
-        }
         if (clearedLayout?.filename != layoutFile) clearedLayout = null
         findViewById<Button>(R.id.btn_undo_clear).visibility = if (clearedLayout != null) View.VISIBLE else View.GONE
         KeyboardRenderer.render(this, previewContainer, layout, heightPx, symbolColor,
+            popupBgColor = popupBgColor,
+            popupSymbolColor = popupSymbolColor,
+            showKeyPreview = true,
             fontSizeSp = appearance.fontSizeSp,
             showGrid = appearance.showGrid,
             showUnassignedPlaceholders = true) { row, column, _ ->
@@ -489,10 +634,11 @@ class KeyboardPageActivity : Activity() {
         }
     }
 
-    private fun showKeyEditor(row: Int, column: Int) {
+    private fun showKeyEditor(row: Int, column: Int, restoredDraft: KeySlot? = null) {
         val filename = editingFilename ?: return
         val layout = LayoutFileManager.loadLayout(this, filename) ?: return
-        val slot = layout.rows[row].slots[column]
+        val originalSlot = layout.rows[row].slots[column]
+        val slot = restoredDraft ?: originalSlot
         val editorView = layoutInflater.inflate(R.layout.dialog_key_editor, null)
         val input = editorView.findViewById<EditText>(R.id.et_key_text)
         val longPressTypes = editorView.findViewById<Spinner>(R.id.sp_long_press_type)
@@ -511,6 +657,36 @@ class KeyboardPageActivity : Activity() {
 
         swipeLeftInput.setText(slot.swipeLeftText)
         swipeRightInput.setText(slot.swipeRightText)
+
+        val mode = editorView.findViewById<Spinner>(R.id.sp_multifunction_mode)
+        mode.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("Classic", "Popup"))
+        mode.setSelection(MultifunctionMode.entries.indexOf(slot.multifunctionMode))
+        val classicEditor = editorView.findViewById<View>(R.id.classic_multifunction_editor)
+        val popupHost = editorView.findViewById<android.widget.FrameLayout>(R.id.popup_multifunction_editor)
+        var popupEditor: PopupActionEditorView? = null
+        val keyView = (previewContainer.getChildAt(row) as? ViewGroup)?.getChildAt(column)
+        val keyHeight = keyView?.height?.takeIf { it > 0 } ?: (48 * resources.displayMetrics.density).toInt()
+        val defaultPopup = KeyPreviewMetrics.initialPopup(this, keyHeight,
+            slot.effectiveLongPressItems.firstOrNull()?.previewText() ?: slot.displayText())
+        fun updateMode() {
+            val popup = MultifunctionMode.entries[mode.selectedItemPosition] == MultifunctionMode.POPUP
+            if (popup && popupEditor == null) {
+                val appearance = PageGroupManager.active(this).appearance
+                popupEditor = PopupActionEditorView(this, slot.popupConfiguration ?: defaultPopup).also {
+                    it.resetConfiguration = defaultPopup
+                    it.setPopupColors(Color.parseColor(appearance.popupBackgroundColor), Color.parseColor(appearance.popupSymbolColor))
+                    it.setPointerColors(Color.parseColor(appearance.pointerAxisColor), Color.parseColor(appearance.pointerCrosshairColor), appearance.usePointerDifferenceBlend)
+                    popupHost.addView(it)
+                }
+            }
+            classicEditor.visibility = if (popup) View.GONE else View.VISIBLE
+            popupHost.visibility = if (popup) View.VISIBLE else View.GONE
+        }
+        mode.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = updateMode()
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+        updateMode()
 
         val types = editorView.findViewById<Spinner>(R.id.sp_key_type)
         val behavior = editorView.findViewById<Spinner>(R.id.sp_text_behavior)
@@ -581,6 +757,45 @@ class KeyboardPageActivity : Activity() {
         updateEditor()
         updateLongPressEditor()
         updateSwipeEditors()
+        fun currentDraft(): KeySlot {
+            val action = actions[types.selectedItemPosition]
+            val lpAction = actions[longPressTypes.selectedItemPosition]
+            val unchangedHold = lpAction == slot.longPressAction && longPressInput.text.toString() == currentLpText
+            val lpText = if (unchangedHold) slot.longPressText else if (lpAction == KeyAction.TEXT) longPressInput.text.toString() else ""
+            val items = if (unchangedHold) slot.longPressItems else if (lpAction == KeyAction.TEXT) {
+                LongPressTextCodec.parse(lpText).map { LongPressItem(text = it) }
+            } else listOf(LongPressItem(action = lpAction))
+            val slAction = actions[swipeLeftTypes.selectedItemPosition]
+            val srAction = actions[swipeRightTypes.selectedItemPosition]
+            return slot.copy(
+                action = action, text = if (action == slot.action && input.text.toString() == slot.text) slot.text else if (action == KeyAction.TEXT) input.text.toString() else "",
+                textBehavior = TextBehavior.entries[behavior.selectedItemPosition],
+                longPressText = lpText, longPressAction = lpAction, longPressItems = items,
+                swipeLeftAction = slAction,
+                swipeLeftText = if (slAction == slot.swipeLeftAction && swipeLeftInput.text.toString() == slot.swipeLeftText) slot.swipeLeftText else if (slAction == KeyAction.TEXT) swipeLeftInput.text.toString() else "",
+                swipeRightAction = srAction,
+                swipeRightText = if (srAction == slot.swipeRightAction && swipeRightInput.text.toString() == slot.swipeRightText) slot.swipeRightText else if (srAction == KeyAction.TEXT) swipeRightInput.text.toString() else "",
+                multifunctionMode = MultifunctionMode.entries[mode.selectedItemPosition],
+                popupConfiguration = popupEditor?.configuration ?: slot.popupConfiguration)
+        }
+        fun showOperationUndo(message: Int, undo: () -> Unit) {
+            com.google.android.material.snackbar.Snackbar.make(findViewById(android.R.id.content), message,
+                com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+                .setAction(R.string.popup_edit_undo) { undo() }.show()
+        }
+        var completed = false
+        fun cancelEditing() {
+            if (completed) return
+            completed = true
+            if (popupEditor != null || slot.multifunctionMode == MultifunctionMode.POPUP) {
+                val draft = currentDraft()
+                showOperationUndo(R.string.popup_edit_cancelled) {
+                    val current = LayoutFileManager.loadLayout(this, filename)?.rows?.getOrNull(row)?.slots?.getOrNull(column)
+                    if (editingFilename == filename && current == originalSlot) showKeyEditor(row, column, draft)
+                    else Toast.makeText(this, R.string.popup_edit_conflict, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
         val dialog = AlertDialog.Builder(this)
             .setTitle("Row ${row + 1} · Key ${column + 1}")
             .setMessage(R.string.key_edit_message)
@@ -588,39 +803,30 @@ class KeyboardPageActivity : Activity() {
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Save", null)
             .create()
+        dialog.setOnCancelListener { cancelEditing() }
         dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener { cancelEditing(); dialog.dismiss() }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 try {
-                    val action = actions[types.selectedItemPosition]
-                    val text = if (action == KeyAction.TEXT) input.text.toString() else ""
-                    val lpAction = actions[longPressTypes.selectedItemPosition]
-                    val lpText = if (lpAction == KeyAction.TEXT) longPressInput.text.toString() else ""
-                    val items = if (lpAction == KeyAction.TEXT && lpText.isNotEmpty()) {
-                        LongPressTextCodec.parse(lpText).map { LongPressItem(text = it) }
-                    } else if (lpAction != KeyAction.TEXT) {
-                        listOf(LongPressItem(action = lpAction))
-                    } else {
-                        emptyList()
-                    }
-
-                    val slAction = actions[swipeLeftTypes.selectedItemPosition]
-                    val slText = if (slAction == KeyAction.TEXT) swipeLeftInput.text.toString() else ""
-
-                    val srAction = actions[swipeRightTypes.selectedItemPosition]
-                    val srText = if (srAction == KeyAction.TEXT) swipeRightInput.text.toString() else ""
-
-                    LayoutFileManager.saveLayout(
-                        this, filename,
-                        layout.withKeyMapping(
-                            row, column, text, action, TextBehavior.entries[behavior.selectedItemPosition],
-                            longPressText = lpText, longPressAction = lpAction, longPressItems = items,
-                            swipeLeftText = slText, swipeLeftAction = slAction,
-                            swipeRightText = srText, swipeRightAction = srAction
-                        )
-                    )
+                    val draft = currentDraft()
+                    val saved = if (draft.multifunctionMode == MultifunctionMode.POPUP)
+                        draft.copy(popupConfiguration = draft.popupConfiguration?.let(PopupGeometry::filterForSave))
+                    else draft
+                    replaceEditedSlot(filename, row, column, originalSlot, saved)
                     clearedLayout = null
                     refreshPreview()
+                    completed = true
                     dialog.dismiss()
+                    if (popupEditor != null || slot.multifunctionMode == MultifunctionMode.POPUP) {
+                        showOperationUndo(R.string.popup_edit_saved) {
+                            try {
+                                replaceEditedSlot(filename, row, column, saved, originalSlot)
+                                refreshPreview()
+                            } catch (_: Exception) {
+                                Toast.makeText(this, R.string.popup_edit_conflict, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
                 } catch (e: Exception) {
                     error.text = "Failed to save: ${e.message}"
                     error.visibility = View.VISIBLE
@@ -628,6 +834,15 @@ class KeyboardPageActivity : Activity() {
             }
         }
         dialog.show()
+    }
+
+    /** An operation-level Undo may only restore its own key, never overwrite later layout edits. */
+    private fun replaceEditedSlot(filename: String, row: Int, column: Int, expected: KeySlot, replacement: KeySlot) {
+        val current = requireNotNull(LayoutFileManager.loadLayout(this, filename))
+        check(current.rows.getOrNull(row)?.slots?.getOrNull(column) == expected) { "Key settings have changed" }
+        LayoutFileManager.saveLayout(this, filename, current.copy(rows = current.rows.mapIndexed { r, value ->
+            if (r != row) value else value.copy(slots = value.slots.mapIndexed { c, key -> if (c == column) replacement else key })
+        }))
     }
 
     private fun showNewLayoutDialog() {

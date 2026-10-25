@@ -17,12 +17,60 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ImeEndToEndTest {
+    @get:org.junit.Rule val lifecycleTrace: org.junit.rules.TestRule = ImeLifecycleTrace()
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val ui = instrumentation.uiAutomation
     private fun shell(command: String) = ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand(command)).bufferedReader().use { it.readText() }
     private val driver = ImeTestDriver()
     private fun find(predicate: (AccessibilityNodeInfo) -> Boolean) = driver.find(predicate)
     private fun awaitNode(predicate: (AccessibilityNodeInfo) -> Boolean) = driver.awaitNode(predicate)
+
+    @Test fun capsLockIndicatorTracksTemporaryShiftLockedInputAndUnlocking() {
+        val layout = KeyboardLayout("Caps Lock E2E", listOf(RowLayout(1f, listOf(
+            KeySlot(1f, action = KeyAction.SHIFT), KeySlot(1f, "a"),
+            KeySlot(1f, "b"), KeySlot(1f, action = KeyAction.ENTER)
+        ))))
+        withIsolatedKeyboard(listOf(layout)) { scenario, _ ->
+            fun key(column: Int) = driver.click {
+                it.contentDescription?.toString()?.startsWith("Row 1, key $column:") == true
+            }
+            fun state(description: String, selected: Boolean) {
+                val shift = awaitNode {
+                    it.contentDescription?.toString()?.startsWith("Row 1, key 1:") == true &&
+                        it.stateDescription?.toString() == description
+                }
+                assertEquals(selected, shift.isSelected)
+            }
+            state("Shift off", false)
+            key(1)
+            state("Shift once", true)
+            key(2)
+            state("Shift off", false)
+            awaitEditorText(scenario, "A", composing = true)
+            key(4)
+            awaitEditorText(scenario, "A", composing = false)
+
+            key(1)
+            state("Shift once", true)
+            key(1)
+            state("Caps Lock", true)
+            key(2)
+            key(3)
+            awaitEditorText(scenario, "AAB", composing = true)
+            state("Caps Lock", true)
+            key(4)
+            awaitEditorText(scenario, "AAB", composing = false)
+            state("Caps Lock", true)
+
+            key(1)
+            state("Shift off", false)
+            key(2)
+            awaitEditorText(scenario, "AABa", composing = true)
+            key(4)
+            awaitEditorText(scenario, "AABa", composing = false)
+            state("Shift off", false)
+        }
+    }
 
     @Test fun widthSwapToolbarAndBoundGesturesTransformExactlyOnce() {
         val original = "aＡ1１,， 😀ɑ中"
@@ -38,10 +86,9 @@ class ImeEndToEndTest {
             )),
             RowLayout(1f, listOf(KeySlot(1f, action = KeyAction.CANDIDATES)))
         ))
-        withWidthSwapKeyboard(listOf(layout, layout.copy(name = "Width Swap E2E alternate"))) { scenario, pages ->
+        withIsolatedKeyboard(listOf(layout, layout.copy(name = "Width Swap E2E alternate"))) { scenario, pages ->
             fun key(column: Int, action: Int = AccessibilityNodeInfo.ACTION_CLICK) {
-                assertTrue(awaitNode { it.contentDescription?.toString()?.startsWith("Row 1, key $column:") == true }
-                    .performAction(action))
+                driver.click(action) { it.contentDescription?.toString()?.startsWith("Row 1, key $column:") == true }
             }
             fun state(enabled: Boolean) {
                 val toggle = awaitNode {
@@ -114,7 +161,7 @@ class ImeEndToEndTest {
             KeySlot(1f, action = KeyAction.WIDTH_SWAP),
             KeySlot(1f, action = KeyAction.ENTER)
         ))))
-        withWidthSwapKeyboard(listOf(layout)) { scenario, _ ->
+        withIsolatedKeyboard(listOf(layout)) { scenario, _ ->
             assertTrue(awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" }
                 .performAction(AccessibilityNodeInfo.ACTION_CLICK))
             awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" && it.stateDescription?.toString() == "开启" }
@@ -150,7 +197,7 @@ class ImeEndToEndTest {
         assertEquals("The editor's composing state must match the input session", composing, composingStart >= 0)
     }
 
-    private fun withWidthSwapKeyboard(
+    private fun withIsolatedKeyboard(
         layouts: List<KeyboardLayout>,
         body: (ActivityScenario<ImeTestEditorActivity>, List<String>) -> Unit
     ) {
@@ -214,13 +261,19 @@ class ImeEndToEndTest {
         val alreadyEnabled = context.getSystemService(android.view.inputmethod.InputMethodManager::class.java).enabledInputMethodList.any { it.id == ime }
         val oldFlags = ui.serviceInfo.flags
         var page: String? = null
-        fun showAllEmoji() {
-            assertTrue(awaitNode { it.text?.toString()?.startsWith("Emoji · ") == true && it.isClickable }
-                .performAction(AccessibilityNodeInfo.ACTION_CLICK))
-            var item = awaitNode { it.text?.toString() == context.getString(R.string.emoji_all) }
+        fun openCategoryMenu() {
+            driver.click { it.text?.toString()?.startsWith("Emoji · ") == true && it.isClickable }
+        }
+        fun menuItem(label: String): AccessibilityNodeInfo {
+            // The same label is also a heading in the continuous list below the popup.
+            var item = awaitNode { it.text?.toString() == label && !it.isHeading }
             while (!item.isClickable) item = requireNotNull(item.parent)
-            assertTrue(item.performAction(AccessibilityNodeInfo.ACTION_CLICK))
-            awaitNode { it.text?.toString() == "Emoji · ${context.getString(R.string.emoji_all)} ▾" }
+            return item
+        }
+        fun jumpToCategory(label: String) {
+            openCategoryMenu()
+            assertTrue(menuItem(label).performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            awaitNode { it.text?.toString() == "Emoji · $label ▾" }
         }
         fun findEmoji(entry: EmojiEntry): AccessibilityNodeInfo {
             val description = "${entry.name}, Emoji ${entry.emojiVersion}"
@@ -246,14 +299,23 @@ class ImeEndToEndTest {
             PageGroupManager.selectPage(context, page)
             shell("ime enable $ime"); shell("ime set $ime")
             ActivityScenario.launch(ImeTestEditorActivity::class.java).use { scenario ->
-                android.os.SystemClock.sleep(700)
-                scenario.onActivity {
-                    it.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
-                        .showSoftInput(it.editor, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                driver.awaitKeyboard(scenario) { it.contentDescription?.toString() == "Row 1, key 2: n" }
+                driver.click { it.contentDescription?.toString() == "Row 1, key 2: n" }
+                driver.click { it.contentDescription?.toString() == "Row 1, key 1: Emoji" }
+                jumpToCategory(first.group)
+                awaitEditorText(scenario, "n", composing = true)
+                val nextGroup = catalog.groups[1]
+                val deadline = android.os.SystemClock.uptimeMillis() + 30_000
+                while (find { it.text?.toString() == "Emoji · $nextGroup ▾" } == null && android.os.SystemClock.uptimeMillis() < deadline) {
+                    assertTrue(awaitNode { it.contentDescription?.toString() == context.getString(R.string.emoji_grid_description) }
+                        .performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD))
+                    android.os.SystemClock.sleep(80)
                 }
-                awaitNode { it.contentDescription?.toString() == "Row 1, key 2: n" }.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                awaitNode { it.contentDescription?.toString() == "Row 1, key 1: Emoji" }.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                showAllEmoji()
+                awaitNode { it.text?.toString() == "Emoji · $nextGroup ▾" }
+                openCategoryMenu()
+                assertTrue("Menu selection must follow ordinary scrolling", menuItem(nextGroup).isSelected)
+                assertTrue(menuItem(first.group).performAction(AccessibilityNodeInfo.ACTION_CLICK))
+                awaitNode { it.text?.toString() == "Emoji · ${first.group} ▾" }
                 assertNull(find { it.contentDescription?.toString()?.startsWith("Row ") == true })
                 repeat(2) {
                     assertTrue(findEmoji(first).performAction(AccessibilityNodeInfo.ACTION_CLICK))
@@ -266,10 +328,16 @@ class ImeEndToEndTest {
                 instrumentation.waitForIdleSync()
                 scenario.onActivity { assertEquals(repeated + latest.text, it.editor.text.toString()) }
                 awaitNode { it.contentDescription?.toString() == context.getString(R.string.emoji_grid_description) }
-                awaitNode { it.contentDescription?.toString() == "Return to Keyboard" }.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                awaitNode { it.contentDescription?.toString() == "Row 1, key 1: Emoji" }.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                showAllEmoji()
+                driver.click { it.contentDescription?.toString() == "Return to Keyboard" }
+                driver.click { it.contentDescription?.toString() == "Row 1, key 1: Emoji" }
+                jumpToCategory(first.group)
                 findEmoji(first)
+                openCategoryMenu()
+                menuItem(first.group)
+                shell("input keyevent 4")
+                awaitNode { it.contentDescription?.toString() == context.getString(R.string.emoji_grid_description) }
+                // Popup exit transitions finish asynchronously; the underlying grid exists throughout.
+                driver.awaitAbsent { it.isVisibleToUser && !it.isHeading && it.text?.toString() == first.group }
                 shell("input keyevent 4")
                 awaitNode { it.contentDescription?.toString() == "Row 1, key 1: Emoji" }
             }

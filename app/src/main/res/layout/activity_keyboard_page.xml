@@ -1,366 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
+    android:orientation="vertical"
     android:background="@color/management_background">
 
+    <!-- Header with Back Button and Title -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp"
-        android:orientation="vertical">
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp">
 
-        <!-- Header with Back Button and Title -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="20dp">
+        <ImageButton
+            android:id="@+id/btn_back"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="@string/back"
+            android:layout_marginEnd="12dp" />
 
-            <ImageButton
-                android:id="@+id/btn_back"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="?android:attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_arrow_back"
-                android:contentDescription="Back"
-                android:layout_marginEnd="12dp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Keyboard Management"
-                android:textSize="@dimen/management_title_size"
-                android:textColor="@color/management_text"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="@string/page_group" android:textColor="@color/management_text" android:textSize="@dimen/management_section_size" />
-        <Spinner android:id="@+id/sp_page_groups" android:layout_width="match_parent"
-            android:layout_height="48dp" android:backgroundTint="@color/management_text" />
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-            <Button style="@style/ManagementButton" android:id="@+id/btn_new_group" android:layout_width="0dp" android:layout_weight="1"
-                android:layout_height="wrap_content" android:text="@string/new_page_group" android:textSize="@dimen/management_caption_size" />
-            <Button style="@style/ManagementButton" android:id="@+id/btn_rename_group" android:layout_width="0dp" android:layout_weight="1"
-                android:layout_height="wrap_content" android:text="@string/rename_page_group" android:textSize="@dimen/management_caption_size" />
-        </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-            <Button style="@style/ManagementButton" android:id="@+id/btn_delete_group" android:layout_width="0dp" android:layout_weight="1"
-                android:layout_height="wrap_content" android:text="@string/delete_page_group" android:textSize="@dimen/management_caption_size" />
-            <Button style="@style/ManagementButton" android:id="@+id/btn_reorder_groups" android:layout_width="0dp" android:layout_weight="1"
-                android:layout_height="wrap_content" android:text="@string/reorder_page_groups" android:textSize="@dimen/management_caption_size" />
-        </LinearLayout>
-        <TextView android:id="@+id/tv_group_summary" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:textColor="@color/management_text_secondary" android:textSize="@dimen/management_caption_size" />
-        <Button style="@style/ManagementButton" android:id="@+id/btn_group_pages" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="@string/page_group_members" />
-        <CheckBox android:id="@+id/cb_all_pages" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="@string/show_all_keyboard_pages" android:textColor="@color/management_text" android:layout_marginBottom="12dp" android:textSize="@dimen/management_body_size" />
-
-        <!-- Layout Management -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Keyboard Page"
-            android:textColor="@color/management_text_secondary"
-            android:textSize="@dimen/management_caption_size"
-            android:layout_marginBottom="8dp"/>
-
-        <Spinner
-            android:id="@+id/sp_layouts"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:backgroundTint="@color/management_text"/>
-
-        <TextView
-            android:id="@+id/tv_layout_name"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:text="@string/keyboard_management"
+            android:textSize="@dimen/management_title_size"
             android:textColor="@color/management_text"
-            android:textSize="@dimen/management_body_size" />
+            android:textStyle="bold" />
+    </LinearLayout>
 
-        <Button style="@style/ManagementButton"
-            android:id="@+id/btn_rename_layout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/rename_layout" />
-
-        <Button style="@style/ManagementButton"
-            android:id="@+id/btn_reorder_pages"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/reorder_pages"
-            android:layout_marginBottom="8dp" />
+    <!-- Global Long Press Time Control (Above Preview, Below Header) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:layout_marginBottom="8dp"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:layout_marginBottom="4dp">
+            android:layout_marginBottom="4dp"
+            android:orientation="horizontal">
 
-            <Button style="@style/ManagementButton"
-                android:id="@+id/btn_import"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Import"
-                android:textSize="@dimen/management_caption_size"
-                android:layout_marginEnd="4dp"/>
-
-            <Button style="@style/ManagementButton"
-                android:id="@+id/btn_export"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Export"
-                android:textSize="@dimen/management_caption_size"
-                android:layout_marginStart="4dp"/>
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="16dp">
-
-            <Button style="@style/ManagementButton"
-                android:id="@+id/btn_new_layout"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="4dp"
-                android:text="@string/new_layout"
-                android:textSize="@dimen/management_caption_size" />
-
-            <Button style="@style/ManagementButton"
-                android:id="@+id/btn_clear_layout"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="4dp"
-                android:text="@string/clear_keys"
-                android:textSize="@dimen/management_caption_size" />
-        </LinearLayout>
-
-        <Button style="@style/ManagementButton"
-            android:id="@+id/btn_delete_layout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/delete_layout"
-            android:layout_marginBottom="12dp" />
-
-        <Button style="@style/ManagementButton"
-            android:id="@+id/btn_undo_clear"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:text="@string/undo_clear"
-            android:visibility="gone" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/key_preview_hint"
-            android:textColor="@color/management_text_secondary"
-            android:textSize="@dimen/management_caption_size"
-            android:layout_marginBottom="12dp" />
-
-        <!-- Live Preview -->
-        <FrameLayout
-            android:id="@+id/preview_wrapper"
-            android:layout_marginBottom="24dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#222222">
-
-            <include layout="@layout/keyboard_view" />
-        </FrameLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#444444"
-            android:layout_marginBottom="16dp"/>
-
-        <TextView android:id="@+id/tv_group_appearance" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:textColor="@color/management_text" android:textSize="@dimen/management_body_size" android:layout_marginBottom="12dp" />
-
-        <CheckBox
-            android:id="@+id/cb_show_grid"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/show_keyboard_grid"
-            android:textColor="@color/management_text"
-            android:layout_marginBottom="12dp" android:textSize="@dimen/management_body_size" />
-
-        <!-- Color Target Selection -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Color Target"
-            android:textColor="@color/management_text_secondary"
-            android:textSize="@dimen/management_caption_size"
-            android:layout_marginBottom="8dp"/>
-
-        <RadioGroup
-            android:id="@+id/rg_color_target"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="16dp">
-            <RadioButton
-                android:id="@+id/rb_target_bg"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Background"
-                android:textColor="@color/management_text"
-                android:checked="true"/>
-            <RadioButton
-                android:id="@+id/rb_target_symbol"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Symbol"
-                android:textColor="@color/management_text"/>
-        </RadioGroup>
-
-        <!-- HSL Sliders -->
-        <TextView
-            android:id="@+id/tv_hue_label"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Hue: 0"
-            android:textColor="@color/management_text_secondary"
-            android:textSize="@dimen/management_caption_size"
-            android:layout_marginBottom="4dp"/>
-        <SeekBar
-            android:id="@+id/sb_hue"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="360"
-            android:layout_marginBottom="16dp"/>
-
-        <TextView
-            android:id="@+id/tv_saturation_label"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Saturation: 0%"
-            android:textColor="@color/management_text_secondary"
-            android:textSize="@dimen/management_caption_size"
-            android:layout_marginBottom="4dp"/>
-        <SeekBar
-            android:id="@+id/sb_saturation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="100"
-            android:layout_marginBottom="16dp"/>
-
-        <TextView
-            android:id="@+id/tv_lightness_label"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Lightness: 0%"
-            android:textColor="@color/management_text_secondary"
-            android:textSize="@dimen/management_caption_size"
-            android:layout_marginBottom="4dp"/>
-        <SeekBar
-            android:id="@+id/sb_lightness"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="100"
-            android:layout_marginBottom="24dp"/>
-
-        <!-- Height Settings -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Keyboard Height"
-                android:textColor="@color/management_text_secondary"
-                android:textSize="@dimen/management_caption_size"/>
-            <TextView
-                android:id="@+id/tv_height_value"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="210dp"
-                android:textColor="@color/management_text"
-                android:textSize="@dimen/management_caption_size"/>
-        </LinearLayout>
-
-        <SeekBar
-            android:id="@+id/sb_height"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="300"
-            android:progress="60"
-            android:layout_marginBottom="24dp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Keyboard Font Size"
-                android:textColor="@color/management_text_secondary"
-                android:textSize="@dimen/management_caption_size" />
-            <TextView
-                android:id="@+id/tv_font_size_value"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/management_text"
-                android:textSize="@dimen/management_caption_size" />
-        </LinearLayout>
-
-        <SeekBar
-            android:id="@+id/sb_font_size"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:contentDescription="Keyboard Font Size"
-            android:layout_marginBottom="24dp" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/management_control"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/keyboard_gestures"
-            android:textColor="@color/management_text"
-            android:textSize="@dimen/management_section_size"
-            android:layout_marginBottom="12dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:labelFor="@id/sb_long_press_time"
                 android:text="@string/keyboard_long_press_time"
-                android:textColor="@color/management_text_secondary"
-                android:textSize="@dimen/management_caption_size" />
+                android:textColor="@color/management_text"
+                android:textSize="@dimen/management_section_size" />
+
             <TextView
                 android:id="@+id/tv_long_press_time_value"
                 android:layout_width="wrap_content"
@@ -372,17 +68,52 @@
         <SeekBar
             android:id="@+id/sb_long_press_time"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:contentDescription="@string/keyboard_long_press_time"
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/keyboard_long_press_time_help"
-            android:textColor="@color/management_text_secondary"
-            android:textSize="@dimen/management_caption_size"
-            android:layout_marginBottom="24dp" />
+            android:layout_height="match_parent"
+            android:contentDescription="@string/keyboard_long_press_time" />
 
     </LinearLayout>
-</ScrollView>
+
+    <!-- Divider Line 1: Between Long Press Time and Live Preview -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginBottom="8dp"
+        android:background="#333333" />
+
+    <!-- Live Preview (Top) -->
+
+    <FrameLayout
+        android:id="@+id/preview_wrapper"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:background="#222222">
+
+        <include layout="@layout/keyboard_view" />
+    </FrameLayout>
+
+    <!-- Divider Line 2: Between Live Preview and Tab Layout -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginBottom="8dp"
+        android:background="#333333" />
+
+    <!-- Tab Layout -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tab_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:tabTextColor="@color/management_text_secondary"
+        app:tabSelectedTextColor="@color/management_text"
+        app:tabIndicatorColor="@color/management_text"
+        android:background="@color/management_background" />
+
+    <!-- Swipeable Cards -->
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/view_pager"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+</LinearLayout>

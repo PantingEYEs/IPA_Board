@@ -157,7 +157,7 @@ class KeyPressPreviewTest {
                 activity.setContentView(host)
                 KeyboardRenderer.render(activity, host,
                     KeyboardLayout("Preview", listOf(RowLayout(1f, listOf(KeySlot(1f, "a", longPressText = "ɑ😀"))))),
-                    180, Color.WHITE, shiftEnabled = true, showKeyPreview = true,
+                    180, Color.WHITE, shiftState = ShiftState.SINGLE, showKeyPreview = true,
                     onKeyLongClick = { _, _, _ -> holds++ }, onKeyClick = { _, _, _ -> taps++ })
                 key = (host.getChildAt(0) as ViewGroup).getChildAt(0) as KeyPreviewFrameLayout
             }

@@ -1,11 +1,13 @@
 package com.example.ipa_board
 
+import com.example.ipa_board.ime.PageEngineBinding
 import org.json.JSONArray
 import org.json.JSONObject
 
 data class KeyboardLayout(
     val name: String,
-    val rows: List<RowLayout>
+    val rows: List<RowLayout>,
+    val engineBinding: PageEngineBinding? = null
 ) {
     init {
         require(rows.isNotEmpty() && rows.size <= 20) { "Layout must contain 1–20 rows" }
@@ -24,7 +26,8 @@ data class KeyboardLayout(
         longPressText: String? = null, longPressAction: KeyAction? = null,
         longPressItems: List<LongPressItem>? = null,
         swipeLeftText: String? = null, swipeLeftAction: KeyAction? = null,
-        swipeRightText: String? = null, swipeRightAction: KeyAction? = null
+        swipeRightText: String? = null, swipeRightAction: KeyAction? = null,
+        multifunctionMode: MultifunctionMode? = null, popupConfiguration: PopupConfiguration? = null
     ): KeyboardLayout {
         require(row in rows.indices && column in rows[row].slots.indices) { "Unknown key position" }
         return copy(rows = rows.mapIndexed { r, value ->
@@ -39,14 +42,16 @@ data class KeyboardLayout(
                     swipeLeftText = swipeLeftText ?: slot.swipeLeftText,
                     swipeLeftAction = swipeLeftAction ?: slot.swipeLeftAction,
                     swipeRightText = swipeRightText ?: slot.swipeRightText,
-                    swipeRightAction = swipeRightAction ?: slot.swipeRightAction
+                    swipeRightAction = swipeRightAction ?: slot.swipeRightAction,
+                    multifunctionMode = multifunctionMode ?: slot.multifunctionMode,
+                    popupConfiguration = popupConfiguration ?: slot.popupConfiguration
                 ) else slot
             })
         })
     }
 
     fun cleared(): KeyboardLayout = copy(rows = rows.map { row ->
-        row.copy(slots = row.slots.map { slot -> slot.copy(text = "", action = KeyAction.TEXT, textBehavior = TextBehavior.LITERAL, longPressText = "", longPressAction = KeyAction.TEXT, longPressItems = emptyList(), swipeLeftText = "", swipeLeftAction = KeyAction.TEXT, swipeRightText = "", swipeRightAction = KeyAction.TEXT) })
+        row.copy(slots = row.slots.map { slot -> slot.copy(text = "", action = KeyAction.TEXT, textBehavior = TextBehavior.LITERAL, longPressText = "", longPressAction = KeyAction.TEXT, longPressItems = emptyList(), swipeLeftText = "", swipeLeftAction = KeyAction.TEXT, swipeRightText = "", swipeRightAction = KeyAction.TEXT, multifunctionMode = MultifunctionMode.CLASSIC, popupConfiguration = null) })
     })
 
     fun toJson(): String {
@@ -57,6 +62,7 @@ data class KeyboardLayout(
             rowsArr.put(row.toJsonObject())
         }
         obj.put("rows", rowsArr)
+        engineBinding?.let { obj.put("engineBinding", it.toJsonObject()) }
         return obj.toString()
     }
 
@@ -69,7 +75,7 @@ data class KeyboardLayout(
             for (i in 0 until rowsArr.length()) {
                 rows.add(RowLayout.fromJsonObject(rowsArr.getJSONObject(i)))
             }
-            return KeyboardLayout(name, rows)
+            return KeyboardLayout(name, rows, PageEngineBinding.fromJsonObject(obj.optJSONObject("engineBinding")))
         }
     }
 }
@@ -149,7 +155,9 @@ data class KeySlot(
     val swipeLeftText: String = "",
     val swipeLeftAction: KeyAction = KeyAction.TEXT,
     val swipeRightText: String = "",
-    val swipeRightAction: KeyAction = KeyAction.TEXT
+    val swipeRightAction: KeyAction = KeyAction.TEXT,
+    val multifunctionMode: MultifunctionMode = MultifunctionMode.CLASSIC,
+    val popupConfiguration: PopupConfiguration? = null
 ) {
     val effectiveLongPressItems: List<LongPressItem>
         get() {
@@ -177,11 +185,12 @@ data class KeySlot(
             else -> null
         }
 
-    val hasSwipeLeft: Boolean get() = effectiveSwipeLeftItem != null
-    val hasSwipeRight: Boolean get() = effectiveSwipeRightItem != null
+    val hasSwipeLeft: Boolean get() = multifunctionMode == MultifunctionMode.CLASSIC && effectiveSwipeLeftItem != null
+    val hasSwipeRight: Boolean get() = multifunctionMode == MultifunctionMode.CLASSIC && effectiveSwipeRightItem != null
 
     val hasLongPress: Boolean
         get() = when {
+            multifunctionMode == MultifunctionMode.POPUP -> true
             action == KeyAction.REPEAT_BACKSPACE -> true
             else -> effectiveLongPressItems.isNotEmpty()
         }
@@ -210,6 +219,8 @@ data class KeySlot(
         obj.put("swipeLeftAction", swipeLeftAction.wireValue)
         obj.put("swipeRightText", swipeRightText)
         obj.put("swipeRightAction", swipeRightAction.wireValue)
+        obj.put("multifunctionMode", multifunctionMode.wireValue)
+        popupConfiguration?.let { obj.put("popupConfiguration", it.toJsonObject()) }
         return obj
     }
 
@@ -233,7 +244,11 @@ data class KeySlot(
                 obj.optString("swipeLeftText", ""),
                 if (obj.has("swipeLeftAction")) KeyAction.fromWireValue(obj.getString("swipeLeftAction")) else KeyAction.TEXT,
                 obj.optString("swipeRightText", ""),
-                if (obj.has("swipeRightAction")) KeyAction.fromWireValue(obj.getString("swipeRightAction")) else KeyAction.TEXT
+                if (obj.has("swipeRightAction")) KeyAction.fromWireValue(obj.getString("swipeRightAction")) else KeyAction.TEXT,
+                MultifunctionMode.fromWireValue(obj.optString("multifunctionMode", "classic")),
+                if (obj.has("popupConfiguration") && !obj.isNull("popupConfiguration")) {
+                    PopupConfiguration.fromJsonObject(obj.getJSONObject("popupConfiguration"))
+                } else null
             )
         }
     }
@@ -247,7 +262,7 @@ enum class KeyAction(val wireValue: String, val title: String, val keyLabel: Str
     RIGHT("right", "Arrow Right", "→", "Move the cursor right. Shift extends the selection."),
     UP("up", "Arrow Up", "↑", "Move the cursor up. Shift extends the selection."),
     DOWN("down", "Arrow Down", "↓", "Move the cursor down. Shift extends the selection."),
-    SHIFT("shift", "Shift / Uppercase", "Shift", "Toggle uppercase text and Shift navigation. Tap again to turn off."),
+    SHIFT("shift", "Shift / Uppercase", "Shift", "Tap once for temporary Shift, again for Caps Lock, and once more to turn off."),
     CTRL("ctrl", "Ctrl", "Ctrl", "Apply Ctrl to the next key. Use single letters for shortcuts, such as Ctrl+A. Support depends on the receiving app."),
     ENTER("enter", "Enter", "↵", "Run the text field action, or insert a new line in a multiline field."),
     TAB("tab", "Tab", "Tab", "Send Tab. Focus movement depends on the receiving app."),
@@ -257,6 +272,8 @@ enum class KeyAction(val wireValue: String, val title: String, val keyLabel: Str
     KAOMOJI("kaomoji", "顔文字", "顔", "Open the scrollable 顔文字 panel. Tap a 顔文字 to insert it; Return closes the panel."),
     WIDTH_SWAP("width_swap", "全角 / 半角转换", "◩", "Off by default. When enabled, swap full-width and half-width forms of typed characters that have a width counterpart. Tap again to turn off."),
     CALCULATOR("calculator", "计算器", "∑", "Toggle calculator mode. Evaluate math expressions and output results as candidates."),
+    ENGINE_DASHBOARD("engine_dashboard", "Engine Dashboard", "◷", "Open the read-only engine dashboard. Return closes the panel."),
+    REMOTE_KEYBOARD("remote_keyboard", "Remote Keyboard Mode", "⌁", "Save and disable all input engines. Press again to restore their original settings, including after an app restart. Manually enabled engines remain enabled until restoration. No built-in remote connection is required."),
     CANDIDATES("candidates", "Candidates", "⋯", "Open the candidate word list panel."),
     CLIPBOARD("clipboard", "Clipboard", "⧉", "Open the clipboard panel. Tap an item to insert it; Return closes the panel."),
     PAGES("pages", "Keyboard Pages", "⊞", "Open the keyboard page picker panel to switch active layouts."),

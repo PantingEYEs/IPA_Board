@@ -4,7 +4,7 @@
 
 ## 固定资源
 
-所有文件已随源码保存，正常 Gradle 构建不下载引擎。运行 `python3 tools/verify_engine_assets.py` 检查资源 SHA-256；`tools/engine-assets.lock.json` 记录发布包地址、原始包哈希及最终资源哈希。更换引擎或词库时必须重新执行真实候选测试，并更新资源目录版本，避免读取旧部署结果。
+内置资源已随源码保存，正常 Gradle 构建不下载引擎。运行 `python3 tools/verify_engine_assets.py` 检查资源 SHA-256；`tools/engine-assets.lock.json` 记录发布包地址、原始包哈希及最终资源哈希。更换内置引擎或词库时必须重新执行真实候选测试，并更新资源目录版本，避免读取旧部署结果。IPA 另有运行时独立资源更新入口，不能用内置版本代替用户当前安装版本。
 
 | 组件 | 精确来源 | 本项目接入方式 |
 | --- | --- | --- |
@@ -13,10 +13,12 @@
 | 中文资源 | 上述 Trime APK 的 assets/shared | 保留拼音、词典、OpenCC 数据；本项目修改 t2s.json 使用文本词典，并增加禁用学习的 schema patch |
 | LatinIME 英文核心与词库 | [HeliBoard 4.1，revision `9f5bb635c2e8609dcd95dc7506c0c58fba82a52c`](https://github.com/HeliBorg/HeliBoard/tree/9f5bb635c2e8609dcd95dc7506c0c58fba82a52c) | 从官方 APK 原样提取两个 ABI 的 libjni_latinime.so 与 main_en-US.dict；保留四个 JNI 注册类的方法签名，使用本项目的最小只读适配器，替换 easy_en |
 | JNA | [5.17.0](https://github.com/java-native-access/jna/tree/5.17.0) | 原始 Android AAR；ABI 过滤只保留 arm64-v8a/x86_64 |
+| E5 与 ONNX Runtime | 固定 E5 small 模型 revision、ONNX Runtime 1.23.2 / Extensions 0.13.0 | 模型分块、分词图、校准数据和 AAR 随源码保存；详见 [语义排序](context-ranking.md) |
+| IPA_Engine | 内置 v0.0.1-dev，发布提交 `53eed9518f932934a28aceb4e03a453d545f80b8` | ARM64 DEX/JNI 与预编译压缩词典，独立 `:ipa` 服务；版本及更新合同见 [IPA 资源更新](ipa-updates.md) |
 
 Engine Management 展示已接入的输入功能及版本，也单独标记计划项，不代表瞬时原生加载状态。LatinIME 英文补全、拼写纠错与短上下文下一词预测已接入，个人学习仍属后续计划。已打包的 librime 版本为 1.17.0：x86_64 二进制的 `RimeGetVersion()` 返回该字符串；arm64 库同样包含 1.17.0 版本字符串。下述 1.14.0 是适配器采用的 C API 表定义来源，不是已打包引擎版本。Mozc 使用固定源码 revision 与 Libre Japanese Input 来源版本；OpenCC 的独立版本未在当前锁定资源中确认，界面明确标注来源为 Trime 3.3.12。方案/词典版本来自资源声明，内置排序、计算和验证码规则模块随应用版本显示。
 
-语义排序设置接口为 `ContextRankingSettings`：使用现有 `ipa_board_prefs` 的 `semantic_context_enabled` 布尔值，默认 false，每侧上下文读取上限 256 字符。Engine Management 提供开关和延迟提示。接口先在 `6f4bc71` 提交并推送，再接入实现，保持同一键与默认值。关闭时不绑定语义服务、不部署或加载模型；关闭已启用的开关会取消请求、解绑并释放模型。普通候选始终先显示。详见 [实验性上下文联想](context-ranking.md)。
+语义排序设置接口为 `ContextRankingSettings`：使用现有 `ipa_board_prefs` 的 `semantic_context_enabled` 布尔值，默认 false，每侧上下文读取上限 256 个 UTF-16 单元。Engine Management 的 Multilingual E5 开关是此能力的唯一开关，并提供延迟提示。关闭时不绑定语义服务、不部署或加载模型；关闭已启用的开关会取消请求、解绑并释放模型。普通候选始终先显示。详见 [实验性上下文语义排序](context-ranking.md)。
 
 Rime function table顺序来自 librime 1.14.0 的 rime_api.h。适配器限定 64 位 ABI，并在访问函数前检查表大小。Mozc 的小型 wire reader 对应上述 revision 的 commands.proto / candidates.proto，支持该协议使用的 group、嵌套消息、未知字段跳过及输入长度限制。
 
@@ -24,7 +26,7 @@ Rime 的原生候选可能只覆盖原串前缀。本版本在禁用用户学习
 
 ## 生命周期与隐私
 
-`:rime`、`:mozc` 和 `:english` 为独立、非导出的进程。每个进程串行执行原生调用，查询按 revision 合并；主进程丢弃过期结果，点击候选也校验视图快照 revision。原生崩溃时剩余引擎和原样上屏仍可使用。
+`:rime`、`:mozc`、`:english` 和 `:ipa` 为独立、非导出的进程。每个进程串行执行原生调用，查询按 revision 合并；主进程丢弃过期结果，点击候选也校验视图快照 revision。原生崩溃时剩余引擎和原样上屏仍可使用。
 
 英文查询最多接收游标前 256 字符，去掉当前组合文本后提取连续英文后缀（最多三个前词，遇到其他文字或句末标点停止）。en_US 词库头声明 `version=54`、`date=1414726260`、格式 202，实际预测使用词库 bigram 数据；这是静态词库预测，不是长上下文神经模型。词表来源见打包的 `English-dictionary-source.txt`，指向 OpenBoard v1.4.5 原始词表。原生每次最多返回 18 个候选，当前英文词最长 47 个字母；保留原生分数、来源顺序与候选类型，跨语言采用有界启发式排序。没有实际触点坐标，英文纠错使用完整编辑距离，不假设用户的自定义键盘是 QWERTY。
 
@@ -32,7 +34,7 @@ Rime 的原生候选可能只覆盖原串前缀。本版本在禁用用户学习
 
 LatinIME JNI 从优先队列按低分到高分输出数组；数组下标不能直接作为来源排名。适配器先按原生分数降序排序，同分时按码点长度与文字排序，去重后重新生成 rank，再交给跨语言混排。这与上游前端的排序方向一致，同时适用于补全、纠错和预测。
 
-用户数据与部署资源放在 noBackupFilesDir。首版不写个人输入学习记录；Rime 禁用 user_dict，Mozc 使用 incognito 配置。上述限制仅针对输入引擎。当前应用具有联网权限，用于手动更新 Emoji 目录；输入法会在系统允许读取时保存本地剪贴板历史（包括敏感标记内容），未固定项最多 20 条。应用启用了系统备份，现有规则尚未排除剪贴板历史。短信自动复制可选，Broadcast 模式需短信接收权限。
+引擎部署资源放在 noBackupFilesDir；布局、偏好、剪贴板等应用数据分布于各自私有目录，并非全部排除系统备份。当前不写个人输入学习记录；Rime 禁用 user_dict，Mozc 使用 incognito 配置。上述学习限制仅针对输入引擎。应用具有联网权限，用于手动更新 Emoji 目录、查询版本与下载 IPA 资源；输入法会在系统允许读取时保存本地剪贴板历史（包括敏感标记内容），未固定项最多 20 条。应用启用了系统备份，现有规则尚未排除剪贴板历史。短信自动复制可选，Broadcast 模式需短信接收权限。
 
 ## 构建、检查与当前限制
 
@@ -48,8 +50,8 @@ python3 tools/regression.py run --suite full --serial DEVICE_SERIAL --no-build
 - 首次 Rime 部署需编译词典，界面保持可用并显示加载状态；后续复用部署结果。
 - 候选当前为有界列表：Rime 检查前 40 个原生候选，Mozc 最多 60 个，LatinIME 最多 18 个。展开显示这一批结果，尚无滚动到末尾继续向引擎分页。
 - 排序采用来源内排名、原文匹配、具体 bigram 关联与候选类型等启发式特征，另有可选的实验性语义重排；不是经过跨语言语料校准的概率。尚无持久化个性学习，也没有无分隔整串跨语言分词。
-- Rime 的两个二进制为 16KB ELF 对齐；当前 Mozc 上游发布库和 ONNX Runtime Extensions 0.13.0 AAR 中的原生库为 **4KB 对齐**。此次真机验证不等于 16KB 页设备兼容验证；面向此类设备发布前，应按上游 source revision 重编译 Mozc 与 Extensions 并验证。不要通过修改 ELF 头伪造兼容性。
-- 当前使用 Trime 发布的组合 JNI 库，其中包含 GPL 代码，不能仅将其视为 BSD 的 librime。许可证文本和原始声明在 app/src/main/assets/licenses。对外分发需按实际组合依赖提供相应源码/许可材料；若要求宽松许可发行，需独立构建纯 librime/OpenCC 并替换该二进制。本次未发布软件，也未给项目自有代码指定新许可证。
+- Rime 的两个二进制为 16KB ELF 对齐；当前 Mozc 上游发布库和 ONNX Runtime Extensions 0.13.0 AAR 中的原生库为 **4KB 对齐**。既有设备验证不等于 16KB 页设备兼容验证；面向此类设备发布前，应按上游 source revision 重编译 Mozc 与 Extensions 并验证。不要通过修改 ELF 头伪造兼容性。
+- 当前使用 Trime 发布的组合 JNI 库，其中包含 GPL 代码，不能仅将其视为 BSD 的 librime。许可证文本和原始声明在 app/src/main/assets/licenses。对外分发需按实际组合依赖提供相应源码/许可材料；若要求宽松许可发行，需独立构建纯 librime/OpenCC 并替换该二进制。
 - HeliBoard 发布核心及适配的上游声明包含 Apache-2.0 与 GPL-3.0；两份许可证已保存，官方源码归档的 SHA-256 与固定 revision 已记录。未包含其图标或外部手势库。LatinIME 两个 ABI 的 ELF LOAD 对齐均为 16KB；这不改变 Mozc 的上述兼容限制。
 
 上游原生构建说明：[Trime 源码](https://github.com/osfans/trime/tree/v3.3.12)、[Libre Japanese Input 构建说明](https://github.com/elizagamedev/android-libre-japanese-input/tree/v0.1.2#building-the-mozc-jni-library-and-dataset)。
@@ -63,7 +65,7 @@ python3 tools/regression.py run --suite full --serial DEVICE_SERIAL --no-build
 - 尚未验证 x86_64 运行、16KB 页设备、广泛编辑器兼容性或个人学习；上下文预测质量受静态 en_US v54 词库限制。
 - 排序回归修复：真机复现旧适配器把 `wha` 的低分 `whale's` 排在高分 `what` 之前。修复后 `what` 为英文首选及混排首选；新增回归覆盖多组前缀、纠错和预测的分数降序与连续来源排名。五项原生引擎设备测试通过。
 
-## 本次验证记录（2026-09-28）
+## 初始接入验证记录（2026-09-28）
 
 - `testDebugUnitTest`：16 项通过；`assembleDebug`、`assembleDebugAndroidTest`、`lintDebug` 通过（lint 存在非阻断警告）。
 - 已连接 ARM64 设备通过 ADB instrumentation 运行完整套件：47 项通过。
@@ -81,13 +83,17 @@ python3 tools/regression.py run --suite full --serial DEVICE_SERIAL --no-build
 
 验证：79 项单元测试及 16 项定向设备测试通过（组合输入 8 项、原生候选 8 项）。设备示例包括 `nihao123, → 你好123,`、`中文123hel! → 中文123hello!`、`nihongo123! → 日本語123!`、`天气123， → 预报/預報` 和 `ありがとう, → ございます`。81 个固定引擎资源哈希校验通过。
 
-## 引擎开关及版本查询（2026-10-03）
+## 引擎开关及版本查询（当前行为）
 
-Engine Management 保存 13 个功能开关，除语义排序仍默认关闭外，其他现有功能默认开启。主进程读取配置，将不可变策略随每次 Messenger 请求传入独立的引擎进程，避免跨进程 SharedPreferences 缓存问题。设置改变时立即清除旧候选并重新查询；另以请求序号拒绝相同组合版本下的旧策略回复。某语言的转换、补全/纠错及预测都关闭后，不再绑定或查询该语言服务；已加载的进程级原生库允许缓存，不尝试不安全的 dlclose。
+Engine Management 的功能开关以 `EngineFeature` 为准，当前共 14 项，包含 IPA。除 E5 语义排序默认关闭外，其余能力开关默认开启；这不等于功能模式自动开启：行内计算模式与短信自动复制仍各自默认关闭，必须同时满足能力开关和对应模式条件。
 
-关闭英文补全保留纠错，反之亦然；过滤发生在片段候选组合之前。关闭简化不生成简体候选，但中文词组查询仍可进行内部简转繁上下文归一化。关闭评分采用稳定来源顺序和去重；关闭分段不查询含数字、标点的组合，仍保留原样提交路径。所有候选关闭不会丢弃预输入。计算和本地短信解析均有独立门控，拼音纠错是 Rime 方案规则的一部分，当前未实现独立切换。
+主进程读取配置，将不可变策略随每次 Messenger 请求传入独立的引擎进程，避免跨进程 SharedPreferences 缓存问题。设置改变时立即清除旧候选并重新查询；另以请求序号拒绝相同组合版本下的旧策略回复。某语言的转换、补全/纠错及预测都关闭后，不再绑定或查询该语言服务；已加载的进程级原生库允许缓存，不尝试不安全的 dlclose。运行状态另由 [引擎仪表盘](engine-dashboard.md) 显示，配置开启不能代替加载成功。
 
-版本查询仅在展开类目时读取固定官方 GitHub Releases/Hugging Face 模型元数据。每个条目显示当前版本及最新来源版本/模型修订，不提供资产下载或引擎替换路径。内置/尚未集成条目明确显示无独立发行版或未集成。连接、读取均设 5 秒超时，响应限制 1 MiB，并在后台解析；成功缓存 5 分钟，失败缓存 30 秒。关闭页面时丢弃回调，限时 HTTPS 请求自行在后台结束，避免中断套接字拖慢主线程重建。
+关闭英文补全保留纠错，反之亦然；过滤发生在片段候选组合之前。关闭简化不生成 Rime/OpenCC 的简体候选，但中文词组查询仍可进行内部简转繁上下文归一化，IPA 词典直接返回的目标文字不属于 OpenCC 转换。关闭评分采用稳定来源顺序和去重；关闭分段后，各引擎只查询自己可接受的完整编码，不再拆分混有其他字符的输入，仍保留原样提交路径。所有候选关闭不会丢弃预输入。计算和本地短信解析均有独立门控，拼音纠错是 Rime 方案规则的一部分，当前未实现独立切换。
+
+普通引擎条目在展开类目时读取固定官方 GitHub Releases/Hugging Face 模型元数据，显示当前版本及最新来源版本/模型修订，不提供 Rime/Mozc/LatinIME/E5 的下载或替换。内置/尚未集成条目明确显示无独立发行版或未集成。连接、读取均设 5 秒超时，响应限制 1 MiB，并在后台解析；成功缓存 5 分钟，失败缓存 30 秒。关闭页面时丢弃回调，限时 HTTPS 请求自行在后台结束，避免中断套接字拖慢主线程重建。
+
+IPA 资源管理页采用独立的 `board-update.json` 检查与引擎/词典下载路径；清单地址、格式及失败回退见 [IPA 更新接口](ipa-updates.md)。它不会自动跟随 GitHub 的最新 tag 或 Release。
 
 
 ### 拼音纠错的归属与选型
@@ -110,3 +116,9 @@ Engine Management 删除重复的拼音纠错条目及 `Pinyin Correction Engine
 混输分段由各引擎声明输入语法，中文引擎可处理拼音和注音片段，英文/日文引擎只查询各自支持的字母片段。数字、汉字、表情及标点仍原样保留。关闭混输分段后，完整注音串仍可转换；含其他文字的组合只允许原样提交。中文转换关闭同时停用拼音与注音候选，不影响单独开启的中文联想。布局初始化保留用户既有配置，已有注音页面会直接获得汉字候选。
 
 验证（2026-10-03）：87 项单元测试、9 项注音设备测试、11 项原有多语引擎设备测试通过；Android 15 ARM64 真机确认带调/无调转换、轻声、简繁、混输保留、独立开关、删除重输与汉字提交，非法前置声调不被静默删除。Debug 构建与 lint 检查通过（0 error），87 项引擎资源 SHA-256 检查通过。
+
+## IPA 实验接入（0.0.3）
+
+IPA_Engine 已以独立 `:ipa` 服务接入，当前只提供 ARM64 的 IPA → 中英日文字候选；引擎开关可独立关闭。内置版本为 v0.0.1-dev，固定于上游发布提交 `53eed9518f932934a28aceb4e03a453d545f80b8`，包含只读 DEX、原始 JNI 和 IPADWG01 v2 压缩词典；这是内置基线，不代表上游最新版或用户更新后的活动版本。资源哈希、原始 AAR 来源与字典数据声明均已保留。
+
+Engine Management 提供独立资源页，支持引擎和预编译词典分别更新。更新路径无输入或上下文上传；客户端没有词库编译器。活动指针原子切换，旧请求通过资源 generation 拒绝；词典更新用当前引擎在 `:ipa_check` 中验证，失败保留旧资源。具体发布接口见 [IPA 更新接口](ipa-updates.md)。

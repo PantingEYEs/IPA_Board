@@ -30,7 +30,7 @@ class PageGroupUiTest {
             val first = PageGroupManager.active(context).id
             PageGroupManager.state(context).groups.filter { it.id != first }.forEach { PageGroupManager.delete(context, it.id) }
             PageGroupManager.setPages(context, first, listOf(file))
-            PageGroupManager.setAppearance(context, first, GroupAppearance("#123456", "#FFFFFF", 250, 20))
+            PageGroupManager.setAppearance(context, first, GroupAppearance(backgroundColor = "#123456", symbolColor = "#FFFFFF", heightDp = 250, fontSizeSp = 20))
             val second = PageGroupManager.create(context, "Group UI Empty")
             ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
                 scenario.onActivity { activity ->
@@ -42,7 +42,7 @@ class PageGroupUiTest {
                 onView(withText(file.removeSuffix(".json"))).inRoot(isDialog()).perform(click())
                 onView(withText("Save")).inRoot(isDialog()).perform(click())
                 assertEquals(listOf(file), PageGroupManager.pages(context))
-                PageGroupManager.setAppearance(context, second, GroupAppearance("#654321", "#FFFFFF", 350, 30))
+                PageGroupManager.setAppearance(context, second, GroupAppearance(backgroundColor = "#654321", symbolColor = "#FFFFFF", heightDp = 350, fontSizeSp = 30))
                 scenario.recreate()
                 scenario.onActivity { activity ->
                     assertEquals("350dp", activity.findViewById<TextView>(R.id.tv_height_value).text.toString())
@@ -65,12 +65,12 @@ class PageGroupUiTest {
                 scenario.onActivity { activity ->
                     assertTrue(activity.findViewById<CheckBox>(R.id.cb_all_pages).isChecked)
                     assertTrue(activity.findViewById<Button>(R.id.btn_rename_layout).isEnabled)
-                    assertTrue(activity.findViewById<TextView>(R.id.tv_layout_name).text.contains("outside this group"))
+                    assertTrue(activity.findViewById<Spinner>(R.id.sp_layouts).selectedItem.toString().contains("outside this group"))
                 }
                 assertNull(PageGroupManager.activeFilename(context))
                 assertEquals(SettingsConstants.DEFAULT_LAYOUT, LayoutFileManager.activeLayout(context))
                 onView(withId(R.id.btn_delete_group)).perform(scrollTo(), click())
-                onView(withText("Delete")).inRoot(isDialog()).perform(click())
+                onView(withId(android.R.id.button1)).inRoot(isDialog()).perform(click())
                 assertEquals(second, PageGroupManager.active(context).id)
                 assertNotNull(LayoutFileManager.loadLayout(context, file))
                 scenario.onActivity { assertFalse(it.findViewById<Button>(R.id.btn_delete_group).isEnabled) }

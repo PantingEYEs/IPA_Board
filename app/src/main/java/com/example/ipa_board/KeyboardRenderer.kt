@@ -2,6 +2,7 @@ package com.example.ipa_board
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.ViewGroup
@@ -12,18 +13,22 @@ import android.widget.TextView
 object KeyboardRenderer {
 
     fun render(context: Context, container: ViewGroup, layout: KeyboardLayout, heightPx: Int, symbolColor: Int,
-        shiftEnabled: Boolean = false,
+        popupBgColor: Int = Color.WHITE,
+        popupSymbolColor: Int = Color.BLACK,
+        shiftState: ShiftState = ShiftState.OFF,
         ctrlEnabled: Boolean = false,
         showUnassignedPlaceholders: Boolean = false,
         showKeyPreview: Boolean = false,
         fontSizeSp: Int = SettingsConstants.DEFAULT_KEYBOARD_FONT_SIZE,
         showGrid: Boolean = true,
+        remoteKeyboardEnabled: Boolean = false,
         onKeyQuickSwipeItemClick: ((Int, Int, KeySlot, LongPressItem) -> Unit)? = null,
         onKeyLongItemClick: ((Int, Int, KeySlot, LongPressItem) -> Unit)? = null,
         onKeyLongClick: ((Int, Int, KeySlot) -> Unit)? = null,
         onKeyClick: ((Int, Int, KeySlot) -> Unit)? = null
     ) {
         container.removeAllViews()
+        val shiftEnabled = shiftState != ShiftState.OFF
         
         val totalWeight = layout.rows.sumOf { it.heightWeight.toDouble() }.toFloat()
 
@@ -43,15 +48,32 @@ object KeyboardRenderer {
             }
 
             for ((columnIndex, slot) in row.slots.withIndex()) {
+                val capsLocked = slot.action == KeyAction.SHIFT && shiftState == ShiftState.CAPS_LOCK
+                val functionLabel = if (capsLocked) context.getString(R.string.caps_lock_label) else slot.action.keyLabel
                 val active = (slot.action == KeyAction.SHIFT && shiftEnabled) ||
-                    (slot.action == KeyAction.CTRL && ctrlEnabled)
+                    (slot.action == KeyAction.CTRL && ctrlEnabled) ||
+                    (slot.action == KeyAction.REMOTE_KEYBOARD && remoteKeyboardEnabled)
                 val slotView = FrameLayoutWithBorder(context, symbolColor, active, showGrid).apply {
                     isSelected = active
+                    if (slot.action == KeyAction.SHIFT) {
+                        stateDescription = context.getString(when (shiftState) {
+                            ShiftState.OFF -> R.string.shift_state_off
+                            ShiftState.SINGLE -> R.string.shift_state_once
+                            ShiftState.CAPS_LOCK -> R.string.caps_lock_label
+                        })
+                    } else if (slot.action == KeyAction.REMOTE_KEYBOARD) {
+                        stateDescription = context.getString(if (remoteKeyboardEnabled)
+                            R.string.remote_keyboard_on else R.string.remote_keyboard_off)
+                    }
+                    multifunctionMode = slot.multifunctionMode
+                    popupConfiguration = slot.popupConfiguration
                     previewEnabled = showKeyPreview
+                    this.popupBgColor = popupBgColor
+                    this.popupSymbolColor = popupSymbolColor
                     this.shiftEnabled = shiftEnabled
                     this.ctrlEnabled = ctrlEnabled
                     tapPreview = when {
-                        slot.action != KeyAction.TEXT -> slot.action.keyLabel
+                        slot.action != KeyAction.TEXT -> functionLabel
                         slot.text == " " -> "␣"
                         slot.text == "\n" -> "↵"
                         slot.text == "\t" -> "⇥"
@@ -76,10 +98,15 @@ object KeyboardRenderer {
                 }
                 
                 val unassigned = slot.action == KeyAction.TEXT && slot.text.isEmpty()
-                val label = if (unassigned && !showUnassignedPlaceholders) "" else slot.displayText(shiftEnabled)
+                val label = when {
+                    capsLocked -> functionLabel
+                    unassigned && !showUnassignedPlaceholders -> ""
+                    else -> slot.displayText(shiftEnabled)
+                }
                 val textView = TextView(context).apply {
                     textSize = fontSizeSp.coerceIn(SettingsConstants.MIN_KEYBOARD_FONT_SIZE, SettingsConstants.MAX_KEYBOARD_FONT_SIZE).toFloat()
                     text = label + if (active) " •" else ""
+                    setTypeface(null, if (capsLocked) Typeface.BOLD else Typeface.NORMAL)
                     maxLines = 2
                     gravity = Gravity.CENTER
                     setTextColor(symbolColor)
@@ -104,7 +131,8 @@ object KeyboardRenderer {
                         onKeyQuickSwipeItemClick(rowIndex, columnIndex, slot, item)
                     }
                 }
-                if ((onKeyLongItemClick != null || onKeyLongClick != null) && slot.hasLongPress) {
+                val popupMode = slot.multifunctionMode == MultifunctionMode.POPUP
+                if ((onKeyLongItemClick != null || onKeyLongClick != null) && (slot.hasLongPress || popupMode)) {
                     slotView.onLongPressItemClick = { item ->
                         if (onKeyLongItemClick != null) {
                             onKeyLongItemClick(rowIndex, columnIndex, slot, item)
@@ -122,7 +150,12 @@ object KeyboardRenderer {
                         true
                     }
                 }
-                if (slot.longPressAction == KeyAction.REPEAT_BACKSPACE || slot.action == KeyAction.REPEAT_BACKSPACE) {
+                slotView.repeatForItem = { item ->
+                    if (item.action == KeyAction.REPEAT_BACKSPACE) {
+                        { slotView.onLongPressItemClick?.invoke(item); Unit }
+                    } else null
+                }
+                if (!popupMode && (slot.longPressAction == KeyAction.REPEAT_BACKSPACE || slot.action == KeyAction.REPEAT_BACKSPACE)) {
                     slotView.onLongPressRepeat = {
                         val firstItem = slot.effectiveLongPressItems.firstOrNull() ?: LongPressItem(text = slot.longPressText, action = slot.longPressAction)
                         if (onKeyLongItemClick != null) {
@@ -137,7 +170,7 @@ object KeyboardRenderer {
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     Gravity.CENTER
                 ))
-                if (slot.hasLongPress) {
+                if (slot.hasLongPress && !popupMode) {
                     val firstItem = slot.effectiveLongPressItems.firstOrNull()
                     // The persistent corner label shows the symbol, independently of Ctrl input mode.
                     val longPressLabel = firstItem?.previewText(shiftEnabled)

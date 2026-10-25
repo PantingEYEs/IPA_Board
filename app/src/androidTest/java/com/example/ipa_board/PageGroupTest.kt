@@ -36,7 +36,7 @@ class PageGroupTest {
         assertEquals(1, state.groups.size)
         assertEquals(listOf(second, first), state.active.pages)
         assertEquals(first, PageGroupManager.activeFilename(context))
-        assertEquals(GroupAppearance("#123456", "#ABCDEF", 300, 25), state.active.appearance)
+        assertEquals(GroupAppearance(backgroundColor = "#123456", symbolColor = "#ABCDEF", heightDp = 300, fontSizeSp = 25), state.active.appearance)
         PageGroupManager.initialize(context)
         assertEquals(state, PageGroupManager.state(context))
         assertFalse(context.getSharedPreferences(SettingsConstants.PREFS_NAME, 0).contains(SettingsConstants.KEY_BG_COLOR_HEX))
@@ -63,11 +63,11 @@ class PageGroupTest {
     @Test fun samePageUsesDifferentGroupAppearanceAndSelectionSurvivesReorder() {
         val file = LayoutFileManager.createBlankLayout(context, "shared")
         val first = PageGroupManager.active(context).id
-        val firstStyle = GroupAppearance("#123456", "#ABCDEF", 250, 20)
+        val firstStyle = GroupAppearance(backgroundColor = "#123456", symbolColor = "#ABCDEF", heightDp = 250, fontSizeSp = 20)
         PageGroupManager.setAppearance(context, first, firstStyle)
         val second = PageGroupManager.create(context, "Second")
         PageGroupManager.addPages(context, second, listOf(file))
-        val secondStyle = GroupAppearance("#654321", "#FEDCBA", 350, 30)
+        val secondStyle = GroupAppearance(backgroundColor = "#654321", symbolColor = "#FEDCBA", heightDp = 350, fontSizeSp = 30)
         PageGroupManager.setAppearance(context, second, secondStyle)
         PageGroupManager.reorder(context, listOf(second, first))
         assertEquals("0 · Second", PageGroupManager.label(context, PageGroupManager.active(context)))
@@ -80,6 +80,30 @@ class PageGroupTest {
         assertFalse(json.has("appearance"))
         assertFalse(json.has("groups"))
         assertFalse(json.has("pageGroups"))
+    }
+
+    @Test fun groupAppearanceSupportsPopupAndPointerColors() {
+        val appearance = GroupAppearance(
+            backgroundColor = "#112233",
+            symbolColor = "#445566",
+            popupBackgroundColor = "#778899",
+            popupSymbolColor = "#AABBCC",
+            pointerPathColor = "#111111",
+            pointerAxisColor = "#222222",
+            pointerCrosshairColor = "#333333",
+            heightDp = 220,
+            fontSizeSp = 18,
+            usePointerDifferenceBlend = true
+        )
+        val json = appearance.toJson()
+        val restored = GroupAppearance.fromJson(json)
+        assertEquals(appearance, restored)
+        assertEquals("#778899", restored.popupBackgroundColor)
+        assertEquals("#AABBCC", restored.popupSymbolColor)
+        assertEquals("#111111", restored.pointerPathColor)
+        assertEquals("#222222", restored.pointerAxisColor)
+        assertEquals("#333333", restored.pointerCrosshairColor)
+        assertTrue(restored.usePointerDifferenceBlend)
     }
 
     @Test fun groupDeletionKeepsFilesAndLastGroupCannotBeDeleted() {

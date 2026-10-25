@@ -1,6 +1,6 @@
-# 实验性上下文联想
+# 实验性上下文语义排序
 
-设置接口先在 `6f4bc71` 提交并推送，再接入以下实现，始终使用 `ContextRankingSettings` 的 `semantic_context_enabled`，默认 false。Engine Management 开关告知候选延迟和内存开销，关闭时不部署、绑定或加载语义模型。
+Engine Management 的 **Multilingual E5 · Semantic context ranking** 是语义排序的唯一开关，使用 `ContextRankingSettings` 的 `semantic_context_enabled`，默认 false。开关说明候选延迟和内存开销，关闭时不部署、绑定或加载语义模型。普通 CandidateRanker 的评分开关独立控制基础排序，不等同于 E5。
 
 ## 输入与评分
 

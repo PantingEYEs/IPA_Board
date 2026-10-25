@@ -62,6 +62,31 @@ class DiagnosticsContractTest {
         assertFalse(preferences.contains(EngineFeature.SEMANTIC.key))
     }
 
+    @Test fun logFileStorageAndImeLifecycleEventsWork() {
+        AppDiagnostics.configure(context)
+        DebugDiagnosticsSettings.setEnabled(context, true)
+        AppDiagnostics.clearLogFile(context)
+        assertEquals(0L, AppDiagnostics.getLogFileSize(context))
+
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT)
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT_VIEW)
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.SELECTION_CHANGE)
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT_VIEW)
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT)
+
+        val size = AppDiagnostics.getLogFileSize(context)
+        assertTrue("Log file size should be greater than 0 B when logging is enabled", size > 0L)
+        assertEquals(listOf("START_INPUT", "START_INPUT_VIEW", "SELECTION_CHANGE", "FINISH_INPUT_VIEW", "FINISH_INPUT")
+            .map { "IME/$it/READY" }, File(context.filesDir, "diagnostics.log").readLines())
+
+        AppDiagnostics.clearLogFile(context)
+        assertEquals(0L, AppDiagnostics.getLogFileSize(context))
+
+        DebugDiagnosticsSettings.setEnabled(context, false)
+        AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT)
+        assertEquals(0L, AppDiagnostics.getLogFileSize(context))
+    }
+
     @Test fun diagnosticsPersistIndependentlyWithoutChangingAnyEngineChoice() {
         val preferences = EngineSettings.preferences(context)
         preferences.edit().apply {
@@ -365,7 +390,7 @@ class DiagnosticsContractTest {
                 }
                 coordinator!!.start()
                 coordinator!!.query(27L, "test-owned-input")
-                assertEquals(3, context.bindAttempts.size)
+                assertEquals(4, context.bindAttempts.size)
                 assertTrue(states.isNotEmpty())
                 val result = states.last()
                 assertEquals(27L, result.revision)
@@ -389,6 +414,7 @@ class DiagnosticsContractTest {
     private class DiagnosticContext(base: Context) : ContextWrapper(base), AutoCloseable {
         private val prefix = "diagnostics-contract-${UUID.randomUUID()}-"
         private val names = mutableSetOf<String>()
+        private val logDirectory = File(base.cacheDir, prefix).apply { check(mkdirs()) }
         val bindAttempts = mutableListOf<String?>()
         val connections = mutableListOf<ServiceConnection>()
         var throwSecurity = false
@@ -396,6 +422,7 @@ class DiagnosticsContractTest {
         var unbindCalls = 0
 
         override fun getApplicationContext(): Context = this
+        override fun getFilesDir(): File = logDirectory
 
         override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
             val isolated = prefix + name
@@ -414,6 +441,7 @@ class DiagnosticsContractTest {
 
         override fun close() {
             names.forEach { baseContext.deleteSharedPreferences(it) }
+            logDirectory.deleteRecursively()
         }
     }
 }

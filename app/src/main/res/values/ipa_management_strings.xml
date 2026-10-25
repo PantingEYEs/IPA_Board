@@ -1,0 +1,36 @@
+<resources>
+    <string name="ipa_management_title">IPA Engine</string>
+    <string name="ipa_management_entry">Manage IPA engine and dictionary</string>
+    <string name="ipa_management_entry_description">Check versions and update the engine or dictionary independently.</string>
+    <string name="ipa_management_development">Development engine and dictionary</string>
+    <string name="ipa_management_local_title">Installed resources</string>
+    <string name="ipa_management_local_pending">Reading local resources…</string>
+    <string name="ipa_management_local_missing">No installed resources</string>
+    <string name="ipa_management_local_versions">Engine: %1$s\nDictionary: %2$s</string>
+    <string name="ipa_management_local_files">Binary dictionary: %1$s</string>
+    <string name="ipa_management_available">Available</string>
+    <string name="ipa_management_missing">Missing</string>
+    <string name="ipa_management_remote_title">Latest repository resources</string>
+    <string name="ipa_management_remote_unchecked">Not checked</string>
+    <string name="ipa_management_remote_versions">Engine: %1$s\nDictionary: %2$s\nIPA keys: %3$d</string>
+    <string name="ipa_management_check">Check updates</string>
+    <string name="ipa_management_update_engine">Update engine</string>
+    <string name="ipa_management_update_dictionary">Update dictionary</string>
+    <string name="ipa_management_update_engine_help">Updates only the engine; keeps the current dictionary.</string>
+    <string name="ipa_management_update_dictionary_help">Downloads a precompiled binary dictionary compatible with the current engine. Replaces the old dictionary only after verification.</string>
+    <string name="ipa_management_unsupported_device">The current development engine supports arm64 devices. This device can manage resources, but cannot run this engine.</string>
+    <string name="ipa_management_installing">Preparing installed resources…</string>
+    <string name="ipa_management_checking">Checking repository resources…</string>
+    <string name="ipa_management_updating_engine">Updating engine…</string>
+    <string name="ipa_management_updating_dictionary">Downloading and verifying dictionary…</string>
+    <string name="ipa_management_ready">Local resources are ready.</string>
+    <string name="ipa_management_checked">Latest versions checked.</string>
+    <string name="ipa_management_engine_updated">Engine updated. Current dictionary preserved.</string>
+    <string name="ipa_management_dictionary_updated">Dictionary updated. Current engine preserved.</string>
+    <string name="ipa_management_failure_network">Unable to reach the repository. Check the connection and retry.</string>
+    <string name="ipa_management_failure_resources">Resource files are incomplete or invalid. Retry the update.</string>
+    <string name="ipa_management_failure_storage">Unable to read or write local resources. Check available storage and retry.</string>
+    <string name="ipa_management_failure_unsupported">These resources are not supported by the current engine or device.</string>
+    <string name="ipa_management_failure_busy">Another resource operation is in progress. Wait for it to finish and retry.</string>
+    <string name="ipa_management_failure_other">The operation could not finish. Please retry.</string>
+</resources>

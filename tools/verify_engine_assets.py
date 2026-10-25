@@ -27,6 +27,8 @@ def print_alignment(label, data):
 
 for path in sorted((root / 'app/src/main/jniLibs').glob('*/*.so')):
     print_alignment(path.relative_to(root), path.read_bytes())
+for path in sorted((root / 'app/src/main/assets/engines/ipa').glob('**/*.so')):
+    print_alignment(path.relative_to(root), path.read_bytes())
 for path in sorted((root / 'app/libs').glob('onnxruntime*.aar')):
     with zipfile.ZipFile(path) as archive:
         for name in sorted(archive.namelist()):
