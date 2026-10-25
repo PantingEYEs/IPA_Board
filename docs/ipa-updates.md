@@ -17,11 +17,13 @@
 | artifactCommit | 产物已发布提交的 40 位小写 SHA；只在远程 board-update.json 必需 |
 | schemaVersion / entryPoint | `1` / `com.ipaengine.graph.GraphEngine` |
 | engineVersion / dictionaryVersion | 分别显示的版本字符串，长度 1–100；词典版本独立变更 |
-| abi / minSdk | abi 必须为 `arm64-v8a`；minSdk 是引擎最低 API，当前解析器接受 26–36，内置为 26。IPA Board 自身最低 API 仍为 35 |
+| abi / minSdk | abi 必须为 `arm64-v8a`；minSdk 是引擎最低 API，当前解析器接受 26–36，内置为 26。IPA Board 自身最低适配 API 仍为 35 |
 | dictionaryFormat / dictionaryKeys | 当前为 `2` / IPA 编码数，1–2,000,000 |
 | dexPath / nativePath / dictionaryPath | 同仓库内相对路径；不允许外部 URL、绝对路径或 `..` |
 | dexBytes / nativeBytes / dictionaryBytes | 实际文件长度，上限分别为 4 MB、8 MB、40 MB |
 | dexSha256 / nativeSha256 / dictionarySha256 | 对应文件的 64 位小写 SHA-256 |
+
+> IPA Board 的 `minSdk` 改为 26，以便通过安装流程从而收集运行故障，但本项目最低适配 API 版本仍然是 35。
 
 引擎文件为 `classes.dex` 与 `libipa_graph_android.so`，调用合同保持 GraphEngine 的构造、configure、acceptsInput、getSegmentPattern、queryDetailed、close 及现有公开字段。候选需符合应用已有文本合同，开发调试包返回畸形值时被丢弃。
 
