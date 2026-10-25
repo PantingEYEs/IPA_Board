@@ -10,121 +10,131 @@
             "widthWeight": 1,
             "text": "ㄅ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄉ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ˇ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ˋ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄓ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ˊ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "˙",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄚ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄞ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄢ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
@@ -142,7 +152,8 @@
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           }
         ]
       },
@@ -153,121 +164,131 @@
             "widthWeight": 1,
             "text": "ㄆ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄊ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄍ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄐ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄔ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄗ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄧ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄛ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄟ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄣ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
@@ -279,7 +300,8 @@
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           }
         ]
       },
@@ -290,121 +312,131 @@
             "widthWeight": 1,
             "text": "ㄇ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄋ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄎ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄑ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄕ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄘ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄨ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄜ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄠ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄤ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
@@ -416,7 +448,8 @@
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           }
         ]
       },
@@ -427,121 +460,131 @@
             "widthWeight": 1,
             "text": "ㄈ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄌ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄏ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄒ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄖ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄙ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄩ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄝ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄡ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄥ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
@@ -553,7 +596,8 @@
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           }
         ]
       },
@@ -570,7 +614,8 @@
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
@@ -582,7 +627,8 @@
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
@@ -594,31 +640,34 @@
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 5,
             "text": "ˉ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "prev_page",
             "swipeRightText": "",
-            "swipeRightAction": "next_page"
+            "swipeRightAction": "next_page",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
             "text": "ㄦ",
             "action": "text",
-            "textBehavior": "auto",
+            "textBehavior": "literal",
             "longPressText": "",
             "longPressAction": "text",
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
@@ -630,7 +679,8 @@
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           }
         ]
       },
@@ -647,7 +697,8 @@
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
@@ -659,7 +710,8 @@
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
@@ -671,7 +723,8 @@
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           },
           {
             "widthWeight": 1,
@@ -683,10 +736,30 @@
             "swipeLeftText": "",
             "swipeLeftAction": "text",
             "swipeRightText": "",
-            "swipeRightAction": "text"
+            "swipeRightAction": "text",
+            "multifunctionMode": "classic"
           }
         ]
       }
-    ]
+    ],
+    "engineBinding": {
+      "version": 1,
+      "states": {
+        "engine_ipa_conversion": false,
+        "engine_chinese_conversion": true,
+        "engine_japanese_conversion": false,
+        "engine_english_completion": false,
+        "engine_script_conversion": true,
+        "engine_candidate_ranking": true,
+        "semantic_context_enabled": false,
+        "engine_calculator": true,
+        "engine_sms_otp": true,
+        "engine_english_prediction": true,
+        "engine_chinese_prediction": true,
+        "engine_japanese_prediction": false,
+        "engine_english_correction": false,
+        "engine_mixed_segmentation": true
+      }
+    }
   }
 }
