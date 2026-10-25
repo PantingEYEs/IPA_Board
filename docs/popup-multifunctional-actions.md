@@ -66,6 +66,8 @@
 
 页组开启 `Show Pointer Location` 时，触摸轨迹、坐标线和准星也显示在 Popup 上，沿用普通按键预览的颜色、差值混合和指针状态。
 
-## 已知的共用功能缺陷
+<a id="已知的共用功能缺陷"></a>
 
-#20 回归发现，现有 `CompositionController.backspace()` 对预输入文本按 UTF-16 单元退格，删除 Emoji 等补充平面字符时可能留下半个代理对。这不是 Popup 专用行为，Classic 与 Popup 均使用该实现。用户决定暂不修复，后续需单独调整共用退格逻辑；当前等价测试只比较两种交互的文本与 composing 状态，不代表 Unicode 退格正确性已通过。
+## 保留的共用退格行为
+
+#20 回归记录了 `CompositionController.backspace()` 对预输入文本按 UTF-16 单元退格，删除 Emoji 等补充平面字符时可能留下半个代理对。Classic 与 Popup 均使用该实现。用户已明确选择保留这一行为，不纳入 0.0.4 稳定性修复；当前等价测试只比较两种交互的文本与 composing 状态，不将行为保留解释为已实现按码点或可见字符退格。历史记录中的缺陷描述与暂缓决定保留原有上下文，当前计划见 [0.0.4 开发计划](0.0.4-development-plan.md)。

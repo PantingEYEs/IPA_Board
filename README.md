@@ -2,7 +2,9 @@
 
 可自定义的 Android 音标键盘，支持 IPA 输入、中英日混合候选与联想、注音、Emoji、颜文字、剪贴板和行内计算。
 
-当前版本：**0.0.3**，`versionCode = 3`。版本说明见 [v0.0.3 Release Notes](docs/releases/RELEASE_NOTES_0.0.3.md) 和 [更新日志](CHANGELOG.md)；正式安装包以 [GitHub Releases](https://github.com/PantingEYEs/IPA_Board/releases) 为准。
+当前开发版本：**0.0.4-dev**，`versionCode = 4`，开发分支为 `0.0.4-dev`。最新正式版本为 **v0.0.3**；版本说明见 [v0.0.3 Release Notes](docs/releases/RELEASE_NOTES_0.0.3.md) 和 [更新日志](CHANGELOG.md)，正式安装包以 [GitHub Releases](https://github.com/PantingEYEs/IPA_Board/releases) 为准。
+
+0.0.4 计划先在 App 内实现蓝牙键盘，从官方源下载并在客户端适配安装第三方引擎，新增 About、宽屏 Stretch/Split、连续光标控制和 Shortcut 配置导出，并改善基础输入稳定性。IPA Engine 与配套词典继续内置，现有 UTF-16 退格行为保留。以上为开发目标，尚未实现；范围与未决事项见 [0.0.4 开发计划](docs/0.0.4-development-plan.md)。
 
 0.0.3 修复同一输入框重新打开键盘时无候选的问题，加入 Popup 多功能操作、按页引擎绑定、可编辑多功能栏、科学计算、只读引擎仪表盘、日志管理与 Remote Keyboard Mode（Phase 1），改进 Emoji 浏览，并提供 IPA 预置键盘和实验性 IPA 引擎。开发周期的交付范围与后续目标见 [归档计划](docs/archive/0.0.3-development-plan.md)。
 
@@ -117,6 +119,6 @@ python3 tools/regression.py run --suite full --serial DEVICE_SERIAL --no-build
 
 Mozc 与语义分词 Extensions 原生库为 4KB 对齐，尚未验证 16KB 页设备兼容性。既有 debug 回归结果不代表正式签名 release 或其他设备已通过。
 
-已知问题包括预输入退格可能切断 Emoji 代理对，以及部分回归中的输入法窗口等待超时；这两项尚未修复。API 31 诊断中，Engine Management 和 Dashboard 仍有较新系统接口调用导致的崩溃，API 26 与鸿蒙实机未验证。放宽安装门槛后，lint 仍会报告未适配的 API 调用；编译成功不代表低版本兼容或全部检查通过。
+预输入目前按 UTF-16 单元退格，可能留下半个 Emoji 代理对；按用户选择保留这一行为，不纳入 0.0.4 稳定性修复。部分回归中的输入法窗口等待超时仍待调查。API 31 诊断中，Engine Management 和 Dashboard 仍有较新系统接口调用导致的崩溃，API 26 与鸿蒙实机未验证。放宽安装门槛后，lint 仍会报告未适配的 API 调用；编译成功不代表低版本兼容或全部检查通过。
 
 各专题说明与历史记录见 [文档索引](docs/README.md)。

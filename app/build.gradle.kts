@@ -15,8 +15,8 @@ android {
         // minSdk 改为 26，以便通过安装流程从而收集运行故障，但本项目最低适配 API 版本仍然是 35。
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.0.3"
+        versionCode = 4
+        versionName = "0.0.4-dev"
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
 
         testInstrumentationRunner = "com.example.ipa_board.RegressionTestRunner"
