@@ -282,6 +282,29 @@ class KeyboardInputControllerTest {
         }
     }
 
+    @Test fun continuousCursorDispatchesReuseDirectionEventsAndNeverDeleteOrCommitText() = withRecordingConnection { controller, connection ->
+        val mappings = listOf(KeyAction.REPEAT_LEFT to KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyAction.REPEAT_RIGHT to KeyEvent.KEYCODE_DPAD_RIGHT, KeyAction.REPEAT_UP to KeyEvent.KEYCODE_DPAD_UP,
+            KeyAction.REPEAT_DOWN to KeyEvent.KEYCODE_DPAD_DOWN)
+        controller.handle(key(KeyAction.SHIFT), connection, null)
+        controller.handle(key(KeyAction.SHIFT), connection, null)
+        for ((action, code) in mappings) {
+            connection.events.clear()
+            repeat(3) { assertTrue(controller.handle(key(action), connection, null)) }
+            assertEquals(6, connection.events.size)
+            connection.events.chunked(2).forEach { assertKeyPair(it, code, KeyEvent.META_SHIFT_ON) }
+            assertTrue(controller.shiftEnabled)
+            connection.events.clear()
+            assertTrue(controller.executeAction(action, connection, null, KeyEvent.META_CTRL_ON))
+            assertKeyPair(connection.events, code, KeyEvent.META_CTRL_ON)
+        }
+        assertTrue(connection.committed.isEmpty())
+        assertTrue(connection.codePointDeletions.isEmpty())
+        assertTrue(connection.surroundingDeletions.isEmpty())
+        connection.acceptEvents = false
+        assertFalse(controller.handle(key(KeyAction.REPEAT_LEFT), connection, null))
+    }
+
     @Test fun repeatBackspaceDeletesCharactersLikeBackspace() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.runOnMainSync {

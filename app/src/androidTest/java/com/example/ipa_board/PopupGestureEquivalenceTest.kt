@@ -34,10 +34,13 @@ class PopupGestureEquivalenceTest {
     }
 
     @Test fun allEightRepeatingBindingCasesMatchClassicWithoutASecondRepeatLoop() {
-        for (case in 0..7) {
-            assertEquals("Repeating equivalence case $case",
-                exercise(MultifunctionMode.CLASSIC, LongPressItem(action = KeyAction.REPEAT_BACKSPACE), case),
-                exercise(MultifunctionMode.POPUP, LongPressItem(action = KeyAction.REPEAT_BACKSPACE), case))
+        for (action in listOf(KeyAction.REPEAT_BACKSPACE, KeyAction.REPEAT_LEFT, KeyAction.REPEAT_RIGHT,
+            KeyAction.REPEAT_UP, KeyAction.REPEAT_DOWN)) {
+            for (case in 0..7) {
+                assertEquals("Repeating equivalence $action case $case",
+                    exercise(MultifunctionMode.CLASSIC, LongPressItem(action = action), case),
+                    exercise(MultifunctionMode.POPUP, LongPressItem(action = action), case))
+            }
         }
     }
 

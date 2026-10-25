@@ -29,6 +29,42 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class KeyEditorTest {
+    @Test fun continuousCursorHoldCanBeSavedWithoutReplacingItsSingleStepTap() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val snapshot = PageGroupTestState(context)
+        val filename = "test_continuous_cursor_${System.nanoTime()}.json"
+        try {
+            LayoutFileManager.saveLayout(context, filename, SettingsConstants.DEFAULT_LAYOUT)
+            PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(filename))
+            PageGroupManager.selectPage(context, filename)
+            ActivityScenario.launch(KeyboardPageActivity::class.java).use {
+                for ((tap, hold) in listOf(KeyAction.LEFT to KeyAction.REPEAT_LEFT, KeyAction.RIGHT to KeyAction.REPEAT_RIGHT,
+                    KeyAction.UP to KeyAction.REPEAT_UP, KeyAction.DOWN to KeyAction.REPEAT_DOWN)) {
+                    onView(withContentDescription(startsWith("Row 1, key 1:"))).perform(click())
+                    onView(withId(R.id.sp_key_type)).perform(click())
+                    onData(equalTo(tap.title)).inRoot(isPlatformPopup()).perform(click())
+                    onView(withId(R.id.sp_long_press_type)).perform(scrollTo(), click())
+                    onData(equalTo(hold.title)).inRoot(isPlatformPopup()).perform(click())
+                    onView(withId(android.R.id.button1)).inRoot(isDialog()).perform(awaitDialogButton(), click())
+                    val saved = requireNotNull(LayoutFileManager.loadLayout(context, filename))
+                    val key = saved.rows[0].slots[0]
+                    assertEquals(tap, key.action)
+                    assertEquals(hold, key.longPressAction)
+                    assertEquals(hold, key.effectiveLongPressItems.single().action)
+                    assertEquals(saved, KeyboardLayout.fromJson(saved.toJson()))
+                    onView(withContentDescription(startsWith("Row 1, key 1:"))).perform(click())
+                    onView(withId(R.id.sp_key_type)).check(matches(withSpinnerText(tap.title)))
+                    onView(withId(R.id.sp_long_press_type)).check(matches(withSpinnerText(hold.title)))
+                    onView(withId(android.R.id.button2)).inRoot(isDialog()).perform(awaitDialogButton(), click())
+                    assertEquals(saved, LayoutFileManager.loadLayout(context, filename))
+                }
+            }
+        } finally {
+            LayoutFileManager.deleteLayout(context, filename)
+            snapshot.close()
+        }
+    }
+
     @Test fun widthSwapCanBeSavedAndReopenedAsTapAndHoldActions() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val groupSnapshot = PageGroupTestState(context)

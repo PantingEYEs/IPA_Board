@@ -4,6 +4,35 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class KeyboardMappingTest {
+    @Test fun repeatingTapBindingsDeriveAHoldWithoutOverwritingIndependentMappings() {
+        for (action in listOf(KeyAction.REPEAT_BACKSPACE, KeyAction.REPEAT_LEFT, KeyAction.REPEAT_RIGHT,
+            KeyAction.REPEAT_UP, KeyAction.REPEAT_DOWN)) {
+            val key = KeySlot(1f, action = action)
+            assertTrue(key.hasLongPress)
+            assertEquals(listOf(LongPressItem(action = action)), key.effectiveLongPressItems)
+            val independent = key.copy(longPressAction = KeyAction.HOME)
+            assertEquals(listOf(LongPressItem(action = KeyAction.HOME)), independent.effectiveLongPressItems)
+            assertEquals(listOf(LongPressItem(text = "ɑ😀")), key.copy(longPressText = "ɑ😀").effectiveLongPressItems)
+            val items = listOf(LongPressItem(action = KeyAction.END), LongPressItem(text = "x"))
+            assertEquals(items, key.copy(longPressItems = items).effectiveLongPressItems)
+        }
+    }
+
+    @Test fun continuousHoldEditingKeepsTapSwipeAndOriginalLayoutIntact() {
+        for ((tap, hold) in listOf(KeyAction.LEFT to KeyAction.REPEAT_LEFT, KeyAction.RIGHT to KeyAction.REPEAT_RIGHT,
+            KeyAction.UP to KeyAction.REPEAT_UP, KeyAction.DOWN to KeyAction.REPEAT_DOWN)) {
+            val original = KeyboardLayout("Cursor", listOf(RowLayout(1f, listOf(
+                KeySlot(2f, action = tap, swipeLeftText = "ɑ😀")))))
+            val edited = original.withKeyMapping(0, 0, "", tap, longPressAction = hold)
+            val key = edited.rows.single().slots.single()
+            assertEquals(tap, key.action)
+            assertEquals(listOf(LongPressItem(action = hold)), key.effectiveLongPressItems)
+            assertEquals(LongPressItem(text = "ɑ😀"), key.effectiveSwipeLeftItem)
+            assertFalse(original.rows.single().slots.single().hasLongPress)
+            assertFalse(edited.cleared().rows.single().slots.single().hasLongPress)
+        }
+    }
+
     @Test fun longPressEditingPreservesOtherMappingsAndClearRemovesBoth() {
         val original = KeyboardLayout("Long press", listOf(RowLayout(1f, listOf(
             KeySlot(1f, "a"), KeySlot(2f, action = KeyAction.BACKSPACE)

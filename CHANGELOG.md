@@ -1,5 +1,12 @@
 # 更新日志
 
+## 0.0.4（开发中，未发布）
+
+Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划](docs/0.0.4-development-plan.md)。
+
+- 新增四方向 Continuous Cursor 功能（#10），与单步方向键分别绑定；复用方向键的实际执行及 Continuous Delete 的长按重复机制，支持 Classic、Popup 和多功能栏。没有另设长按内容的持续功能主键可直接按住重复，明确配置的长按始终优先；保持原有方向键、默认布局及 UTF-16 退格行为。
+- #10 通过 206 项 JVM、49 项工具测试及 debug/测试包编译；API 35/ARM64 专项首轮 67 项中 66 通过，唯一失败为旧的“所有预置不含 Dashboard”断言。按维护者确认更新测试和说明，补跑配置合同 11/11 通过；真实 IME 的四方向、边界、停止与预输入完整性均通过。两轮恢复校验成功、备份删除；完整 lint 仍有 137 项既有 `NewApi` 错误，详见[验证记录](docs/testing.md#2026-10-25-连续光标控制10)。
+
 ## 0.0.3
 
 Android `versionName = 0.0.3`、`versionCode = 3`。已签名候选发布包由维护者构建并确认验证通过。发布摘要见 [Release Notes](docs/releases/RELEASE_NOTES_0.0.3.md)，开发周期目标与剩余范围见 [归档计划](docs/archive/0.0.3-development-plan.md)。

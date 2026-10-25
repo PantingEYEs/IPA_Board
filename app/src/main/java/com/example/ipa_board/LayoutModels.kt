@@ -168,6 +168,8 @@ data class KeySlot(
             if (longPressText.isNotEmpty()) {
                 return LongPressTextCodec.parse(longPressText).map { LongPressItem(text = it) }
             }
+            // A repeat binding can be held directly unless the user assigned a separate hold action.
+            if (action.repeatsWhileHeld) return listOf(LongPressItem(action = action))
             return emptyList()
         }
 
@@ -191,7 +193,7 @@ data class KeySlot(
     val hasLongPress: Boolean
         get() = when {
             multifunctionMode == MultifunctionMode.POPUP -> true
-            action == KeyAction.REPEAT_BACKSPACE -> true
+            action.repeatsWhileHeld -> true
             else -> effectiveLongPressItems.isNotEmpty()
         }
 
@@ -262,6 +264,10 @@ enum class KeyAction(val wireValue: String, val title: String, val keyLabel: Str
     RIGHT("right", "Arrow Right", "→", "Move the cursor right. Shift extends the selection."),
     UP("up", "Arrow Up", "↑", "Move the cursor up. Shift extends the selection."),
     DOWN("down", "Arrow Down", "↓", "Move the cursor down. Shift extends the selection."),
+    REPEAT_LEFT("repeat_left", "Continuous Cursor Left", "←…", "Repeatedly move the cursor left while held, using the Continuous Delete timing. Shift extends the selection."),
+    REPEAT_RIGHT("repeat_right", "Continuous Cursor Right", "→…", "Repeatedly move the cursor right while held, using the Continuous Delete timing. Shift extends the selection."),
+    REPEAT_UP("repeat_up", "Continuous Cursor Up", "↑…", "Repeatedly move the cursor up while held, using the Continuous Delete timing. Shift extends the selection."),
+    REPEAT_DOWN("repeat_down", "Continuous Cursor Down", "↓…", "Repeatedly move the cursor down while held, using the Continuous Delete timing. Shift extends the selection."),
     SHIFT("shift", "Shift / Uppercase", "Shift", "Tap once for temporary Shift, again for Caps Lock, and once more to turn off."),
     CTRL("ctrl", "Ctrl", "Ctrl", "Apply Ctrl to the next key. Use single letters for shortcuts, such as Ctrl+A. Support depends on the receiving app."),
     ENTER("enter", "Enter", "↵", "Run the text field action, or insert a new line in a multiline field."),
@@ -283,6 +289,19 @@ enum class KeyAction(val wireValue: String, val title: String, val keyLabel: Str
     COPY("copy", "Copy", "复制", "Copy current selected text."),
     CUT("cut", "Cut", "剪切", "Cut current selected text."),
     PASTE("paste", "Paste", "粘贴", "Paste clipboard text.");
+
+    /** Repetition belongs to the gesture; each dispatch reuses its existing single-step operation. */
+    val singleStepAction: KeyAction
+        get() = when (this) {
+            REPEAT_BACKSPACE -> BACKSPACE
+            REPEAT_LEFT -> LEFT
+            REPEAT_RIGHT -> RIGHT
+            REPEAT_UP -> UP
+            REPEAT_DOWN -> DOWN
+            else -> this
+        }
+
+    val repeatsWhileHeld: Boolean get() = singleStepAction != this
 
     companion object {
         fun fromWireValue(value: String): KeyAction = entries.firstOrNull { it.wireValue == value }

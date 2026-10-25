@@ -151,11 +151,11 @@ object KeyboardRenderer {
                     }
                 }
                 slotView.repeatForItem = { item ->
-                    if (item.action == KeyAction.REPEAT_BACKSPACE) {
+                    if (item.action.repeatsWhileHeld) {
                         { slotView.onLongPressItemClick?.invoke(item); Unit }
                     } else null
                 }
-                if (!popupMode && (slot.longPressAction == KeyAction.REPEAT_BACKSPACE || slot.action == KeyAction.REPEAT_BACKSPACE)) {
+                if (!popupMode && slot.effectiveLongPressItems.firstOrNull()?.action?.repeatsWhileHeld == true) {
                     slotView.onLongPressRepeat = {
                         val firstItem = slot.effectiveLongPressItems.firstOrNull() ?: LongPressItem(text = slot.longPressText, action = slot.longPressAction)
                         if (onKeyLongItemClick != null) {

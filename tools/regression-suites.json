@@ -209,6 +209,23 @@
         "com.example.ipa_board.PageGroupUiTest",
         "com.example.ipa_board.PageEngineBindingImeTest"
       ]
+    },
+    "continuous-cursor": {
+      "classes": [
+        "com.example.ipa_board.KeyboardConfigurationTest",
+        "com.example.ipa_board.KeyboardInputControllerTest",
+        "com.example.ipa_board.KeyboardWindowTest",
+        "com.example.ipa_board.KeyEditorTest",
+        "com.example.ipa_board.KeyPressPreviewTest",
+        "com.example.ipa_board.PopupGestureEquivalenceTest",
+        "com.example.ipa_board.MultifunctionBarTest",
+        "com.example.ipa_board.MultifunctionBarImeTest"
+      ]
+    },
+    "keyboard-configuration": {
+      "classes": [
+        "com.example.ipa_board.KeyboardConfigurationTest"
+      ]
     }
   }
 }

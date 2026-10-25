@@ -89,11 +89,11 @@ class KeyboardInputController(private val transformOutput: (String) -> String = 
             }
         }
 
-        val handled = when (slot.action) {
+        val handled = when (slot.action.singleStepAction) {
             KeyAction.TEXT -> slot.text.isEmpty() || connection.commitText(
                 transformOutput(if (shiftEnabled) slot.text.uppercase(Locale.ROOT) else slot.text), 1
             )
-            KeyAction.BACKSPACE, KeyAction.REPEAT_BACKSPACE -> backspace(connection)
+            KeyAction.BACKSPACE -> backspace(connection)
             KeyAction.LEFT -> sendKey(connection, KeyEvent.KEYCODE_DPAD_LEFT, metaState)
             KeyAction.RIGHT -> sendKey(connection, KeyEvent.KEYCODE_DPAD_RIGHT, metaState)
             KeyAction.UP -> sendKey(connection, KeyEvent.KEYCODE_DPAD_UP, metaState)
@@ -116,7 +116,7 @@ class KeyboardInputController(private val transformOutput: (String) -> String = 
     }
 
     fun executeAction(action: KeyAction, connection: InputConnection, editorInfo: EditorInfo?, metaState: Int): Boolean {
-        return when (action) {
+        return when (action.singleStepAction) {
             KeyAction.SELECT_ALL -> {
                 if (connection.performContextMenuAction(R.id.selectAll)) true
                 else sendKey(connection, KeyEvent.KEYCODE_A, metaState)
@@ -135,7 +135,7 @@ class KeyboardInputController(private val transformOutput: (String) -> String = 
                 if (connection.performContextMenuAction(R.id.paste)) true
                 else sendKey(connection, KeyEvent.KEYCODE_V, metaState)
             }
-            KeyAction.BACKSPACE, KeyAction.REPEAT_BACKSPACE -> backspace(connection)
+            KeyAction.BACKSPACE -> backspace(connection)
             KeyAction.LEFT -> sendKey(connection, KeyEvent.KEYCODE_DPAD_LEFT, metaState)
             KeyAction.RIGHT -> sendKey(connection, KeyEvent.KEYCODE_DPAD_RIGHT, metaState)
             KeyAction.UP -> sendKey(connection, KeyEvent.KEYCODE_DPAD_UP, metaState)
