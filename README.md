@@ -2,9 +2,9 @@
 
 可自定义的 Android 音标键盘，支持 IPA 输入、中英日混合候选与联想、注音、Emoji、颜文字、剪贴板和行内计算。
 
-当前开发版本：**0.0.3-dev**，`versionCode = 3`，开发分支为 `0.0.3-dev`。最新正式版本为 **v0.0.2**。变更见 [更新日志](CHANGELOG.md)；正式安装包以 [GitHub Releases](https://github.com/PantingEYEs/IPA_Board/releases) 为准。
+当前版本：**0.0.3**，`versionCode = 3`。版本说明见 [v0.0.3 Release Notes](docs/releases/RELEASE_NOTES_0.0.3.md) 和 [更新日志](CHANGELOG.md)；正式安装包以 [GitHub Releases](https://github.com/PantingEYEs/IPA_Board/releases) 为准。
 
-0.0.3 已修复同一输入框重新打开键盘时无候选的问题，加入日志文件查看/导出/清空、只读引擎仪表盘、可编辑的多功能栏入口及实验性 IPA 引擎，并改进 Emoji 浏览。鸿蒙兼容、正式 IPA 键盘及后续运行稳定性工作仍待推进；范围与进度见 [开发计划](docs/0.0.3-development-plan.md)。
+0.0.3 修复同一输入框重新打开键盘时无候选的问题，加入 Popup 多功能操作、按页引擎绑定、可编辑多功能栏、科学计算、只读引擎仪表盘、日志管理与 Remote Keyboard Mode（Phase 1），改进 Emoji 浏览，并提供 IPA 预置键盘和实验性 IPA 引擎。开发周期的交付范围与后续目标见 [归档计划](docs/archive/0.0.3-development-plan.md)。
 
 独立 IPA 引擎的调用、输入、返回值及接入安全要求见 [引擎开发规范](docs/engine-specification.md)。
 
@@ -34,7 +34,7 @@ Shift 第一次点击启用临时大写（`Shift •`），再次点击锁定大
 
 布局导出为 `version: 4`，只包含 `layout`，不包含页组外观、剪贴板或应用全部设置。旧版带 `appearance` 的配置仍可导入，外观应用到当前组。配置文件上限 1 MB。
 
-首次安装的预置内容来自 [键盘配置](app/src/main/assets/initialization/keyboards) 和 [颜文字配置](app/src/main/assets/initialization/kaomoji)，更新应用不会覆盖已有用户配置。当前不提供增删行列的布局编辑器。
+首次安装的预置内容来自 [键盘配置](app/src/main/assets/initialization/keyboards) 和 [颜文字配置](app/src/main/assets/initialization/kaomoji)，本版新增 [IPA 键盘页](app/src/main/assets/initialization/keyboards/IPA.json)，并刷新其他键盘与颜文字配置。更新应用不会重新初始化或覆盖已有用户配置，因此已有安装不会自动新增 IPA 页；可下载所需 JSON 后通过布局导入使用。IPA 预置仅绑定 IPA 引擎，其余功能关闭，可在 Choose Engines 中调整。当前不提供增删行列的布局编辑器。
 
 ## 输入与候选
 
@@ -87,7 +87,7 @@ Shift 第一次点击启用临时大写（`Shift •`），再次点击锁定大
 
 角度在 `sin`、`cos` 内或角度相除时消去，结果恢复普通候选规则；含 φ 的角度/斜率结果也只提供上述六项。加减两侧须有相同角度单位（如 `30°+10°`）；`30°+1` 等混合单位算式不计算。允许中间出现角度乘方，但最终只显示无单位或一次角度结果；不提供独立的弧度/斜率输入标记或额外转换函数。
 
-暂不支持三角函数；空括号、错配、未闭合、缺失指数、`0^0` 等未定义情况、除零及超出计算容量的表达式不提供计算结果候选，原文仍可输入。
+空括号、错配、未闭合、缺失指数、`0^0` 等未定义情况、除零及超出计算容量的表达式不提供计算结果候选，原文仍可输入。
 
 功能键还支持光标导航、选区、复制/剪切/粘贴、Emoji、候选展开及切页。Shortcut 页面可配置 Shift/Ctrl 映射；快捷键支持取决于接收应用，Ctrl+Backspace 执行普通退格。
 
@@ -117,4 +117,6 @@ python3 tools/regression.py run --suite full --serial DEVICE_SERIAL --no-build
 
 Mozc 与语义分词 Extensions 原生库为 4KB 对齐，尚未验证 16KB 页设备兼容性。既有 debug 回归结果不代表正式签名 release 或其他设备已通过。
 
-各专题说明、开发计划及历史记录见 [文档索引](docs/README.md)。
+已知问题包括预输入退格可能切断 Emoji 代理对，以及部分回归中的输入法窗口等待超时；这两项尚未修复。API 31 诊断中，Engine Management 和 Dashboard 仍有较新系统接口调用导致的崩溃，API 26 与鸿蒙实机未验证。放宽安装门槛后，lint 仍会报告未适配的 API 调用；编译成功不代表低版本兼容或全部检查通过。
+
+各专题说明与历史记录见 [文档索引](docs/README.md)。

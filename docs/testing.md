@@ -416,3 +416,21 @@ Shift / Caps Lock 指示由 `KeyboardWindowTest`（ui/full）验证真实控制�
 - 独立临时 Android 15/API 35/arm64-v8a 模拟器首轮报告 `f800d801-17fa-487e-b966-8e256399af0a`：36 项中 35 通过、1 失败、0 跳过。界面用例在切换 Page Settings 后尝试滚动时目标尚不可见；测试改为无动画设置 ViewPager 目标页并等待主线程空闲，再执行原滚动/断言，未改产品行为或放宽等待时限。该失败记录保留。
 - 最终报告 `482695cf-b763-4401-94a3-4b7592cc10fb`：七个类共 36/36 通过，0 失败、0 跳过，`success=true`、`restored=true`。包括绑定合同 8、管理界面 3、Remote 模式 12、IPC 策略 3、页组合同 7、页组界面 1、真实 IME 2。
 - 两轮均恢复并校验原 APK 与私有 CE/DE 数据，备份删除，pending 为空；首轮额外的合成软件/私有数据往返校验通过。临时模拟器已关闭、AVD 已清理，未操作既有模拟器或实体手机。未执行本次 full 套件、其他 API/ABI、签名 release 或实体设备验证。
+
+## 2026-10-25 0.0.3 发布准备
+
+验证对象为基于 `15fdea7` 的发布准备工作树：`versionName` 从 `0.0.3-dev` 改为 `0.0.3`，`versionCode` 保持 3；安装声明为 `minSdk=26`、`targetSdk=36`，最低适配 API 仍为 35。文档更新不表示已发布或创建标签。
+
+- `testDebugUnitTest assembleDebug assembleRelease --offline` 成功，包含 release 的 `lintVitalRelease`。JVM XML 记录 204 项、0 失败、0 跳过；本轮 Gradle 判定 JVM 测试任务为 `UP-TO-DATE`，复用了有效结果，未重新执行全部 204 项。
+- 实际核对 debug 与 `app-release-unsigned.apk` 的 manifest：版本名均为 `0.0.3`、版本码 3、最低 API 26、目标 API 36。release 产物未签名，编译成功不代表签名安装包验收。
+- 49 项 Python 工作流工具测试通过，49 个 instrumentation 类登记与初始化 JSON 解析通过；93 项引擎资源哈希及 E5 重组校验通过。文档相对链接与 `git diff --check` 通过。
+- 完整 `lintRelease --offline` **未通过**：137 项错误均为 `NewApi`，另有 277 条警告。降低安装声明后，现有 API 27–33 的主题、窗口 Insets、无障碍、混合绘制、返回回调与 Java 数学接口被识别为低版本不兼容；未添加抑制或修改运行逻辑。原始报告位于 `app/build/reports/lint-results-release.xml` 与同目录 HTML；`lintVitalRelease` 成功不代表完整 lint 通过。
+- 本轮仅执行主机检查，未连接或修改设备，未执行完整设备回归、API 26/鸿蒙实机测试或最终签名 release 的安装、运行和升级验证。开发期间的设备结果仍按各自源码、API/ABI 与失败记录解释。
+
+### 签名候选包最终确认
+
+2026-10-25，维护者确认其手动构建的签名候选发布包已验证通过。本条记录维护者的验收确认，不将其改写为自动化设备套件结果。
+
+- 最终只读核对 `app/release/IPA_Board_v0.0.3.apk` 与 `app/build/outputs/apk/release/app-release.apk`：包名均为 `com.example.ipa_board`、版本名 `0.0.3`、版本码 3、最低 API 26、目标 API 36，签名校验通过。
+- 两份 APK 的 SHA-256 均为 `ba5e57fae3488a205bc8407b734ce9683681dcbd68adbce44e0e6cf23093a2d6`。此前未签名的 release APK 已不存在。
+- 本次最终确认未重新构建 APK、连接设备或执行安装、instrumentation；API 26 与鸿蒙兼容限制保持前述范围。

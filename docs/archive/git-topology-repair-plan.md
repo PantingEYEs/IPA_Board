@@ -2,7 +2,7 @@
 
 状态：已执行。核对日期：2026-10-01（Asia/Shanghai）。
 
-本文件是历史修复记录，所列分支、引用及命令均属于当时状态，不是当前同步或发布操作步骤。当前开发流程见 [0.0.3 计划](../0.0.3-development-plan.md) 与 [PR 规范](../pull-request-guidelines.md)。
+本文件是历史修复记录，所列分支、引用及命令均属于当时状态，不是当前同步或发布操作步骤。当前开发流程见 [Issue 规范](../../.github/ISSUE_GUIDELINES.md) 与 [PR 规范](../pull-request-guidelines.md)；[0.0.3 开发计划](0.0.3-development-plan.md) 已归档。
 
 ## 实际执行结果
 

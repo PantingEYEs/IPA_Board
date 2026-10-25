@@ -2,6 +2,8 @@
 
 Submitted as [Issue #20](https://github.com/PantingEYEs/IPA_Board/issues/20) on 2026-10-24. This local copy includes the requester-confirmed gesture definitions and graphical editor requirements.
 
+**Archived requirement draft:** The feature was implemented and merged in [PR #21](https://github.com/PantingEYEs/IPA_Board/pull/21). This file preserves the original request and unchecked acceptance checklist; it is not the current implementation or test-status document. See [Popup Multifunctional Actions](../popup-multifunctional-actions.md) and the [test records](../testing.md) for the delivered behavior and verification scope.
+
 ## Description
 
 Add Popup Multifunctional Actions as an alternative to the existing long-press and quick horizontal swipe actions. Each keyboard key independently selects Classic or Popup mode. Popup mode allows a user to hold a keyboard key, slide the same finger over selectable circular items in its preview popup, and interact with a selected item through the existing long-press key behavior. Action execution must be shared with keyboard keys and fixed toolbar entries; the gesture equivalences below define Popup behavior.
