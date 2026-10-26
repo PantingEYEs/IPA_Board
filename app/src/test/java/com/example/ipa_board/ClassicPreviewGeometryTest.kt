@@ -10,20 +10,24 @@ class ClassicPreviewGeometryTest {
     @Test fun completeMixedQueueHasOneItemPerCellAndDefaultAlignedAnchor() {
         val config = config()
         assertEquals(items, config.items.map { it.binding })
-        assertEquals(168f, config.vertices.maxOf { it.x }, .001f)
+        assertEquals(126f, config.vertices.maxOf { it.x }, .001f)
         assertEquals(56f, config.vertices.maxOf { it.y }, .001f)
+        assertEquals(17.5f, config.items[1].radius, .001f)
+        assertEquals(28f, config.items[1].center.y, .001f)
+        assertEquals(10.5f, config.items.first().center.x - config.items.first().radius, .001f)
+        assertEquals(10.5f, config.vertices.maxOf { it.x } - config.items.last().center.x - config.items.last().radius, .001f)
         assertEquals(config.items[1].center.x, config.anchor.x, .001f)
         for (i in items.indices) {
-            assertEquals(i, ClassicPreviewGeometry.selectedIndex(config, 1, (i - 1) * 56f))
+            assertEquals(i, ClassicPreviewGeometry.selectedIndex(config, 1, (i - 1) * 35f))
         }
     }
 
     @Test fun overrunAndPartialReturnRemainAtTheSameEndUntilReentering() {
         val config = config()
-        for (x in listOf(10000f, 5000f, 100f, 29f)) assertEquals(2, ClassicPreviewGeometry.selectedIndex(config, 1, x))
-        assertEquals(1, ClassicPreviewGeometry.selectedIndex(config, 1, 27f))
-        for (x in listOf(-10000f, -5000f, -100f, -29f)) assertEquals(0, ClassicPreviewGeometry.selectedIndex(config, 1, x))
-        assertEquals(1, ClassicPreviewGeometry.selectedIndex(config, 1, -27f))
+        for (x in listOf(10000f, 5000f, 100f, 63f, 18f)) assertEquals(2, ClassicPreviewGeometry.selectedIndex(config, 1, x))
+        assertEquals(1, ClassicPreviewGeometry.selectedIndex(config, 1, 17f))
+        for (x in listOf(-10000f, -5000f, -100f, -63f, -18f)) assertEquals(0, ClassicPreviewGeometry.selectedIndex(config, 1, x))
+        assertEquals(1, ClassicPreviewGeometry.selectedIndex(config, 1, -17f))
         assertEquals(0, ClassicPreviewGeometry.selectedIndex(config, 1, Float.NEGATIVE_INFINITY))
         assertEquals(2, ClassicPreviewGeometry.selectedIndex(config, 1, Float.POSITIVE_INFINITY))
         assertNull(ClassicPreviewGeometry.selectedIndex(config, 1, Float.NaN))

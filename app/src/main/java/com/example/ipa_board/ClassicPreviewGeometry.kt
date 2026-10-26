@@ -5,9 +5,12 @@ internal object ClassicPreviewGeometry {
     fun configuration(items: List<LongPressItem>, defaultIndex: Int, keyHeightDp: Float, diameterDp: Float): PopupConfiguration {
         require(items.isNotEmpty())
         val index = defaultIndex.takeIf { it in items.indices } ?: 0
-        val base = PopupConfiguration.default(keyHeightDp, diameterDp * items.size, diameterDp)
-        return base.copy(anchor = base.anchor.copy(x = diameterDp * (index + .5f)),
-            items = items.mapIndexed { i, item -> PopupItem(PopupPoint(diameterDp * (i + .5f), diameterDp / 2f), diameterDp / 2f, displayBinding(item)) })
+        // Preserve preview height; scale the half-size items to 125% and add symmetric end padding.
+        val itemDiameter = diameterDp / 2f * 1.25f
+        val padding = (diameterDp - itemDiameter) / 2f
+        val base = PopupConfiguration.default(keyHeightDp, itemDiameter * items.size + padding * 2f, diameterDp)
+        return base.copy(anchor = base.anchor.copy(x = padding + itemDiameter * (index + .5f)),
+            items = items.mapIndexed { i, item -> PopupItem(PopupPoint(padding + itemDiameter * (i + .5f), diameterDp / 2f), itemDiameter / 2f, displayBinding(item)) })
     }
 
     // Legacy queues can contain longer text than editable Popup items. Only the generated
@@ -20,6 +23,7 @@ internal object ClassicPreviewGeometry {
         val first = config.items.first()
         val last = config.items.last()
         val initial = config.items.getOrNull(defaultIndex) ?: first
+        // Clamp to the item queue, excluding the decorative padding at either end.
         val x = (initial.center.x.toDouble() + deltaXDp).coerceIn(
             (first.center.x - first.radius).toDouble(), (last.center.x + last.radius).toDouble()).toFloat()
         return PopupGeometry.hitItem(config, PopupPoint(x, first.center.y))
