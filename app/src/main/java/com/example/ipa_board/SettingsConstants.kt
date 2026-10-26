@@ -41,6 +41,7 @@ object SettingsConstants {
     const val KEY_CTRL_SHORTCUTS = "ctrl_shortcuts_json"
     const val KEY_SEMANTIC_CONTEXT_ENABLED = "semantic_context_enabled"
 
+    const val KEY_CLIPBOARD_SYNC_ON_START = "clipboard_sync_on_start"
     const val KEY_QUICK_PASTE_ENABLED = "quick_paste_enabled"
     const val KEY_QUICK_PASTE_RETENTION_TYPE = "quick_paste_retention_type"
     const val KEY_QUICK_PASTE_RETENTION_SECONDS = "quick_paste_retention_seconds"

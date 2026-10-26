@@ -16,6 +16,7 @@ import com.example.ipa_board.clipboard.SmsCodeAutoFillManager
 
 class ClipboardManagerActivity : Activity() {
 
+    private lateinit var swSyncOnStart: Switch
     private lateinit var swQuickPaste: Switch
     private lateinit var swSmsOtp: Switch
     private lateinit var containerSmsOtpModes: View
@@ -54,6 +55,7 @@ class ClipboardManagerActivity : Activity() {
 
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener { finish() }
 
+        swSyncOnStart = findViewById(R.id.sw_clipboard_sync_on_start)
         swQuickPaste = findViewById(R.id.sw_quick_paste)
         swSmsOtp = findViewById(R.id.sw_sms_otp)
         containerSmsOtpModes = findViewById(R.id.container_sms_otp_modes)
@@ -118,6 +120,7 @@ class ClipboardManagerActivity : Activity() {
     private fun loadSettings() {
         val prefs = getSharedPreferences(SettingsConstants.PREFS_NAME, MODE_PRIVATE)
 
+        swSyncOnStart.isChecked = prefs.getBoolean(SettingsConstants.KEY_CLIPBOARD_SYNC_ON_START, true)
         val quickPasteEnabled = prefs.getBoolean(SettingsConstants.KEY_QUICK_PASTE_ENABLED, true)
         swQuickPaste.isChecked = quickPasteEnabled
         containerOptions.visibility = if (quickPasteEnabled) View.VISIBLE else View.GONE
@@ -184,6 +187,7 @@ class ClipboardManagerActivity : Activity() {
         }
 
         prefs.edit()
+            .putBoolean(SettingsConstants.KEY_CLIPBOARD_SYNC_ON_START, swSyncOnStart.isChecked)
             .putBoolean(SettingsConstants.KEY_QUICK_PASTE_ENABLED, quickPasteEnabled)
             .putBoolean(SettingsConstants.KEY_SMS_OTP_AUTO_COPY_ENABLED, smsOtpEnabled)
             .putString(SettingsConstants.KEY_SMS_OTP_MODE, smsMode)

@@ -16,13 +16,18 @@ Engine Management 底部的 **Debug diagnostics** 默认关闭，debug 和 relea
 | E5 | ONNX 环境、清单、目录/锁、模型重组/校验/发布、校准数据、分词器扩展与会话、模型会话、推理、清理 |
 | IPA | 资源快照、DEX/JNI 加载、GraphEngine 接口、压缩词典打开、查询、资源更新及旧实例清理 |
 | 引擎通信 | 绑定被拒绝或抛异常、请求/回复发送失败、服务断开/绑定失效/空绑定、候选或分数响应格式错误 |
+| 剪贴板 | 键盘显示时的启动同步耗时（Clipboard Management 的同步开关默认开启） |
 | 其他必要边界 | 布局存储回退、Emoji 安装目录回退与更新失败、颜文字读写、短信自动填充启动、最新版本元数据查询失败 |
 
-事件仅由固定的 `component/stage/outcome/kind` 枚举组成，例如 `SEMANTIC/MODEL/FAILURE/NATIVE_LINK`。不传入 Throwable、异常 message/stack trace、输入/上下文/候选/词向量、剪贴板/短信、私人配置、文件名/路径/URI、下载地址或响应内容。原生库自身的内部日志由其实现控制，此开关只控制本项目新增及替换的诊断输出。原生硬崩溃通过服务断开检测，不声称能在 Kotlin 中捕获 SIGSEGV。
+事件使用固定的 `component/stage/outcome/kind` 枚举；显式测量事件另允许非负整数 `duration_ms`，例如 `SEMANTIC/MODEL/FAILURE/NATIVE_LINK`。不传入 Throwable、异常 message/stack trace、输入/上下文/候选/词向量、剪贴板/短信、私人配置、文件名/路径/URI、下载地址或响应内容。原生库自身的内部日志由其实现控制，此开关只控制本项目新增及替换的诊断输出。原生硬崩溃通过服务断开检测，不声称能在 Kotlin 中捕获 SIGSEGV。
 
 正常加载记录 `START` / `READY`；查询、取消、无候选、不支持的输入、缺少可选安装文件、过期结果和关闭引擎都不作为错误。相同 component/stage/kind 的失败每进程每 60 秒最多输出一次，成功恢复后可再次报告；去重缓存限 128 项，关闭时清空。诊断 sink 自身失败不会改变业务结果。
 
 IME 生命周期与预输入的显式 `trace` 每次产生一条固定的 `READY` 事件，例如 `IME/START_INPUT_VIEW/READY`。它不受阶段的自动 START/READY 包装开关影响，且仍遵守诊断总开关；不包含输入文字或编辑器信息。
+
+Clipboard Management 中的 **Sync clipboard when keyboard opens** 默认开启，在每次 `onStartInputView()` 完成输入状态初始化后尝试补读。Debug diagnostics 开启时，每次尝试记录一条 `CLIPBOARD/STARTUP_SYNC/READY duration_ms=<毫秒>`；耗时使用单调时钟，包含读取、已有去重/历史保存及快捷提示更新，不包含后续日志写入。此处 READY 表示尝试正常返回，空剪贴板、已有内容及沿用现有回退处理的访问拒绝也会产生耗时事件，不代表一定新增历史。
+
+测量事件逐次记录，不经过失败事件的 60 秒去重；未被业务层处理的异常使用固定失败分类和耗时，保留原异常控制流。关闭日志后同步仍执行且不输出；关闭启动同步开关则既不补读也不产生该耗时事件。原有复制监听及面板补读不受此开关影响。当前不记录剪贴板文字、来源、指纹或异常细节，也不将启动补读视作 #15 所有可能原因已解决。
 
 ## 维护和剔除
 

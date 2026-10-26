@@ -5,6 +5,47 @@ import org.junit.Test
 import java.io.IOException
 
 class DiagnosticReporterTest {
+    @Test fun measurementIsOptionalAndLogsEveryAttemptWithoutLoggingTheResult() {
+        var now = 100L
+        var clockReads = 0
+        val events = mutableListOf<DiagnosticEvent>()
+        val reporter = DiagnosticReporter({ clockReads++; now }, events::add)
+        assertEquals("private clipboard text", reporter.measure(DiagnosticComponent.CLIPBOARD, DiagnosticStage.STARTUP_SYNC) {
+            now += 5; "private clipboard text"
+        })
+        assertEquals(0, clockReads)
+        assertTrue(events.isEmpty())
+        reporter.enabled = true
+        repeat(2) {
+            assertEquals("private clipboard text", reporter.measure(DiagnosticComponent.CLIPBOARD, DiagnosticStage.STARTUP_SYNC) {
+                now += 12; "private clipboard text"
+            })
+        }
+        assertEquals(listOf("CLIPBOARD/STARTUP_SYNC/READY duration_ms=12",
+            "CLIPBOARD/STARTUP_SYNC/READY duration_ms=12"), events.map { it.line() })
+        assertFalse(events.joinToString { it.line() }.contains("private"))
+        reporter.measure(DiagnosticComponent.CLIPBOARD, DiagnosticStage.STARTUP_SYNC) { reporter.enabled = false }
+        assertEquals(2, events.size)
+    }
+
+    @Test fun measurementPreservesOriginalFailuresAndIgnoresBrokenSinks() {
+        var now = 10L
+        val events = mutableListOf<DiagnosticEvent>()
+        val reporter = DiagnosticReporter({ now }, events::add).apply { enabled = true }
+        val error = SecurityException("private clipboard detail")
+        try {
+            reporter.measure(DiagnosticComponent.CLIPBOARD, DiagnosticStage.STARTUP_SYNC) { now += 7; throw error }
+            fail("Expected the original failure")
+        } catch (caught: SecurityException) { assertSame(error, caught) }
+        assertEquals("CLIPBOARD/STARTUP_SYNC/FAILURE/SECURITY duration_ms=7", events.single().line())
+        val broken = DiagnosticReporter({ now }, { throw IllegalStateException("sink") }).apply { enabled = true }
+        assertEquals(42, broken.measure(DiagnosticComponent.CLIPBOARD, DiagnosticStage.STARTUP_SYNC) { 42 })
+        try {
+            broken.measure(DiagnosticComponent.CLIPBOARD, DiagnosticStage.STARTUP_SYNC) { throw error }
+            fail("Expected the original failure")
+        } catch (caught: SecurityException) { assertSame(error, caught) }
+    }
+
     @Test fun explicitLifecyclePointsAreLoggedOnceWhileAutomaticQuietStagesStayQuiet() {
         val events = mutableListOf<DiagnosticEvent>()
         val reporter = DiagnosticReporter({ 0L }, events::add)

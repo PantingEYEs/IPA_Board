@@ -71,14 +71,23 @@ class IpaBoardService : InputMethodService() {
         syncClipboardHistory()
         if (chrome?.panel == ImeChromeView.Panel.CLIPBOARD) showClipboard()
     }
-    private fun syncClipboardHistory() {
-        val clip = try { clipboard.primaryClip } catch (_: SecurityException) { null }
+    private fun syncClipboardHistory(readClip: () -> android.content.ClipData? = { clipboard.primaryClip }) {
+        val clip = try { readClip() } catch (_: SecurityException) { null }
         val text = if (clip != null && clip.itemCount > 0) clip.getItemAt(0).text?.toString() else null
         val sensitive = clip?.description?.extras?.getBoolean("android.content.extra.IS_SENSITIVE", false) == true
         if (clip != null && !text.isNullOrEmpty()) {
             if (clipboardRepository.syncSystemClip(text, clip.description.timestamp, sensitive) != null) {
                 onNewClipCopied(text)
             }
+        }
+    }
+
+    // The reader seam allows synthetic ClipData tests without touching the system clipboard.
+    internal fun syncClipboardOnInputViewStart(readClip: () -> android.content.ClipData? = { clipboard.primaryClip }) {
+        if (!prefs.getBoolean(SettingsConstants.KEY_CLIPBOARD_SYNC_ON_START, true)) return
+        // DIAGNOSTICS: removable timing wrapper; synchronization also runs with logging disabled.
+        AppDiagnostics.measure(DiagnosticComponent.CLIPBOARD, DiagnosticStage.STARTUP_SYNC) {
+            syncClipboardHistory(readClip)
         }
     }
 
@@ -917,6 +926,7 @@ class IpaBoardService : InputMethodService() {
         clipboard.addPrimaryClipChangedListener(clipboardListener)
         composition.start()
         applySettings()
+        syncClipboardOnInputViewStart()
     }
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)

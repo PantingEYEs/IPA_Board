@@ -60,7 +60,8 @@
         "com.example.ipa_board.PopupKeySettingsTest",
         "com.example.ipa_board.PopupGestureEquivalenceTest",
         "com.example.ipa_board.MultifunctionBarTest",
-        "com.example.ipa_board.PageEngineBindingUiTest"
+        "com.example.ipa_board.PageEngineBindingUiTest",
+        "com.example.ipa_board.ClipboardStartupSyncTest"
       ]
     },
     "e2e": {
@@ -131,7 +132,8 @@
         "com.example.ipa_board.CalculatorImeTest",
         "com.example.ipa_board.PageEngineBindingContractTest",
         "com.example.ipa_board.PageEngineBindingUiTest",
-        "com.example.ipa_board.PageEngineBindingImeTest"
+        "com.example.ipa_board.PageEngineBindingImeTest",
+        "com.example.ipa_board.ClipboardStartupSyncTest"
       ]
     },
     "ipa": {
@@ -242,6 +244,14 @@
     "classic-preview": {
       "classes": [
         "com.example.ipa_board.KeyPressPreviewTest"
+      ]
+    },
+    "clipboard-startup": {
+      "classes": [
+        "com.example.ipa_board.ClipboardStartupSyncTest",
+        "com.example.ipa_board.QuickPasteStatusTest",
+        "com.example.ipa_board.ClipboardPanelOrderTest",
+        "com.example.ipa_board.DiagnosticsContractTest"
       ]
     }
   }
