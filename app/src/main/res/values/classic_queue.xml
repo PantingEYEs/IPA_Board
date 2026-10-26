@@ -1,0 +1,14 @@
+<resources>
+    <string name="classic_queue_title">Classic long-press actions</string>
+    <string name="classic_queue_edit">Edit long-press actions</string>
+    <string name="classic_queue_help">The default action starts selected. Slide horizontally after holding to select another action. Deleting the default selects the first remaining action.</string>
+    <string name="classic_queue_summary">%1$d actions · Default: %2$s</string>
+    <string name="classic_queue_empty">No long-press actions</string>
+    <string name="classic_queue_add">Add action</string>
+    <string name="classic_queue_delete">Delete</string>
+    <string name="classic_queue_default_item">Default action %1$d</string>
+    <string name="classic_queue_delete_item">Delete action %1$d</string>
+    <string name="classic_queue_function">Long-press action %1$d function</string>
+    <string name="classic_queue_text">Long-press action %1$d text</string>
+    <item name="classic_queue_add" type="id" />
+</resources>

@@ -33,4 +33,18 @@ internal object KeyPreviewMetrics {
         val density = context.resources.displayMetrics.density
         return PopupConfiguration.default(keyHeightPx / density, label.measuredWidth / density, label.measuredHeight / density)
     }
+
+    @android.annotation.SuppressLint("AppCompatCustomView")
+    fun classicQueue(context: Context, keyHeightPx: Int, items: List<LongPressItem>, defaultIndex: Int,
+        shift: Boolean = false, ctrl: Boolean = false): PopupConfiguration {
+        var diameter = 56f
+        val density = context.resources.displayMetrics.density
+        for (item in items) {
+            // A measured, unattached TextView cannot safely be rebound without layout params.
+            val label = TextView(context).apply { text = item.previewText(shift, ctrl); style(this) }
+            measure(label)
+            diameter = maxOf(diameter, maxOf(label.measuredWidth, label.measuredHeight) / density)
+        }
+        return ClassicPreviewGeometry.configuration(items, defaultIndex, (keyHeightPx / density).coerceAtLeast(1f), diameter)
+    }
 }

@@ -152,7 +152,12 @@ class PopupActionsImeTest {
 
     private fun classicHold(itemIndex: Int) {
         val source = sourceBounds(column = 3)
-        val endX = source.exactCenterX() + itemIndex * 28f * density
+        var step = 0f
+        instrumentation.runOnMainSync {
+            step = KeyPreviewMetrics.classicQueue(context, source.height(),
+                layout.rows.single().slots[2].effectiveLongPressItems, 0).items.first().radius * 2f * density
+        }
+        val endX = source.exactCenterX() + itemIndex * step
         val y = source.exactCenterY()
         lastGesture = "Classic source=$source end=($endX, $y) itemIndex=$itemIndex"
         val down = SystemClock.uptimeMillis()

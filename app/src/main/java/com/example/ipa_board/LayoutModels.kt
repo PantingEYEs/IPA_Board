@@ -27,7 +27,8 @@ data class KeyboardLayout(
         longPressItems: List<LongPressItem>? = null,
         swipeLeftText: String? = null, swipeLeftAction: KeyAction? = null,
         swipeRightText: String? = null, swipeRightAction: KeyAction? = null,
-        multifunctionMode: MultifunctionMode? = null, popupConfiguration: PopupConfiguration? = null
+        multifunctionMode: MultifunctionMode? = null, popupConfiguration: PopupConfiguration? = null,
+        longPressDefaultIndex: Int? = null, longPressQueueConfigured: Boolean? = null
     ): KeyboardLayout {
         require(row in rows.indices && column in rows[row].slots.indices) { "Unknown key position" }
         return copy(rows = rows.mapIndexed { r, value ->
@@ -44,14 +45,16 @@ data class KeyboardLayout(
                     swipeRightText = swipeRightText ?: slot.swipeRightText,
                     swipeRightAction = swipeRightAction ?: slot.swipeRightAction,
                     multifunctionMode = multifunctionMode ?: slot.multifunctionMode,
-                    popupConfiguration = popupConfiguration ?: slot.popupConfiguration
+                    popupConfiguration = popupConfiguration ?: slot.popupConfiguration,
+                    longPressDefaultIndex = longPressDefaultIndex ?: slot.longPressDefaultIndex,
+                    longPressQueueConfigured = longPressQueueConfigured ?: slot.longPressQueueConfigured
                 ) else slot
             })
         })
     }
 
     fun cleared(): KeyboardLayout = copy(rows = rows.map { row ->
-        row.copy(slots = row.slots.map { slot -> slot.copy(text = "", action = KeyAction.TEXT, textBehavior = TextBehavior.LITERAL, longPressText = "", longPressAction = KeyAction.TEXT, longPressItems = emptyList(), swipeLeftText = "", swipeLeftAction = KeyAction.TEXT, swipeRightText = "", swipeRightAction = KeyAction.TEXT, multifunctionMode = MultifunctionMode.CLASSIC, popupConfiguration = null) })
+        row.copy(slots = row.slots.map { slot -> slot.copy(text = "", action = KeyAction.TEXT, textBehavior = TextBehavior.LITERAL, longPressText = "", longPressAction = KeyAction.TEXT, longPressItems = emptyList(), swipeLeftText = "", swipeLeftAction = KeyAction.TEXT, swipeRightText = "", swipeRightAction = KeyAction.TEXT, multifunctionMode = MultifunctionMode.CLASSIC, popupConfiguration = null, longPressDefaultIndex = 0, longPressQueueConfigured = false) })
     })
 
     fun toJson(): String {
@@ -157,10 +160,13 @@ data class KeySlot(
     val swipeRightText: String = "",
     val swipeRightAction: KeyAction = KeyAction.TEXT,
     val multifunctionMode: MultifunctionMode = MultifunctionMode.CLASSIC,
-    val popupConfiguration: PopupConfiguration? = null
+    val popupConfiguration: PopupConfiguration? = null,
+    val longPressDefaultIndex: Int = 0,
+    val longPressQueueConfigured: Boolean = false
 ) {
     val effectiveLongPressItems: List<LongPressItem>
         get() {
+            if (longPressQueueConfigured) return longPressItems
             if (longPressItems.isNotEmpty()) return longPressItems
             if (longPressAction != KeyAction.TEXT) {
                 return listOf(LongPressItem(action = longPressAction))
@@ -190,10 +196,23 @@ data class KeySlot(
     val hasSwipeLeft: Boolean get() = multifunctionMode == MultifunctionMode.CLASSIC && effectiveSwipeLeftItem != null
     val hasSwipeRight: Boolean get() = multifunctionMode == MultifunctionMode.CLASSIC && effectiveSwipeRightItem != null
 
+    val effectiveLongPressDefaultIndex: Int
+        get() = longPressDefaultIndex.takeIf { it in effectiveLongPressItems.indices } ?: 0
+    val defaultLongPressItem: LongPressItem? get() = effectiveLongPressItems.getOrNull(effectiveLongPressDefaultIndex)
+
+    /** Only an explicit queue edit rewrites legacy mirrors; loading/saving unrelated fields retains them. */
+    fun withLongPressQueue(items: List<LongPressItem>, defaultIndex: Int): KeySlot {
+        val index = defaultIndex.takeIf { it in items.indices } ?: 0
+        val selected = items.getOrNull(index)
+        return copy(longPressItems = items.toList(), longPressDefaultIndex = index, longPressQueueConfigured = true,
+            longPressAction = selected?.action ?: KeyAction.TEXT,
+            longPressText = (if (items.all { it.action == KeyAction.TEXT }) LongPressTextCodec.format(items.map { it.text }) else null)
+                ?.takeIf { it.length <= 1000 } ?: selected?.takeIf { it.action == KeyAction.TEXT }?.text.orEmpty())
+    }
+
     val hasLongPress: Boolean
         get() = when {
             multifunctionMode == MultifunctionMode.POPUP -> true
-            action.repeatsWhileHeld -> true
             else -> effectiveLongPressItems.isNotEmpty()
         }
 
@@ -222,6 +241,8 @@ data class KeySlot(
         obj.put("swipeRightText", swipeRightText)
         obj.put("swipeRightAction", swipeRightAction.wireValue)
         obj.put("multifunctionMode", multifunctionMode.wireValue)
+        if (longPressDefaultIndex != 0) obj.put("longPressDefaultIndex", longPressDefaultIndex)
+        if (longPressQueueConfigured) obj.put("longPressQueueConfigured", true)
         popupConfiguration?.let { obj.put("popupConfiguration", it.toJsonObject()) }
         return obj
     }
@@ -250,7 +271,9 @@ data class KeySlot(
                 MultifunctionMode.fromWireValue(obj.optString("multifunctionMode", "classic")),
                 if (obj.has("popupConfiguration") && !obj.isNull("popupConfiguration")) {
                     PopupConfiguration.fromJsonObject(obj.getJSONObject("popupConfiguration"))
-                } else null
+                } else null,
+                obj.optInt("longPressDefaultIndex", 0),
+                obj.optBoolean("longPressQueueConfigured", false)
             )
         }
     }

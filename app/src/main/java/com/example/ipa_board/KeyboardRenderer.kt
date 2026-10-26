@@ -80,9 +80,10 @@ object KeyboardRenderer {
                         else -> slot.displayText(shiftEnabled)
                     }.let { if (ctrlEnabled && slot.action == KeyAction.TEXT) "Ctrl+$it" else it }
                     longPressItems = slot.effectiveLongPressItems
+                    longPressDefaultIndex = slot.effectiveLongPressDefaultIndex
                     swipeLeftItem = slot.effectiveSwipeLeftItem
                     swipeRightItem = slot.effectiveSwipeRightItem
-                    val firstItem = slot.effectiveLongPressItems.firstOrNull()
+                    val firstItem = slot.defaultLongPressItem
                     holdPreview = firstItem?.previewText(shiftEnabled, ctrlEnabled) ?: when {
                         slot.longPressAction != KeyAction.TEXT -> slot.longPressAction.keyLabel
                         slot.longPressText == " " -> "␣"
@@ -141,7 +142,7 @@ object KeyboardRenderer {
                         }
                     }
                     slotView.setOnLongClickListener {
-                        val firstItem = slot.effectiveLongPressItems.firstOrNull() ?: LongPressItem(text = slot.longPressText, action = slot.longPressAction)
+                        val firstItem = slot.defaultLongPressItem ?: LongPressItem(text = slot.longPressText, action = slot.longPressAction)
                         if (onKeyLongItemClick != null) {
                             onKeyLongItemClick(rowIndex, columnIndex, slot, firstItem)
                         } else {
@@ -155,9 +156,9 @@ object KeyboardRenderer {
                         { slotView.onLongPressItemClick?.invoke(item); Unit }
                     } else null
                 }
-                if (!popupMode && slot.effectiveLongPressItems.firstOrNull()?.action?.repeatsWhileHeld == true) {
+                if (!popupMode && slot.defaultLongPressItem?.action?.repeatsWhileHeld == true) {
                     slotView.onLongPressRepeat = {
-                        val firstItem = slot.effectiveLongPressItems.firstOrNull() ?: LongPressItem(text = slot.longPressText, action = slot.longPressAction)
+                        val firstItem = slot.defaultLongPressItem ?: LongPressItem(text = slot.longPressText, action = slot.longPressAction)
                         if (onKeyLongItemClick != null) {
                             onKeyLongItemClick(rowIndex, columnIndex, slot, firstItem)
                         } else {
@@ -171,7 +172,7 @@ object KeyboardRenderer {
                     Gravity.CENTER
                 ))
                 if (slot.hasLongPress && !popupMode) {
-                    val firstItem = slot.effectiveLongPressItems.firstOrNull()
+                    val firstItem = slot.defaultLongPressItem
                     // The persistent corner label shows the symbol, independently of Ctrl input mode.
                     val longPressLabel = firstItem?.previewText(shiftEnabled)
                         ?: if (slot.longPressAction != KeyAction.TEXT) slot.longPressAction.keyLabel else slot.longPressText

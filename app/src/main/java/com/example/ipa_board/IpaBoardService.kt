@@ -370,7 +370,7 @@ class IpaBoardService : InputMethodService() {
 
     private fun handleLongPress(slot: KeySlot) {
         if (!slot.hasLongPress) return
-        val item = slot.effectiveLongPressItems.firstOrNull() ?: LongPressItem(text = slot.longPressText, action = slot.longPressAction)
+        val item = slot.defaultLongPressItem ?: LongPressItem(text = slot.longPressText, action = slot.longPressAction)
         handleLongPressItem(slot, item)
     }
 
