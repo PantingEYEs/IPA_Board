@@ -15,7 +15,6 @@ import android.view.ViewConfiguration
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
-import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
@@ -186,20 +185,8 @@ class PopupActionEditorView(context: Context, initial: PopupConfiguration) : Lin
     private fun editItem(index: Int) {
         val original = configuration.items.getOrNull(index) ?: return
         val body = LinearLayout(context).apply { orientation = VERTICAL; setPadding(dp(12f), 0, dp(12f), 0) }
-        val function = Spinner(context).apply {
-            adapter = ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item, KeyAction.entries.map { it.title })
-            setSelection(KeyAction.entries.indexOf(original.binding.action))
-            contentDescription = context.getString(R.string.popup_editor_item_function)
-        }
-        val textInput = EditText(context).apply { setText(original.binding.text); setHint(R.string.popup_editor_text); contentDescription = context.getString(R.string.popup_editor_item_text) }
-        body.addView(function)
-        body.addView(textInput)
-        function.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                textInput.visibility = if (KeyAction.entries[position] == KeyAction.TEXT) VISIBLE else GONE
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
-        }
+        val bindingEditor = FunctionBindingEditor(context, original.binding)
+        body.addView(bindingEditor)
         // Reordering happens as part of this dialog's Save, so Cancel discards it too.
         var destination = index
         val order = TextView(context).apply { setTextColor(Color.WHITE) }
@@ -215,12 +202,10 @@ class PopupActionEditorView(context: Context, initial: PopupConfiguration) : Lin
             .setNegativeButton(R.string.popup_editor_cancel, null).setPositiveButton(R.string.popup_editor_save, null).create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val action = KeyAction.entries[function.selectedItemPosition]
-                val text = if (action == KeyAction.TEXT) textInput.text.toString() else ""
-                if (text.length > 1000) { textInput.error = context.getString(R.string.popup_editor_text_limit); return@setOnClickListener }
+                val binding = bindingEditor.bindingOrNull() ?: return@setOnClickListener
                 val items = configuration.items.toMutableList()
                 if (index !in items.indices) { dialog.dismiss(); return@setOnClickListener }
-                val item = items.removeAt(index).copy(binding = LongPressItem(text, action))
+                val item = items.removeAt(index).copy(binding = binding)
                 items.add(destination.coerceIn(0, items.size), item)
                 edit(configuration.copy(items = items))
                 select(Selection.Item(destination))

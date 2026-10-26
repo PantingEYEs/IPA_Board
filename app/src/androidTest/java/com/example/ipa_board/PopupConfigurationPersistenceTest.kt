@@ -43,6 +43,24 @@ class PopupConfigurationPersistenceTest {
         assertTrue(pending.hasLongPress)
     }
 
+    @Test fun mixedClassicDefaultAndExplicitEmptyQueuesSurviveJson() {
+        val base = KeySlot(1f, "tap", longPressText = "legacy", swipeRightAction = KeyAction.PASTE,
+            popupConfiguration = PopupConfiguration.default())
+        val bindings = listOf(LongPressItem(","), LongPressItem(action = KeyAction.REPEAT_LEFT), LongPressItem("β😀"))
+        val edited = base.withLongPressQueue(bindings, 1)
+        val restored = KeySlot.fromJsonObject(edited.toJsonObject())
+        assertEquals(edited, restored)
+        assertEquals(bindings[1], restored.defaultLongPressItem)
+        val cleared = edited.copy(action = KeyAction.REPEAT_BACKSPACE).withLongPressQueue(emptyList(), 0)
+        assertEquals(cleared, KeySlot.fromJsonObject(cleared.toJsonObject()))
+        assertFalse(KeySlot.fromJsonObject(cleared.toJsonObject()).hasLongPress)
+        val legacy = KeySlot.fromJsonObject(JSONObject("""{"widthWeight":1,"longPressText":"ɑ, β"}"""))
+        assertEquals(LongPressItem("ɑ"), legacy.defaultLongPressItem)
+        assertEquals(listOf(LongPressItem("ɑ"), LongPressItem("β")), legacy.effectiveLongPressItems)
+        val invalid = edited.toJsonObject().put("longPressDefaultIndex", 999)
+        assertEquals(bindings.first(), KeySlot.fromJsonObject(invalid).defaultLongPressItem)
+    }
+
     @Test fun malformedImportedPopupCannotEnterTheLayoutModel() {
         val original = KeySlot(1f, popupConfiguration = PopupConfiguration.default().copy(
             items = listOf(PopupItem(PopupPoint(10f, 10f), 8f, LongPressItem("a")))

@@ -641,15 +641,9 @@ class KeyboardPageActivity : Activity() {
         val slot = restoredDraft ?: originalSlot
         val editorView = layoutInflater.inflate(R.layout.dialog_key_editor, null)
         val input = editorView.findViewById<EditText>(R.id.et_key_text)
-        val longPressTypes = editorView.findViewById<Spinner>(R.id.sp_long_press_type)
-        val longPressTextLabel = editorView.findViewById<TextView>(R.id.tv_long_press_text_label)
-        val longPressInput = editorView.findViewById<EditText>(R.id.et_long_press_text)
-        val currentLpText = if (slot.longPressItems.isNotEmpty()) {
-            LongPressTextCodec.format(slot.longPressItems.map { if (it.action != KeyAction.TEXT) it.action.keyLabel else it.text })
-        } else {
-            slot.longPressText
-        }
-        longPressInput.setText(currentLpText)
+        val queueButton = editorView.findViewById<Button>(R.id.btn_long_press_queue)
+        val queueSummary = editorView.findViewById<TextView>(R.id.tv_long_press_queue)
+        var editedQueue: Pair<List<LongPressItem>, Int>? = null
         val swipeLeftTypes = editorView.findViewById<Spinner>(R.id.sp_swipe_left_type)
         val swipeLeftInput = editorView.findViewById<EditText>(R.id.et_swipe_left_text)
         val swipeRightTypes = editorView.findViewById<Spinner>(R.id.sp_swipe_right_type)
@@ -667,7 +661,7 @@ class KeyboardPageActivity : Activity() {
         val keyView = (previewContainer.getChildAt(row) as? ViewGroup)?.getChildAt(column)
         val keyHeight = keyView?.height?.takeIf { it > 0 } ?: (48 * resources.displayMetrics.density).toInt()
         val defaultPopup = KeyPreviewMetrics.initialPopup(this, keyHeight,
-            slot.effectiveLongPressItems.firstOrNull()?.previewText() ?: slot.displayText())
+            slot.defaultLongPressItem?.previewText() ?: slot.displayText())
         fun updateMode() {
             val popup = MultifunctionMode.entries[mode.selectedItemPosition] == MultifunctionMode.POPUP
             if (popup && popupEditor == null) {
@@ -700,11 +694,6 @@ class KeyboardPageActivity : Activity() {
         types.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, actions.map { it.title }).apply {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
-        longPressTypes.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, actions.map { it.title }).apply {
-            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        }
-        longPressTypes.setSelection(actions.indexOf(slot.longPressAction))
-
         swipeLeftTypes.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, actions.map { it.title }).apply {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
@@ -715,18 +704,29 @@ class KeyboardPageActivity : Activity() {
         }
         swipeRightTypes.setSelection(actions.indexOf(slot.swipeRightAction))
 
+        fun queueSource() = slot.copy(action = actions.getOrNull(types.selectedItemPosition) ?: slot.action)
+        fun refreshQueueSummary() {
+            val source = queueSource()
+            val items = editedQueue?.first ?: source.effectiveLongPressItems
+            val index = editedQueue?.second ?: source.effectiveLongPressDefaultIndex
+            queueSummary.text = if (items.isEmpty()) getString(R.string.classic_queue_empty)
+                else getString(R.string.classic_queue_summary, items.size, items.getOrNull(index)?.description().orEmpty())
+        }
+        queueButton.setOnClickListener {
+            val source = queueSource()
+            ClassicLongPressEditor.show(this, editedQueue?.first ?: source.effectiveLongPressItems,
+                editedQueue?.second ?: source.effectiveLongPressDefaultIndex) { items, index ->
+                editedQueue = items to index
+                refreshQueueSummary()
+            }
+        }
         fun updateEditor() {
             val action = actions[types.selectedItemPosition]
             input.visibility = if (action == KeyAction.TEXT) View.VISIBLE else View.GONE
             behavior.visibility = View.GONE
             help.text = action.help
             error.visibility = View.GONE
-        }
-        fun updateLongPressEditor() {
-            val lpAction = actions[longPressTypes.selectedItemPosition]
-            val isText = lpAction == KeyAction.TEXT
-            longPressTextLabel.visibility = if (isText) View.VISIBLE else View.GONE
-            longPressInput.visibility = if (isText) View.VISIBLE else View.GONE
+            refreshQueueSummary()
         }
         fun updateSwipeEditors() {
             val slAction = actions[swipeLeftTypes.selectedItemPosition]
@@ -741,10 +741,6 @@ class KeyboardPageActivity : Activity() {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = updateEditor()
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
-        longPressTypes.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = updateLongPressEditor()
-            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
-        }
         swipeLeftTypes.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = updateSwipeEditors()
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
@@ -755,28 +751,21 @@ class KeyboardPageActivity : Activity() {
         }
 
         updateEditor()
-        updateLongPressEditor()
         updateSwipeEditors()
         fun currentDraft(): KeySlot {
             val action = actions[types.selectedItemPosition]
-            val lpAction = actions[longPressTypes.selectedItemPosition]
-            val unchangedHold = lpAction == slot.longPressAction && longPressInput.text.toString() == currentLpText
-            val lpText = if (unchangedHold) slot.longPressText else if (lpAction == KeyAction.TEXT) longPressInput.text.toString() else ""
-            val items = if (unchangedHold) slot.longPressItems else if (lpAction == KeyAction.TEXT) {
-                LongPressTextCodec.parse(lpText).map { LongPressItem(text = it) }
-            } else listOf(LongPressItem(action = lpAction))
             val slAction = actions[swipeLeftTypes.selectedItemPosition]
             val srAction = actions[swipeRightTypes.selectedItemPosition]
-            return slot.copy(
+            val draft = slot.copy(
                 action = action, text = if (action == slot.action && input.text.toString() == slot.text) slot.text else if (action == KeyAction.TEXT) input.text.toString() else "",
                 textBehavior = TextBehavior.entries[behavior.selectedItemPosition],
-                longPressText = lpText, longPressAction = lpAction, longPressItems = items,
                 swipeLeftAction = slAction,
                 swipeLeftText = if (slAction == slot.swipeLeftAction && swipeLeftInput.text.toString() == slot.swipeLeftText) slot.swipeLeftText else if (slAction == KeyAction.TEXT) swipeLeftInput.text.toString() else "",
                 swipeRightAction = srAction,
                 swipeRightText = if (srAction == slot.swipeRightAction && swipeRightInput.text.toString() == slot.swipeRightText) slot.swipeRightText else if (srAction == KeyAction.TEXT) swipeRightInput.text.toString() else "",
                 multifunctionMode = MultifunctionMode.entries[mode.selectedItemPosition],
                 popupConfiguration = popupEditor?.configuration ?: slot.popupConfiguration)
+            return editedQueue?.let { draft.withLongPressQueue(it.first, it.second) } ?: draft
         }
         fun showOperationUndo(message: Int, undo: () -> Unit) {
             com.google.android.material.snackbar.Snackbar.make(findViewById(android.R.id.content), message,

@@ -1,6 +1,6 @@
 # 引擎仪表盘（Issue #8）
 
-在 Keyboard Management 中编辑任意按键，将功能设为 **Engine Dashboard**，默认键面符号为 **◷**；也可绑定到长按、滑动或 Shift/Ctrl 快捷映射。默认布局及工具栏不添加仪表盘入口。
+在 Keyboard Management 中编辑任意按键，将功能设为 **Engine Dashboard**，默认键面符号为 **◷**；也可绑定到长按、滑动或 Shift/Ctrl 快捷映射。当前 QWERTY 初始化配置包含仪表盘长按绑定；已有用户配置不会因升级而覆盖。程序回退模板和默认工具栏不添加仪表盘入口，预置布局中的实际绑定以其 JSON 配置为准。
 
 按下该键后，键盘按键区替换为可竖向滚动的只读列表。列出 Engine Management 中所有已接入的功能，包括关闭项；共享 Rime、Mozc 或 LatinIME 的功能显示同一后端状态。顶部可打开 IPA Board 主设置，右侧 Return 或系统返回键回到键盘。单纯打开/关闭面板不提交或清空预输入，不初始化、重试或释放引擎。
 

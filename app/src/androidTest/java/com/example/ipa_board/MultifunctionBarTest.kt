@@ -200,6 +200,11 @@ class MultifunctionBarTest {
     }
 
     @Test fun continuousDeleteRepeatsUntilReleaseCancelRebindOrDetachWithNoExtraReleaseClick() {
+        for (action in listOf(KeyAction.REPEAT_BACKSPACE, KeyAction.REPEAT_LEFT, KeyAction.REPEAT_RIGHT,
+            KeyAction.REPEAT_UP, KeyAction.REPEAT_DOWN)) verifyRepeatStops(action)
+    }
+
+    private fun verifyRepeatStops(action: KeyAction) {
         withAppBindingState {
             ActivityScenario.launch(ShortcutManagerActivity::class.java).use { scenario ->
                 lateinit var bar: MultifunctionBarView
@@ -210,7 +215,7 @@ class MultifunctionBarTest {
                     bar = preview(it)
                     bar.editing = false
                     bar.setBindings(MultifunctionBarSettings.defaults() +
-                        (MultifunctionBarSlot.LEFT_FIRST to MultifunctionBarBinding(KeyAction.REPEAT_BACKSPACE)))
+                        (MultifunctionBarSlot.LEFT_FIRST to MultifunctionBarBinding(action)))
                     button = bar.buttonAt(MultifunctionBarSlot.LEFT_FIRST)
                     bar.onSlotClick = { clicks.incrementAndGet(); repeated.countDown() }
                 }
@@ -255,7 +260,7 @@ class MultifunctionBarTest {
                     assertStopped()
                     if (stop == "rebind") instrumentation.runOnMainSync {
                         bar.setBindings(MultifunctionBarSettings.defaults() +
-                            (MultifunctionBarSlot.LEFT_FIRST to MultifunctionBarBinding(KeyAction.REPEAT_BACKSPACE)))
+                            (MultifunctionBarSlot.LEFT_FIRST to MultifunctionBarBinding(action)))
                     }
                 }
             }

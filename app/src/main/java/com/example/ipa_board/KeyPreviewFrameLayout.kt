@@ -10,7 +10,6 @@ import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.PopupWindow
-import android.widget.TextView
 
 /** One gesture owner for Classic previews and Popup selection; both share hold execution. */
 internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(context) {
@@ -20,6 +19,7 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
     var tapPreview = ""
     var holdPreview = ""
     var longPressItems: List<LongPressItem> = emptyList()
+    var longPressDefaultIndex: Int = 0
     var swipeLeftItem: LongPressItem? = null
     var swipeRightItem: LongPressItem? = null
     var onLongPressRepeat: (() -> Unit)? = null
@@ -61,7 +61,10 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
         get() = popup?.takeIf { it.isShowing }?.contentView
 
     internal val visiblePreview: String?
-        get() = if (popup?.isShowing == true) (popup?.contentView as? TextView)?.text?.toString() else null
+        get() = if (popup?.isShowing == true) actionView?.activeLabel else null
+
+    internal val visiblePopupConfiguration: PopupConfiguration?
+        get() = runtimeConfiguration.takeIf { popup?.isShowing == true }
 
     private val repeatRunnable = object : Runnable {
         override fun run() {
@@ -76,7 +79,7 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
         if (tracking && !isCanceled) {
             held = true
             quickSwipe = QuickSwipe.NONE
-            currentSelectedIndex = 0
+            currentSelectedIndex = longPressDefaultIndex.takeIf { it in getEffectiveItems().indices } ?: 0
             startX = currentTouchRawX
             startY = currentTouchRawY
 
@@ -85,9 +88,12 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
                 updatePopupTouch(currentTouchLocalX, currentTouchLocalY)
             } else {
                 val items = getEffectiveItems()
-                val initialPreview = items.firstOrNull()?.previewText(shiftEnabled, ctrlEnabled) ?: holdPreview
-                if (initialPreview.isNotEmpty()) showPreview(initialPreview)
-                activateHold(items.firstOrNull(), onLongPressRepeat)
+                val item = items.getOrNull(currentSelectedIndex)
+                if (items.isNotEmpty()) {
+                    showPopupConfiguration(KeyPreviewMetrics.classicQueue(context, height, items, currentSelectedIndex, shiftEnabled, ctrlEnabled))
+                    actionView?.activeIndex = currentSelectedIndex
+                }
+                activateHold(item, item?.let { repeatForItem?.invoke(it) } ?: onLongPressRepeat)
             }
             performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
         }
@@ -104,7 +110,6 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
         if (!isEnabled || !isClickable) return false
 
         val density = resources.displayMetrics.density
-        val stepPx = (28 * density).toInt().coerceAtLeast(1)
         val cancelThresholdY = (32 * density).toInt()
 
         when (event.actionMasked) {
@@ -182,31 +187,17 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
                             }
                         }
                     } else {
-                        if (currentY - startY > cancelThresholdY || viewY >= height + cancelThresholdY) {
-                            cancelPress()
-                            isCanceled = true
-                        } else {
-                            val items = getEffectiveItems()
-                            if (items.isNotEmpty()) {
-                                val deltaX = currentX - startX
-                                val steps = Math.round(deltaX / stepPx)
-                                val n = items.size
-                                val newIndex = Math.floorMod(steps, n)
-                                if (newIndex != currentSelectedIndex) {
-                                    currentSelectedIndex = newIndex
-                                    holdState.select(items[newIndex])
-                                    showPreview(items[newIndex].previewText(shiftEnabled, ctrlEnabled))
-                                    performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                }
-                            }
-                        }
+                        updateClassicTouch(currentX, currentY)
                     }
                 } else {
                     cancelPress()
                 }
             }
             MotionEvent.ACTION_UP -> {
-                if (held && multifunctionMode == MultifunctionMode.POPUP) updatePopupTouch(event.x, event.y)
+                if (held) {
+                    if (multifunctionMode == MultifunctionMode.POPUP) updatePopupTouch(event.x, event.y)
+                    else updateClassicTouch(event.rawX, event.rawY)
+                }
                 val index = event.actionIndex
                 val pointerMatches = event.getPointerId(index) == pointerId
                 val commit = tracking && pointerMatches && !isCanceled
@@ -257,14 +248,19 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
         if (repeat != null) repeatRunnable.run()
     }
 
+    private fun showActionPopup() {
+        showPopupConfiguration(popupConfiguration ?: KeyPreviewMetrics.initialPopup(context, height, holdPreview))
+    }
+
     // Saved geometry uses absolute screen coordinates regardless of the current RTL locale.
     @android.annotation.SuppressLint("RtlHardcoded")
-    private fun showActionPopup() {
+    private fun showPopupConfiguration(config: PopupConfiguration, renderShift: Boolean = shiftEnabled, renderCtrl: Boolean = ctrlEnabled) {
+        runtimeConfiguration = config
         if (!isAttachedToWindow || windowToken == null) return
         popup?.dismiss()
+        popup = null
+        actionView = null
         val density = resources.displayMetrics.density
-        val config = popupConfiguration ?: KeyPreviewMetrics.initialPopup(context, height, holdPreview)
-        runtimeConfiguration = config
         val location = IntArray(2)
         getLocationOnScreen(location)
         popupOriginX = location[0] + width / 2.0 - config.anchor.x.toDouble() * density
@@ -288,7 +284,7 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
         val w = (edgeX - x).toInt()
         val h = (edgeY - y).toInt()
         val drawing = PopupActionView(context, config, popupOriginX - x, popupOriginY - y,
-            popupBgColor, popupSymbolColor, shiftEnabled, ctrlEnabled, this)
+            popupBgColor, popupSymbolColor, renderShift, renderCtrl, this)
         actionView = drawing
         popup = PopupWindow(drawing, w, h, false).apply {
             isTouchable = false
@@ -337,40 +333,31 @@ internal open class KeyPreviewFrameLayout(context: Context) : FrameLayout(contex
         }
     }
 
-    private fun showPreview(value: String) {
-        if (!isAttachedToWindow || windowToken == null) return
-        popup?.dismiss()
+    private fun updateClassicTouch(rawX: Float, rawY: Float) {
+        if (holdState.canceled || !tracking) return
         val density = resources.displayMetrics.density
+        // Classic cancellation is relative to the activation touch, independent of key/window bounds.
+        if (rawY - startY > (32 * density).toInt()) {
+            cancelPress()
+            isCanceled = true
+            return
+        }
+        val config = runtimeConfiguration ?: return
+        val initial = longPressDefaultIndex.takeIf { it in config.items.indices } ?: 0
+        val target = ClassicPreviewGeometry.selectedIndex(config, initial, (rawX - startX) / density) ?: return
+        if (target != currentSelectedIndex) {
+            currentSelectedIndex = target
+            getEffectiveItems().getOrNull(target)?.let(holdState::select)
+            actionView?.activeIndex = target
+            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+        }
+    }
 
-        @android.annotation.SuppressLint("AppCompatCustomView")
-        val label = object : TextView(context) {
-            private val pointerOverlay = KeyPreviewPointerOverlay(this, this@KeyPreviewFrameLayout)
-            override fun dispatchDraw(canvas: android.graphics.Canvas) {
-                super.dispatchDraw(canvas)
-                pointerOverlay.draw(canvas)
-            }
-        }.apply {
-            text = value
-            setTextColor(popupSymbolColor)
-            setBackgroundColor(popupBgColor)
-            KeyPreviewMetrics.style(this)
-        }
-        KeyPreviewMetrics.measure(label)
-        val location = IntArray(2)
-        getLocationOnScreen(location)
-        val x = (location[0] + (width - label.measuredWidth) / 2)
-            .coerceIn(0, (resources.displayMetrics.widthPixels - label.measuredWidth).coerceAtLeast(0))
-        val y = (location[1] - label.measuredHeight - (4 * density).toInt()).coerceAtLeast(0)
-        popup = PopupWindow(label, label.measuredWidth, label.measuredHeight, false).apply {
-            isTouchable = false
-            inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
-            setBackgroundDrawable(ColorDrawable(popupBgColor))
-            elevation = 6 * density
-            // The IME window itself may be only as tall as the keyboard.
-            isClippingEnabled = false
-            setIsLaidOutInScreen(true)
-            showAtLocation(this@KeyPreviewFrameLayout, Gravity.TOP or Gravity.LEFT, x, y)
-        }
+    private fun showPreview(value: String) {
+        // Tap/quick-swipe labels are already formatted; avoid applying Ctrl a second time.
+        showPopupConfiguration(KeyPreviewMetrics.classicQueue(context, height,
+            listOf(LongPressItem(text = value)), 0), renderShift = false, renderCtrl = false)
+        actionView?.activeIndex = 0
     }
 
     private fun cancelPress() {

@@ -222,69 +222,141 @@ class KeyPressPreviewTest {
         }
     }
 
-    @Test fun longPressSwipeSelectsActionsInCycle() {
+    @Test fun longPressQueueUsesDefaultAndClampsWithoutCycling() {
         ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
             lateinit var key: KeyPreviewFrameLayout
             var selectedItem: LongPressItem? = null
             var taps = 0
+            val items = listOf(LongPressItem("ɑ"), LongPressItem(action = KeyAction.COPY), LongPressItem("ɒ"))
             scenario.onActivity { activity ->
                 val host = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.BOTTOM }
                 activity.setContentView(host)
-                val slot = KeySlot(1f, "a", longPressItems = listOf(
-                    LongPressItem(text = "ɑ"),
-                    LongPressItem(text = "æ"),
-                    LongPressItem(text = "ɒ")
-                ))
                 KeyboardRenderer.render(activity, host,
-                    KeyboardLayout("PreviewCycle", listOf(RowLayout(1f, listOf(slot)))),
+                    KeyboardLayout("Preview queue", listOf(RowLayout(1f, listOf(
+                        KeySlot(1f, "a", longPressItems = items, longPressDefaultIndex = 1))))),
                     180, Color.WHITE, showKeyPreview = true,
                     onKeyLongItemClick = { _, _, _, item -> selectedItem = item },
                     onKeyClick = { _, _, _ -> taps++ })
                 key = (host.getChildAt(0) as ViewGroup).getChildAt(0) as KeyPreviewFrameLayout
             }
             instrumentation.waitForIdleSync()
+            scenario.onActivity { touch(key, MotionEvent.ACTION_DOWN) }
+            waitPastConfiguredTimeout()
             scenario.onActivity {
-                val startX = key.width / 2f
-                val startY = key.height / 2f
+                assertTrue(key.visiblePopupContent is PopupActionView)
+                val config = requireNotNull(key.visiblePopupConfiguration)
+                assertEquals(items, config.items.map { it.binding })
+                assertEquals(config.items[1].center.x, config.anchor.x, .001f)
+                assertEquals(KeyAction.COPY.keyLabel, key.visiblePreview)
+                val step = (config.items[1].center.x - config.items[0].center.x) * key.resources.displayMetrics.density
+                val x = key.width / 2f
+                val y = key.height / 2f
+                touch(key, MotionEvent.ACTION_MOVE, x + step * 10f, y - 100f)
+                assertEquals("ɒ", key.visiblePreview)
+                touch(key, MotionEvent.ACTION_MOVE, x + step * 3f, y)
+                assertEquals("ɒ", key.visiblePreview)
+                touch(key, MotionEvent.ACTION_MOVE, x, y)
+                assertEquals(KeyAction.COPY.keyLabel, key.visiblePreview)
+                touch(key, MotionEvent.ACTION_MOVE, x - step * 10f, y)
+                assertEquals("ɑ", key.visiblePreview)
+                touch(key, MotionEvent.ACTION_UP, x - step, y)
+                assertNull(key.visiblePreview)
+                assertEquals(items[0], selectedItem)
+                assertEquals(0, taps)
+            }
+        }
+    }
 
-                // Down & wait for long press
-                touch(key, MotionEvent.ACTION_DOWN, startX, startY)
+    @Test fun cancellationIsRelativeToActivationTouchEvenBelowKeyBottom() {
+        ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
+            lateinit var key: KeyPreviewFrameLayout
+            var commits = 0
+            scenario.onActivity { activity ->
+                val host = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.BOTTOM }
+                activity.setContentView(host)
+                key = KeyPreviewFrameLayout(activity).apply {
+                    previewEnabled = true; tapPreview = "a"; longPressItems = listOf(LongPressItem("b"))
+                    swipeRightItem = LongPressItem("right")
+                    setOnClickListener { commits++ }; setOnLongClickListener { true }
+                    onLongPressItemClick = { commits++ }
+                }
+                // A deliberately short key lets the two former cancellation conditions disagree.
+                host.addView(key, LinearLayout.LayoutParams(200, (20 * activity.resources.displayMetrics.density).toInt()))
+            }
+            instrumentation.waitForIdleSync()
+            val density = key.resources.displayMetrics.density
+            scenario.onActivity {
+                touch(key, MotionEvent.ACTION_DOWN, 100f, key.height - 1f)
+                // Before activation horizontal dominance permits tracking outside the lower edge.
+                touch(key, MotionEvent.ACTION_MOVE, 100f + 100 * density, key.height + 20 * density)
             }
             waitPastConfiguredTimeout()
             scenario.onActivity {
-                val density = key.resources.displayMetrics.density
-                val stepPx = 28 * density
-                val startX = key.width / 2f
-                val startY = key.height / 2f
-
-                // Initial long press preview (index 0: ɑ)
-                assertEquals("ɑ", key.visiblePreview)
-
-                // Swipe right 1 step -> index 1: æ
-                touch(key, MotionEvent.ACTION_MOVE, startX + stepPx * 1.2f, startY)
-                assertEquals("æ", key.visiblePreview)
-
-                // Swipe right 2 steps -> index 2: ɒ
-                touch(key, MotionEvent.ACTION_MOVE, startX + stepPx * 2.2f, startY)
-                assertEquals("ɒ", key.visiblePreview)
-
-                // Swipe right 3 steps -> index 0: ɑ
-                touch(key, MotionEvent.ACTION_MOVE, startX + stepPx * 3.2f, startY)
-                assertEquals("ɑ", key.visiblePreview)
-
-                // Swipe left 1 step -> index 2: ɒ
-                touch(key, MotionEvent.ACTION_MOVE, startX - stepPx * 1.2f, startY)
-                assertEquals("ɒ", key.visiblePreview)
-
-                // Swipe left 2 steps -> index 1: æ
-                touch(key, MotionEvent.ACTION_MOVE, startX - stepPx * 2.2f, startY)
-                assertEquals("æ", key.visiblePreview)
-
-                // Release on index 1
-                touch(key, MotionEvent.ACTION_UP, startX - stepPx * 2.2f, startY)
+                assertEquals("b", key.visiblePreview)
+                // Below the former key-bottom + 32dp boundary, but only 20dp from activation.
+                touch(key, MotionEvent.ACTION_MOVE, 100f + 100 * density, key.height + 40 * density)
+                assertEquals("b", key.visiblePreview)
+                touch(key, MotionEvent.ACTION_UP, 100f + 100 * density, key.height + 40 * density)
+                assertEquals(1, commits)
+                touch(key, MotionEvent.ACTION_DOWN, 100f, 5f)
+            }
+            waitPastConfiguredTimeout()
+            scenario.onActivity {
+                touch(key, MotionEvent.ACTION_MOVE, 100f, 5f + 33 * density)
                 assertNull(key.visiblePreview)
-                assertEquals("æ", selectedItem?.text)
-                assertEquals(0, taps)
+                touch(key, MotionEvent.ACTION_MOVE, 100f, 5f)
+                touch(key, MotionEvent.ACTION_UP, 100f, 5f)
+                assertEquals("Cancellation must latch through return", 1, commits)
+            }
+        }
+    }
+
+    @Test fun movingAcrossQueueRetainsTheInitiallyActivatedRepeatLifecycle() {
+        ActivityScenario.launch(KeyboardPageActivity::class.java).use { scenario ->
+            lateinit var key: KeyPreviewFrameLayout
+            val effects = mutableListOf<LongPressItem>()
+            val repeat = LongPressItem(action = KeyAction.REPEAT_LEFT)
+            val ordinary = LongPressItem("text")
+            scenario.onActivity { activity ->
+                val host = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.BOTTOM }
+                activity.setContentView(host)
+                key = KeyPreviewFrameLayout(activity).apply {
+                    previewEnabled = true; tapPreview = "tap"; longPressItems = listOf(repeat, ordinary)
+                    setOnClickListener {}; setOnLongClickListener { true }
+                    onLongPressItemClick = { effects += it }
+                    repeatForItem = { item -> if (item.action.repeatsWhileHeld) ({ effects += item; Unit }) else null }
+                }
+                host.addView(key, LinearLayout.LayoutParams(400, 180))
+            }
+            instrumentation.waitForIdleSync()
+            scenario.onActivity { touch(key, MotionEvent.ACTION_DOWN) }
+            waitPastConfiguredTimeout()
+            scenario.onActivity {
+                assertTrue(key.repeatingHold)
+                assertTrue(effects.isNotEmpty())
+                val count = effects.size
+                val config = requireNotNull(key.visiblePopupConfiguration)
+                val step = config.items[0].radius * 2 * key.resources.displayMetrics.density
+                touch(key, MotionEvent.ACTION_MOVE, key.width / 2f + step, key.height / 2f)
+                assertEquals("text", key.visiblePreview)
+                assertTrue("Changing selection must not replace an active repeat", key.repeatingHold)
+                touch(key, MotionEvent.ACTION_UP, key.width / 2f + step, key.height / 2f)
+                assertEquals(count, effects.size)
+                assertTrue(effects.all { it == repeat })
+                assertFalse(key.repeatingHold)
+                effects.clear()
+                key.longPressDefaultIndex = 1
+                touch(key, MotionEvent.ACTION_DOWN)
+            }
+            waitPastConfiguredTimeout()
+            scenario.onActivity {
+                assertFalse(key.repeatingHold)
+                val step = requireNotNull(key.visiblePopupConfiguration).items[0].radius * 2 * key.resources.displayMetrics.density
+                touch(key, MotionEvent.ACTION_MOVE, key.width / 2f - step, key.height / 2f)
+                assertFalse("Moving onto repeat must not start a new hold lifecycle", key.repeatingHold)
+                assertTrue(effects.isEmpty())
+                touch(key, MotionEvent.ACTION_UP, key.width / 2f - step, key.height / 2f)
+                assertEquals(listOf(repeat), effects)
             }
         }
     }

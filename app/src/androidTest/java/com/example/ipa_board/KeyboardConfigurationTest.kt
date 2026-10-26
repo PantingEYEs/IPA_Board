@@ -55,7 +55,7 @@ class KeyboardConfigurationTest {
 
     }
 
-    @Test fun dashboardBindingsSurviveLayoutExportAndDoNotAppearInDefaultLayouts() {
+    @Test fun dashboardAndBundledBindingsRoundTripWithoutChangingFallbackLayouts() {
         val action = KeyAction.ENGINE_DASHBOARD
         val layout = KeyboardLayout("Dashboard mapping", listOf(RowLayout(1f, listOf(
             KeySlot(1f, action = action, longPressAction = action, swipeLeftAction = action, swipeRightAction = action)
@@ -72,7 +72,10 @@ class KeyboardConfigurationTest {
                 KeyboardLayout.fromJson((document.optJSONObject("layout") ?: document).toString())
             }
         }
-        for (initial in bundled + SettingsConstants.DEFAULT_LAYOUT + com.example.ipa_board.ime.BuiltinLayouts.mixed) {
+        // Maintainer-provided presets may include Dashboard (for example QWERTY's hold binding).
+        // Validate their actual configuration instead of prescribing which functions they contain.
+        for (initial in bundled) assertEquals(initial, KeyboardLayout.fromJson(initial.toJson()))
+        for (initial in listOf(SettingsConstants.DEFAULT_LAYOUT, com.example.ipa_board.ime.BuiltinLayouts.mixed)) {
             for (key in initial.rows.flatMap { it.slots }) {
                 assertNotEquals(action, key.action)
                 assertNotEquals(action, key.longPressAction)
@@ -112,6 +115,10 @@ class KeyboardConfigurationTest {
             KeyAction.RIGHT to "right",
             KeyAction.UP to "up",
             KeyAction.DOWN to "down",
+            KeyAction.REPEAT_LEFT to "repeat_left",
+            KeyAction.REPEAT_RIGHT to "repeat_right",
+            KeyAction.REPEAT_UP to "repeat_up",
+            KeyAction.REPEAT_DOWN to "repeat_down",
             KeyAction.SHIFT to "shift",
             KeyAction.CTRL to "ctrl",
             KeyAction.ENTER to "enter",

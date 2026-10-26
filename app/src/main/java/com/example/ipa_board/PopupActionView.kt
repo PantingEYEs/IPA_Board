@@ -22,6 +22,7 @@ internal class PopupActionView(
     private val ctrl: Boolean,
     pointerSource: View? = null
 ) : View(context) {
+    internal val activeLabel: String? get() = activeIndex?.let { configuration.items.getOrNull(it)?.binding?.previewText(shift, ctrl) }
     var activeIndex: Int? = null
         set(value) { if (field != value) { field = value; invalidate() } }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)

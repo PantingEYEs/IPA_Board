@@ -6,6 +6,7 @@ import android.graphics.Rect
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.provider.Settings
+import android.text.InputType
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.inputmethod.BaseInputConnection
@@ -24,6 +25,109 @@ class MultifunctionBarImeTest {
     private val ui = instrumentation.uiAutomation
     private val driver = ImeTestDriver()
     private val context get() = instrumentation.targetContext
+
+    private val cursorActions = listOf(KeyAction.LEFT to KeyAction.REPEAT_LEFT,
+        KeyAction.RIGHT to KeyAction.REPEAT_RIGHT, KeyAction.UP to KeyAction.REPEAT_UP,
+        KeyAction.DOWN to KeyAction.REPEAT_DOWN)
+
+    private fun cursorLayout(mode: MultifunctionMode) = KeyboardLayout("Cursor fixture", listOf(RowLayout(1f,
+        cursorActions.map { (tap, hold) ->
+            KeySlot(1f, action = tap, longPressAction = hold, multifunctionMode = mode,
+                popupConfiguration = PopupConfiguration(
+                    vertices = listOf(PopupPoint(-60f, -100f), PopupPoint(60f, -100f), PopupPoint(60f, -20f), PopupPoint(-60f, -20f)),
+                    anchor = PopupPoint(0f, 0f),
+                    items = listOf(PopupItem(PopupPoint(0f, -60f), 20f, LongPressItem(action = hold)))))
+        } + KeySlot(1f, "abcdefghijkɑ😀"))))
+
+    @Test fun classicAndPopupCursorHoldsMoveAllDirectionsWithoutChangingText() {
+        for (mode in MultifunctionMode.entries) {
+            withKeyboard(emptyMap(), layout = cursorLayout(mode), multiline = true) { scenario ->
+                val text = List(8) { "abcdefghijklmno" }.joinToString("\n") + "ɑ😀"
+                for ((index, pair) in cursorActions.withIndex()) {
+                    val (tap, hold) = pair
+                    scenario.onActivity { it.editor.setText(text); it.editor.setSelection(54) }
+                    driver.click { it.contentDescription?.toString()?.startsWith("Row 1, key ${index + 1}:") == true }
+                    instrumentation.waitForIdleSync()
+                    val step = when (tap) { KeyAction.LEFT -> -1; KeyAction.RIGHT -> 1; KeyAction.UP -> -16; else -> 16 }
+                    scenario.onActivity { assertEquals(54 + step, it.editor.selectionStart); assertEquals(text, it.editor.text.toString()) }
+                    scenario.onActivity { it.editor.setSelection(54) }
+                    val node = driver.awaitNode { it.contentDescription?.toString()?.startsWith("Row 1, key ${index + 1}:") == true }
+                    val rect = Rect().also(node::getBoundsInScreen)
+                    assertCursorHold(scenario, rect, hold, text, popup = mode == MultifunctionMode.POPUP)
+                }
+                // The same service path must finish pending Unicode composition exactly once.
+                scenario.onActivity { it.editor.setText("") }
+                driver.click { it.contentDescription?.toString()?.startsWith("Row 1, key 5:") == true }
+                editor(scenario, "abcdefghijkɑ😀")
+                val node = driver.awaitNode { it.contentDescription?.toString()?.startsWith("Row 1, key 1:") == true }
+                assertCursorHold(scenario, Rect().also(node::getBoundsInScreen), KeyAction.REPEAT_LEFT,
+                    "abcdefghijkɑ😀", popup = mode == MultifunctionMode.POPUP)
+                scenario.onActivity { assertEquals(-1, BaseInputConnection.getComposingSpanStart(it.editor.text)) }
+            }
+        }
+    }
+
+    @Test fun toolbarCursorHoldsMoveAllDirectionsStopAndRespectBoundaries() {
+        val slots = listOf(MultifunctionBarSlot.LEFT_FIRST, MultifunctionBarSlot.LEFT_SECOND,
+            MultifunctionBarSlot.LEFT_THIRD, MultifunctionBarSlot.RIGHT_FIRST)
+        withKeyboard(slots.zip(cursorActions.map { MultifunctionBarBinding(it.second) }).toMap(), multiline = true) { scenario ->
+            val text = List(8) { "abcdefghijklmno" }.joinToString("\n") + "ɑ😀"
+            for ((_, action) in cursorActions) {
+                scenario.onActivity { it.editor.setText(text); it.editor.setSelection(54) }
+                val node = driver.awaitNode { it.contentDescription?.toString() == action.title && it.isVisibleToUser }
+                val rect = Rect().also(node::getBoundsInScreen)
+                assertCursorHold(scenario, rect, action, text)
+                val boundary = if (action == KeyAction.REPEAT_LEFT || action == KeyAction.REPEAT_UP) 0 else text.length
+                scenario.onActivity { it.editor.setSelection(boundary) }
+                val down = SystemClock.uptimeMillis()
+                injectTouch(MotionEvent.ACTION_DOWN, rect.exactCenterX(), rect.exactCenterY(), down)
+                try {
+                    SystemClock.sleep(KeyboardGestureSettings.longPressTimeoutMs(context).toLong() + 180)
+                } finally { injectTouch(MotionEvent.ACTION_UP, rect.exactCenterX(), rect.exactCenterY(), down) }
+                instrumentation.waitForIdleSync()
+                scenario.onActivity { assertEquals(boundary, it.editor.selectionStart); assertEquals(text, it.editor.text.toString()) }
+            }
+        }
+    }
+
+    private fun injectTouch(action: Int, x: Float, y: Float, down: Long) {
+        val event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, x, y, 0)
+            .apply { source = InputDevice.SOURCE_TOUCHSCREEN }
+        try { assertTrue(ui.injectInputEvent(event, true)) } finally { event.recycle() }
+    }
+
+    private fun assertCursorHold(scenario: ActivityScenario<ImeTestEditorActivity>, rect: Rect,
+        action: KeyAction, text: String, popup: Boolean = false) {
+        var start = -1
+        scenario.onActivity { start = it.editor.selectionStart }
+        val down = SystemClock.uptimeMillis()
+        var y = rect.exactCenterY()
+        injectTouch(MotionEvent.ACTION_DOWN, rect.exactCenterX(), y, down)
+        try {
+            if (popup) {
+                SystemClock.sleep(KeyboardGestureSettings.longPressTimeoutMs(context).toLong() + 70)
+                y -= 60f * context.resources.displayMetrics.density
+                injectTouch(MotionEvent.ACTION_MOVE, rect.exactCenterX(), y, down)
+            }
+            val minimum = if (action == KeyAction.REPEAT_UP || action == KeyAction.REPEAT_DOWN) 32 else 2
+            val deadline = down + KeyboardGestureSettings.longPressTimeoutMs(context) + 2000
+            var moved = 0
+            while (moved < minimum && SystemClock.uptimeMillis() < deadline) {
+                scenario.onActivity {
+                    moved = if (action == KeyAction.REPEAT_LEFT || action == KeyAction.REPEAT_UP)
+                        start - it.editor.selectionStart else it.editor.selectionStart - start
+                    assertEquals(text, it.editor.text.toString())
+                }
+                SystemClock.sleep(10)
+            }
+            assertTrue("$action must repeat through the real IME", moved >= minimum)
+        } finally { injectTouch(MotionEvent.ACTION_UP, rect.exactCenterX(), y, down) }
+        instrumentation.waitForIdleSync()
+        var stopped = -1
+        scenario.onActivity { stopped = it.editor.selectionStart; assertEquals(text, it.editor.text.toString()) }
+        SystemClock.sleep(180)
+        scenario.onActivity { assertEquals("Cursor must stop after release", stopped, it.editor.selectionStart); assertEquals(text, it.editor.text.toString()) }
+    }
 
     @Test fun configuredAndLiveReplacedBindingsUseTheExistingServiceActionsWithoutLosingComposition() {
         withKeyboard(mapOf(
@@ -127,7 +231,8 @@ class MultifunctionBarImeTest {
     private fun shell(command: String) = ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand(command))
         .bufferedReader().use { it.readText() }
 
-    private fun withKeyboard(bindings: Map<MultifunctionBarSlot, MultifunctionBarBinding>, body: (ActivityScenario<ImeTestEditorActivity>) -> Unit) {
+    private fun withKeyboard(bindings: Map<MultifunctionBarSlot, MultifunctionBarBinding>, layout: KeyboardLayout? = null,
+        multiline: Boolean = false, body: (ActivityScenario<ImeTestEditorActivity>) -> Unit) {
         val groupSnapshot = PageGroupTestState(context)
         val prefs = EngineSettings.preferences(context)
         val keys = EngineFeature.entries.map { it.key } + listOf(RemoteKeyboardMode.KEY_SNAPSHOT, MultifunctionBarSettings.KEY_BINDINGS)
@@ -146,15 +251,19 @@ class MultifunctionBarImeTest {
                 bindings.forEach { (slot, binding) -> MultifunctionBarSettings.save(context, slot, binding) }
             }
             ui.serviceInfo = ui.serviceInfo.apply { flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS }
-            val layout = KeyboardLayout("Bar fixture", listOf(RowLayout(1f, listOf(
+            val fixture = layout ?: KeyboardLayout("Bar fixture", listOf(RowLayout(1f, listOf(
                 KeySlot(1f, "123456789"), KeySlot(1f, action = KeyAction.ENTER)))))
-            filename = LayoutFileManager.createLayout(context, layout.name, layout)
+            filename = LayoutFileManager.createLayout(context, fixture.name, fixture)
             PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(filename))
             PageGroupManager.selectPage(context, filename)
             shell("ime enable $ime")
             shell("ime set $ime")
             val editor = ActivityScenario.launch(ImeTestEditorActivity::class.java)
             scenario = editor
+            if (multiline) editor.onActivity {
+                it.editor.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                it.editor.setHorizontallyScrolling(false)
+            }
             driver.awaitKeyboard(editor) { it.contentDescription?.toString()?.startsWith("Row 1, key 1:") == true }
             body(editor)
         } finally {

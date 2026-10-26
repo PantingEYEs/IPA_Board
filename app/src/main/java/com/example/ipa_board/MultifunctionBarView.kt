@@ -122,11 +122,11 @@ class MultifunctionBarView(context: Context) : LinearLayout(context) {
                 else -> null
             }
             button.alpha = if (!editing && action in setOf(KeyAction.REMOTE_KEYBOARD, KeyAction.WIDTH_SWAP, KeyAction.CALCULATOR) && !active) 0.5f else 1f
-            button.repeatEnabled = !editing && action == KeyAction.REPEAT_BACKSPACE
+            button.repeatEnabled = !editing && action.repeatsWhileHeld
         }
     }
 
-    /** Repeats dispatch the same binding callback as a click; deletion stays in the IME controller. */
+    /** Repeats dispatch the same binding callback as a click; execution stays in the IME controller. */
     private class RepeatingButton(context: Context) : AppCompatButton(context, null, android.R.attr.buttonStyle) {
         var repeatEnabled = false
             set(value) { if (field != value) cancelGesture(); field = value }
