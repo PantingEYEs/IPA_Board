@@ -61,7 +61,8 @@
         "com.example.ipa_board.PopupGestureEquivalenceTest",
         "com.example.ipa_board.MultifunctionBarTest",
         "com.example.ipa_board.PageEngineBindingUiTest",
-        "com.example.ipa_board.ClipboardStartupSyncTest"
+        "com.example.ipa_board.ClipboardStartupSyncTest",
+        "com.example.ipa_board.ClipboardManagementTest"
       ]
     },
     "e2e": {
@@ -133,7 +134,8 @@
         "com.example.ipa_board.PageEngineBindingContractTest",
         "com.example.ipa_board.PageEngineBindingUiTest",
         "com.example.ipa_board.PageEngineBindingImeTest",
-        "com.example.ipa_board.ClipboardStartupSyncTest"
+        "com.example.ipa_board.ClipboardStartupSyncTest",
+        "com.example.ipa_board.ClipboardManagementTest"
       ]
     },
     "ipa": {
@@ -252,6 +254,14 @@
         "com.example.ipa_board.QuickPasteStatusTest",
         "com.example.ipa_board.ClipboardPanelOrderTest",
         "com.example.ipa_board.DiagnosticsContractTest"
+      ]
+    },
+    "clipboard-management": {
+      "classes": [
+        "com.example.ipa_board.ClipboardManagementTest",
+        "com.example.ipa_board.ClipboardStartupSyncTest",
+        "com.example.ipa_board.QuickPasteStatusTest",
+        "com.example.ipa_board.ClipboardPanelOrderTest"
       ]
     }
   }

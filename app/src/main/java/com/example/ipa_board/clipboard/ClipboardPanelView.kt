@@ -10,6 +10,7 @@ import android.os.Looper
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
@@ -41,6 +42,30 @@ class ClipboardPanelView(
     var isReversed = false
         private set
     var onOrderChanged: (() -> Unit)? = null
+    var onSelectionChanged: ((Int) -> Unit)? = null
+    private val selectedIds = linkedSetOf<String>()
+    var managementMode = false
+        set(value) {
+            field = value
+            recyclerView.setOnTouchListener(if (value) View.OnTouchListener { _, event ->
+                recyclerView.parent?.requestDisallowInterceptTouchEvent(
+                    event.actionMasked != MotionEvent.ACTION_UP && event.actionMasked != MotionEvent.ACTION_CANCEL)
+                false
+            } else null)
+            adapter.notifyDataSetChanged()
+        }
+    var isSelectionMode = false
+        set(value) {
+            field = value
+            if (!value) selectedIds.clear()
+            adapter.notifyDataSetChanged()
+            onSelectionChanged?.invoke(selectedIds.size)
+        }
+
+    fun getSelectedIds(): Set<String> = selectedIds.toSet()
+    fun selectAll() { selectedIds.addAll(adapter.displayItems.map { it.id }); refreshList() }
+    fun clearSelection() { selectedIds.clear(); refreshList() }
+    fun restoreSelection(ids: Collection<String>) { selectedIds.clear(); selectedIds.addAll(ids); refreshList() }
 
     init {
         setBackgroundColor(Color.rgb(18, 18, 18))
@@ -120,6 +145,7 @@ class ClipboardPanelView(
                 recyclerView: RecyclerView,
                 viewHolder: RecyclerView.ViewHolder
             ): Int {
+                if (managementMode || isSelectionMode) return 0
                 val pos = viewHolder.adapterPosition
                 if (pos < 0 || pos >= adapter.displayItems.size) return 0
                 val item = adapter.displayItems[pos]
@@ -151,7 +177,9 @@ class ClipboardPanelView(
         }
         // Sorting and clipboard refreshes must not revive an item while its undo is pending.
         val items = repository.getItems().filter { it.id != pendingDeleteItem?.id }
+        selectedIds.retainAll(items.map { it.id }.toSet())
         adapter.setItems(if (isReversed) items.reversed() else items)
+        onSelectionChanged?.invoke(selectedIds.size)
         updateEmptyState()
     }
 
@@ -255,6 +283,11 @@ class ClipboardPanelView(
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
             }
+            val select = CheckBox(context).apply {
+                visibility = GONE
+                contentDescription = context.getString(R.string.clipboard_select_item)
+            }
+            textLayout.addView(select, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
 
             val contentTextView = TextView(context).apply {
                 setTextColor(Color.WHITE)
@@ -305,21 +338,35 @@ class ClipboardPanelView(
                 addView(container)
             }
 
-            return ViewHolder(wrapper, container, contentTextView, pinTextView, timeTextView)
+            return ViewHolder(wrapper, container, contentTextView, pinTextView, timeTextView, select)
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val item = displayItems[position]
-            holder.contentTextView.text = if (item.isSensitive) "Sensitive Content · Tap to Paste" else item.text
+            holder.contentTextView.text = if (item.isSensitive) context.getString(
+                if (managementMode) R.string.clipboard_sensitive_edit else R.string.clipboard_sensitive_paste) else item.text
             holder.pinTextView.visibility = if (item.isPinned) VISIBLE else GONE
             holder.timeTextView.text = dateFormat.format(Date(item.timestamp))
-
-            holder.container.setOnClickListener {
-                commitPendingDelete()
-                onItemClick(item)
+            holder.select.visibility = if (isSelectionMode) VISIBLE else GONE
+            holder.select.isChecked = item.id in selectedIds
+            (holder.container.background as GradientDrawable).setStroke(
+                if (isSelectionMode && item.id in selectedIds) dp(1) else 0, Color.LTGRAY)
+            val click = View.OnClickListener {
+                if (isSelectionMode) {
+                    if (!selectedIds.add(item.id)) selectedIds.remove(item.id)
+                    notifyDataSetChanged()
+                    onSelectionChanged?.invoke(selectedIds.size)
+                } else {
+                    commitPendingDelete()
+                    onItemClick(item)
+                }
             }
 
+            holder.container.setOnClickListener(click)
+            holder.select.setOnClickListener(click)
+
             holder.container.setOnLongClickListener {
+                if (isSelectionMode) return@setOnLongClickListener true
                 commitPendingDelete()
                 val updated = repository.togglePin(item.id)
                 val message = if (updated?.isPinned == true) "Pinned" else "Unpinned"
@@ -336,7 +383,8 @@ class ClipboardPanelView(
             val container: View,
             val contentTextView: TextView,
             val pinTextView: TextView,
-            val timeTextView: TextView
+            val timeTextView: TextView,
+            val select: CheckBox
         ) : RecyclerView.ViewHolder(itemView)
     }
 }

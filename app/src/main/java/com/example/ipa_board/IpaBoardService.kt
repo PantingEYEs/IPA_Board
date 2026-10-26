@@ -184,6 +184,10 @@ class IpaBoardService : InputMethodService() {
     }
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == ClipboardRepository.KEY_CLIPBOARD_ITEMS) {
+            clipboardPanel?.refreshList()
+            updateQuickPasteStatus()
+        }
         if (key == MultifunctionBarSettings.KEY_BINDINGS) {
             // Rebind only the toolbar: editing shortcuts must not reset modifiers, composition,
             // the open panel, or its custom status controls.

@@ -1,0 +1,23 @@
+<resources>
+    <string name="clipboard_history_title">Clipboard history</string>
+    <string name="clipboard_actions">Clipboard actions</string>
+    <string name="clipboard_manage">Manage</string>
+    <string name="clipboard_exit_manage">Exit</string>
+    <string name="clipboard_select_all">Select All</string>
+    <string name="clipboard_clear_selection">Deselect All</string>
+    <string name="clipboard_export_selected">Export selected</string>
+    <string name="clipboard_selected_count">Selected: %1$d</string>
+    <string name="clipboard_select_item">Select clipboard item</string>
+    <string name="clipboard_select_first">Select clipboard items to export</string>
+    <string name="clipboard_edit_title">Edit clipboard item</string>
+    <string name="clipboard_edit_content">Clipboard content</string>
+    <string name="clipboard_edit_save">Save</string>
+    <string name="clipboard_edit_cancel">Cancel</string>
+    <string name="clipboard_edit_failed">Unable to save: the item changed, is blank, or duplicates another item.</string>
+    <string name="clipboard_export_success">Clipboard exported</string>
+    <string name="clipboard_export_failed">Unable to export clipboard items</string>
+    <string name="clipboard_sensitive_edit">Sensitive Content · Tap to Edit</string>
+    <string name="clipboard_sensitive_paste">Sensitive Content · Tap to Paste</string>
+    <item name="clipboard_history_panel" type="id" />
+    <item name="clipboard_edit_text" type="id" />
+</resources>
