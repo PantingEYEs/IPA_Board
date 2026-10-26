@@ -151,6 +151,45 @@ class ClipboardRepositoryTest {
         assertNotNull(repository.syncSystemClip("Different clip", 100))
     }
 
+    @Test fun editingPreservesMetadataAndOtherRepositoryInstancesCannotOverwriteIt() {
+        val original = repository.addClip("Original")!!
+        repository.togglePin(original.id)
+        val editor = ClipboardRepository(prefsOverride = fakePrefs)
+        val before = editor.getItemById(original.id)!!
+        val edited = editor.editItem(original.id, "Original", "  Edited ɑ😀  ")
+        assertEquals(before.copy(text = "  Edited ɑ😀  "), edited)
+        assertEquals(edited, repository.getItemById(original.id))
+        repository.addClip("Later copy")
+        assertEquals(edited, editor.getItemById(original.id))
+        assertEquals(2, editor.getItems().size)
+        editor.deleteItem(original.id)
+        assertNull(repository.getItemById(original.id))
+    }
+
+    @Test fun invalidOrConflictingEditsLeaveHistoryIntact() {
+        val first = repository.addClip("First")!!
+        repository.addClip("Second")
+        val before = repository.getItems()
+        assertThrows(IllegalArgumentException::class.java) { repository.editItem(first.id, first.text, "  ") }
+        assertThrows(IllegalArgumentException::class.java) { repository.editItem(first.id, first.text, "Second") }
+        assertThrows(IllegalStateException::class.java) { repository.editItem(first.id, "outdated", "Changed") }
+        assertEquals(before, repository.getItems())
+    }
+
+    @Test fun exportIncludesOnlySelectedItemsWithTheirStorageMetadata() {
+        val selected = repository.addClip("Selected\nɑ😀")!!
+        repository.togglePin(selected.id)
+        repository.addClip("Not selected")
+        val json = repository.exportSelection(setOf(selected.id))
+        assertTrue(json.startsWith("["))
+        assertTrue(json.endsWith("]"))
+        val restored = com.example.ipa_board.clipboard.ClipboardItem.fromJsonString(json.substring(1, json.length - 1))
+        assertEquals(repository.getItemById(selected.id), restored)
+        assertFalse(json.contains("Not selected"))
+        assertThrows(IllegalArgumentException::class.java) { repository.exportSelection(emptySet()) }
+        assertThrows(IllegalStateException::class.java) { repository.exportSelection(setOf(selected.id, "missing")) }
+    }
+
     private class FakeSharedPreferences : SharedPreferences {
         private val map = mutableMapOf<String, Any?>()
 

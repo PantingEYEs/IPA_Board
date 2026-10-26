@@ -4,6 +4,8 @@
 
 Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划](docs/0.0.4-development-plan.md)。
 
+- Clipboard Management 底部新增历史卡片区，与输入法共用两列卡片、等高预览和钉选样式。点击可编辑完整文本，保留原时间与标记；右下角菜单复用颜文字管理页的展开/收起逻辑，提供多选、全选和 JSON 导出。导出沿用内部存储格式并保留所选项的完整文本及元数据；管理页和输入法仓库刷新共享历史，避免编辑被旧缓存覆盖。
+- Clipboard Management 新增默认开启的 **Sync clipboard when keyboard opens**，每次键盘显示主动补读当前系统剪贴板，不再仅等待复制事件或打开面板；开关独立于 Quick Paste，关闭后保留原有同步路径。Debug diagnostics 开启时记录每次启动同步的单调时钟耗时，不记录剪贴板内容。此变更优先处理 #15 的启动补读假设，不代表其间歇性故障根因已确认。
 - 连续光标控制（#10）及 Classic 长按队列扩展已通过 [PR #29](https://github.com/PantingEYEs/IPA_Board/pull/29) 合入 `0.0.4-dev`（2026-10-27，merge commit `fdc87ab`）；维护者验收通过，Issue #10 已关闭。
 - 新增四方向 Continuous Cursor 功能，与单步方向键分别绑定；复用原方向键执行及 Continuous Delete 的长按重复机制，支持 Classic、Popup 和多功能栏。持续功能主键未另设长按内容时可直接按住重复，独立配置优先；保留默认布局及 UTF-16 退格行为。
 - Classic 长按支持混合文本和功能的队列，提供次级弹窗新增、删除、编辑与默认项选择，并兼容旧布局。普通预览和完整队列共用 Popup 绘制，左右选择在两端停住、不再循环；Classic 与自定义 Popup 配置分别保留。长按后的取消只依据相对激活触点下移超过 32dp，移除基于按键底部的判断，持续功能生命周期保持原有实现。

@@ -1,0 +1,4 @@
+<resources>
+    <string name="clipboard_startup_sync">Sync clipboard when keyboard opens</string>
+    <string name="clipboard_startup_sync_help">Read the current system clipboard each time the keyboard is shown, including after switching back from another input method. Sync duration is recorded when Debug diagnostics is enabled.</string>
+</resources>

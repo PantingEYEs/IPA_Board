@@ -35,6 +35,8 @@ object AppDiagnostics {
 
     fun <T> atStage(component: DiagnosticComponent, stage: DiagnosticStage, operation: () -> T): T =
         reporter.atStage(component, stage, operation)
+    fun <T> measure(component: DiagnosticComponent, stage: DiagnosticStage, operation: () -> T): T =
+        reporter.measure(component, stage, operation)
     fun failure(component: DiagnosticComponent, stage: DiagnosticStage, error: Throwable) = reporter.failure(component, stage, error)
     fun signal(component: DiagnosticComponent, stage: DiagnosticStage, kind: DiagnosticKind) = reporter.signal(component, stage, kind)
 

@@ -1,7 +1,10 @@
 package com.example.ipa_board
 
 import android.Manifest
-import android.app.Activity
+import android.app.AlertDialog
+import android.content.Intent
+import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
@@ -12,10 +15,17 @@ import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.Switch
 import android.widget.Toast
-import com.example.ipa_board.clipboard.SmsCodeAutoFillManager
+import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.FrameLayout
+import android.widget.TextView
+import com.example.ipa_board.clipboard.*
+import java.io.OutputStream
 
-class ClipboardManagerActivity : Activity() {
+class ClipboardManagerActivity : AppCompatActivity() {
 
+    private lateinit var swSyncOnStart: Switch
     private lateinit var swQuickPaste: Switch
     private lateinit var swSmsOtp: Switch
     private lateinit var containerSmsOtpModes: View
@@ -36,6 +46,26 @@ class ClipboardManagerActivity : Activity() {
 
     private lateinit var btnSave: Button
 
+    private lateinit var history: ClipboardRepository
+    private lateinit var historyPanel: ClipboardPanelView
+    private lateinit var historyPreferences: SharedPreferences
+    private lateinit var actionMenu: FloatingActionMenu
+    private var pendingExportIds: Set<String>? = null
+    private val historyListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == ClipboardRepository.KEY_CLIPBOARD_ITEMS) historyPanel.refreshList()
+    }
+    private val exportLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK && result.data?.data != null) {
+            try {
+                requireNotNull(contentResolver.openOutputStream(result.data!!.data!!)).use(::writeClipboardExport)
+                Toast.makeText(this, R.string.clipboard_export_success, Toast.LENGTH_SHORT).show()
+            } catch (_: Exception) {
+                Toast.makeText(this, R.string.clipboard_export_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+        pendingExportIds = null
+    }
+
     private val REQUEST_SMS_PERMISSION = 201
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,6 +84,7 @@ class ClipboardManagerActivity : Activity() {
 
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener { finish() }
 
+        swSyncOnStart = findViewById(R.id.sw_clipboard_sync_on_start)
         swQuickPaste = findViewById(R.id.sw_quick_paste)
         swSmsOtp = findViewById(R.id.sw_sms_otp)
         containerSmsOtpModes = findViewById(R.id.container_sms_otp_modes)
@@ -75,6 +106,7 @@ class ClipboardManagerActivity : Activity() {
         btnSave = findViewById(R.id.btn_save_clipboard_settings)
 
         loadSettings()
+        setupHistory(savedInstanceState)
 
         swQuickPaste.setOnCheckedChangeListener { _, isChecked ->
             containerOptions.visibility = if (isChecked) View.VISIBLE else View.GONE
@@ -102,6 +134,123 @@ class ClipboardManagerActivity : Activity() {
         }
     }
 
+    private fun setupHistory(state: Bundle?) {
+        historyPreferences = getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        history = ClipboardRepository(this)
+        historyPanel = ClipboardPanelView(this, history, ::editClipboardItem).apply {
+            id = R.id.clipboard_history_panel
+            managementMode = true
+            onSelectionChanged = { updateSelectionUi(it) }
+        }
+        findViewById<FrameLayout>(R.id.clipboard_history_host).addView(historyPanel)
+        actionMenu = FloatingActionMenu(findViewById(R.id.fab_main), findViewById(R.id.overlay_mask),
+            findViewById(R.id.fab_menu_container))
+        findViewById<Button>(R.id.btn_batch_manage).setOnClickListener {
+            actionMenu.close()
+            historyPanel.isSelectionMode = !historyPanel.isSelectionMode
+            revealHistory()
+        }
+        findViewById<Button>(R.id.clipboard_export_menu).setOnClickListener { actionMenu.close(); launchClipboardExport() }
+        findViewById<Button>(R.id.clipboard_export_selected).setOnClickListener { launchClipboardExport() }
+        findViewById<Button>(R.id.clipboard_select_all).setOnClickListener {
+            if (historyPanel.getSelectedIds().size < history.getItems().size) historyPanel.selectAll()
+            else historyPanel.clearSelection()
+        }
+        historyPanel.isSelectionMode = state?.getBoolean("clipboard_selection_mode") == true
+        historyPanel.restoreSelection(state?.getStringArrayList("clipboard_selected_ids").orEmpty())
+        pendingExportIds = state?.getStringArrayList("clipboard_export_ids")?.toSet()
+        historyPreferences.registerOnSharedPreferenceChangeListener(historyListener)
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                when {
+                    actionMenu.isExpanded -> actionMenu.close()
+                    historyPanel.isSelectionMode -> { historyPanel.isSelectionMode = false }
+                    else -> { isEnabled = false; onBackPressedDispatcher.onBackPressed() }
+                }
+            }
+        })
+    }
+
+    private fun revealHistory() {
+        findViewById<View>(R.id.clipboard_history_host).post {
+            findViewById<View>(R.id.clipboard_history_host).requestRectangleOnScreen(
+                android.graphics.Rect(0, 0, 1, 1), false)
+        }
+    }
+
+    private fun updateSelectionUi(count: Int) {
+        findViewById<View>(R.id.clipboard_batch_bar).visibility = if (historyPanel.isSelectionMode) View.VISIBLE else View.GONE
+        findViewById<TextView>(R.id.clipboard_selected_count).text = getString(R.string.clipboard_selected_count, count)
+        findViewById<Button>(R.id.clipboard_export_selected).isEnabled = count > 0
+        findViewById<Button>(R.id.clipboard_select_all).setText(
+            if (count > 0 && count == history.getItems().size) R.string.clipboard_clear_selection else R.string.clipboard_select_all)
+        findViewById<Button>(R.id.btn_batch_manage).setText(
+            if (historyPanel.isSelectionMode) R.string.clipboard_exit_manage else R.string.clipboard_manage)
+    }
+
+    private fun editClipboardItem(item: ClipboardItem) {
+        val input = EditText(this).apply {
+            id = R.id.clipboard_edit_text
+            setText(item.text)
+            contentDescription = getString(R.string.clipboard_edit_content)
+            minLines = 3; maxLines = 8
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE or
+                android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
+            imeOptions = android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
+        }
+        val dialog = AlertDialog.Builder(this).setTitle(R.string.clipboard_edit_title).setView(input)
+            .setNegativeButton(R.string.clipboard_edit_cancel, null).setPositiveButton(R.string.clipboard_edit_save, null).create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                try {
+                    history.editItem(item.id, item.text, input.text.toString())
+                    historyPanel.refreshList()
+                    dialog.dismiss()
+                } catch (_: Exception) { input.error = getString(R.string.clipboard_edit_failed) }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun launchClipboardExport() {
+        if (historyPanel.getSelectedIds().isEmpty()) {
+            historyPanel.isSelectionMode = true
+            revealHistory()
+            Toast.makeText(this, R.string.clipboard_select_first, Toast.LENGTH_SHORT).show()
+            return
+        }
+        pendingExportIds = historyPanel.getSelectedIds()
+        exportLauncher.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+            putExtra(Intent.EXTRA_TITLE, "clipboard_history.json")
+        })
+    }
+
+    /** Shared writer for the system document result and isolated in-memory export checks. */
+    internal fun writeClipboardExport(output: OutputStream) {
+        val ids = pendingExportIds ?: historyPanel.getSelectedIds()
+        output.write(history.exportSelection(ids).toByteArray(Charsets.UTF_8))
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("clipboard_selection_mode", historyPanel.isSelectionMode)
+        outState.putStringArrayList("clipboard_selected_ids", ArrayList(historyPanel.getSelectedIds()))
+        pendingExportIds?.let { outState.putStringArrayList("clipboard_export_ids", ArrayList(it)) }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::historyPanel.isInitialized) historyPanel.refreshList()
+    }
+
+    override fun onDestroy() {
+        if (::historyPreferences.isInitialized) historyPreferences.unregisterOnSharedPreferenceChangeListener(historyListener)
+        super.onDestroy()
+    }
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_SMS_PERMISSION) {
@@ -118,6 +267,7 @@ class ClipboardManagerActivity : Activity() {
     private fun loadSettings() {
         val prefs = getSharedPreferences(SettingsConstants.PREFS_NAME, MODE_PRIVATE)
 
+        swSyncOnStart.isChecked = prefs.getBoolean(SettingsConstants.KEY_CLIPBOARD_SYNC_ON_START, true)
         val quickPasteEnabled = prefs.getBoolean(SettingsConstants.KEY_QUICK_PASTE_ENABLED, true)
         swQuickPaste.isChecked = quickPasteEnabled
         containerOptions.visibility = if (quickPasteEnabled) View.VISIBLE else View.GONE
@@ -184,6 +334,7 @@ class ClipboardManagerActivity : Activity() {
         }
 
         prefs.edit()
+            .putBoolean(SettingsConstants.KEY_CLIPBOARD_SYNC_ON_START, swSyncOnStart.isChecked)
             .putBoolean(SettingsConstants.KEY_QUICK_PASTE_ENABLED, quickPasteEnabled)
             .putBoolean(SettingsConstants.KEY_SMS_OTP_AUTO_COPY_ENABLED, smsOtpEnabled)
             .putString(SettingsConstants.KEY_SMS_OTP_MODE, smsMode)

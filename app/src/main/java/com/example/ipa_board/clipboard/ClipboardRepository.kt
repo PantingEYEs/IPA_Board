@@ -16,6 +16,7 @@ class ClipboardRepository(
         ?: error("Either context or prefsOverride must be provided")
 
     private val items = mutableListOf<ClipboardItem>()
+    private var loadedJson: String? = null
 
     init {
         loadFromPrefs()
@@ -23,23 +24,25 @@ class ClipboardRepository(
 
     @Synchronized
     fun getItems(): List<ClipboardItem> {
+        loadFromPrefs()
         val pinned = items.filter { it.isPinned }.sortedByDescending { it.timestamp }
         val unpinned = items.filter { !it.isPinned }.sortedByDescending { it.timestamp }
         return pinned + unpinned
     }
 
     @Synchronized
-    fun getUnpinnedCount(): Int = items.count { !it.isPinned }
+    fun getUnpinnedCount(): Int { loadFromPrefs(); return items.count { !it.isPinned } }
 
     @Synchronized
-    fun getPinnedCount(): Int = items.count { it.isPinned }
+    fun getPinnedCount(): Int { loadFromPrefs(); return items.count { it.isPinned } }
 
     @Synchronized
-    fun getItemById(id: String): ClipboardItem? = items.firstOrNull { it.id == id }
+    fun getItemById(id: String): ClipboardItem? { loadFromPrefs(); return items.firstOrNull { it.id == id } }
 
     /** A panel refresh is not a new copy event; retain this marker across service restarts. */
     @Synchronized
     fun syncSystemClip(text: String, copiedAt: Long, isSensitive: Boolean = false): ClipboardItem? {
+        loadFromPrefs()
         if (text.isBlank()) return null
         val digest = MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
@@ -52,6 +55,7 @@ class ClipboardRepository(
 
     @Synchronized
     fun addClip(text: String, isSensitive: Boolean = false): ClipboardItem? {
+        loadFromPrefs()
         if (text.isBlank()) return null
         val now = System.currentTimeMillis()
         val existingIndex = items.indexOfFirst { it.text == text }
@@ -75,6 +79,29 @@ class ClipboardRepository(
         return item
     }
 
+    /** Editing changes text only; copying, pinning and sensitivity retain their existing semantics. */
+    @Synchronized
+    fun editItem(id: String, expectedText: String, text: String): ClipboardItem {
+        loadFromPrefs()
+        require(text.isNotBlank()) { "Content cannot be blank" }
+        val index = items.indexOfFirst { it.id == id }
+        check(index >= 0 && items[index].text == expectedText) { "Item changed or is no longer available" }
+        require(items.none { it.id != id && it.text == text }) { "Identical clipboard content already exists" }
+        val updated = items[index].copy(text = text)
+        items[index] = updated
+        saveToPrefs()
+        return updated
+    }
+
+    /** The export is the same JSON array used in private storage, limited to explicitly selected IDs. */
+    @Synchronized
+    fun exportSelection(ids: Set<String>): String {
+        val selected = getItems().filter { it.id in ids }
+        require(selected.isNotEmpty()) { "Select clipboard items first" }
+        check(selected.size == ids.size) { "Selected items are no longer available" }
+        return "[" + selected.joinToString(",") { it.toJsonString() } + "]"
+    }
+
     /**
      * Toggles pin state.
      * When unpinning a pinned item:
@@ -83,6 +110,7 @@ class ClipboardRepository(
      */
     @Synchronized
     fun togglePin(id: String, currentTimeMs: Long = System.currentTimeMillis()): ClipboardItem? {
+        loadFromPrefs()
         val index = items.indexOfFirst { it.id == id }
         if (index == -1) return null
         val current = items[index]
@@ -102,6 +130,7 @@ class ClipboardRepository(
 
     @Synchronized
     fun deleteItem(id: String): Boolean {
+        loadFromPrefs()
         val removed = items.removeAll { it.id == id }
         if (removed) {
             saveToPrefs()
@@ -111,6 +140,7 @@ class ClipboardRepository(
 
     @Synchronized
     fun restoreItem(item: ClipboardItem) {
+        loadFromPrefs()
         if (items.none { it.id == item.id }) {
             items.add(item)
             if (!item.isPinned) {
@@ -122,6 +152,7 @@ class ClipboardRepository(
 
     @Synchronized
     fun clearAllUnpinned() {
+        loadFromPrefs()
         items.removeAll { !it.isPinned }
         saveToPrefs()
     }
@@ -138,8 +169,11 @@ class ClipboardRepository(
     }
 
     private fun loadFromPrefs() {
+        val jsonStr = prefs.getString(KEY_CLIPBOARD_ITEMS, null)
+        if (jsonStr == loadedJson) return
+        loadedJson = jsonStr
         items.clear()
-        val jsonStr = prefs.getString(KEY_CLIPBOARD_ITEMS, null) ?: return
+        if (jsonStr == null) return
         try {
             val jsonArray = JSONArray(jsonStr)
             for (i in 0 until jsonArray.length()) {
@@ -170,6 +204,7 @@ class ClipboardRepository(
             "[" + items.joinToString(",") { it.toJsonString() } + "]"
         }
         prefs.edit().putString(KEY_CLIPBOARD_ITEMS, jsonStr).apply()
+        loadedJson = jsonStr
     }
 
     companion object {

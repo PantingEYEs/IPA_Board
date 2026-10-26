@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/clipboard_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/management_background">
+<ScrollView
+    android:id="@+id/clipboard_settings_scroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
@@ -36,6 +42,32 @@
                 android:textSize="@dimen/management_title_size"
                 android:textColor="@color/management_text"
                 android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@color/management_surface"
+            android:padding="16dp"
+            android:layout_marginBottom="20dp">
+
+            <Switch
+                android:id="@+id/sw_clipboard_sync_on_start"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:checked="true"
+                android:text="@string/clipboard_startup_sync"
+                android:textColor="@color/management_text"
+                android:textSize="@dimen/management_body_size" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/clipboard_startup_sync_help"
+                android:textColor="@color/management_text_secondary"
+                android:textSize="@dimen/management_caption_size" />
         </LinearLayout>
 
         <!-- Quick Paste Feature Card Container -->
@@ -307,5 +339,86 @@
             android:text="Save Settings"
             android:textSize="@dimen/management_caption_size" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/clipboard_history_title"
+            android:textColor="@color/management_text"
+            android:textSize="@dimen/management_body_size"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/clipboard_batch_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:visibility="gone">
+            <TextView
+                android:id="@+id/clipboard_selected_count"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/management_text_secondary" />
+            <Button style="@style/ManagementButton"
+                android:id="@+id/clipboard_select_all"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/clipboard_select_all" />
+            <Button style="@style/ManagementButton"
+                android:id="@+id/clipboard_export_selected"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/clipboard_export_selected" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/clipboard_history_host"
+            android:layout_width="match_parent"
+            android:layout_height="400dp"
+            android:layout_marginBottom="80dp" />
     </LinearLayout>
 </ScrollView>
+
+    <View
+        android:id="@+id/overlay_mask"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#AA000000"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone" />
+    <LinearLayout
+        android:id="@+id/fab_menu_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="84dp"
+        android:layout_marginEnd="16dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+        <Button style="@style/ManagementButton"
+            android:id="@+id/btn_batch_manage"
+            android:layout_width="160dp"
+            android:layout_height="wrap_content"
+            android:text="@string/clipboard_manage" />
+        <Button style="@style/ManagementButton"
+            android:id="@+id/clipboard_export_menu"
+            android:layout_width="160dp"
+            android:layout_height="wrap_content"
+            android:text="@string/clipboard_export_selected" />
+    </LinearLayout>
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_main"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:contentDescription="@string/clipboard_actions"
+        app:fabSize="normal"
+        app:backgroundTint="@color/management_control"
+        app:srcCompat="@drawable/ic_add"
+        app:tint="@color/management_text" />
+</FrameLayout>

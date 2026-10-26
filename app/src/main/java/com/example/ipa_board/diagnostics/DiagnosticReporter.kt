@@ -3,7 +3,7 @@ package com.example.ipa_board.diagnostics
 import java.io.IOException
 
 /** DIAGNOSTICS: fixed vocabulary only. Never add input, paths, messages or Throwable to events. */
-enum class DiagnosticComponent { RIME, MOZC, ENGLISH, IPA, SEMANTIC, LAYOUT, EMOJI, KAOMOJI, SMS, VERSION_LOOKUP, IME }
+enum class DiagnosticComponent { RIME, MOZC, ENGLISH, IPA, SEMANTIC, LAYOUT, EMOJI, KAOMOJI, SMS, VERSION_LOOKUP, IME, CLIPBOARD }
 
 enum class DiagnosticStage(val label: String, val traceLifecycle: Boolean = true) {
     BIND("service binding"), UNBIND("service release"), CONNECT("service connection"),
@@ -21,7 +21,8 @@ enum class DiagnosticStage(val label: String, val traceLifecycle: Boolean = true
     VERSION_CHECK("version lookup", false),
     START_INPUT("start input", false), START_INPUT_VIEW("start input view", false),
     FINISH_INPUT_VIEW("finish input view", false), FINISH_INPUT("finish input", false),
-    SELECTION_CHANGE("selection change", false), COMPOSITION("composition state", false)
+    SELECTION_CHANGE("selection change", false), COMPOSITION("composition state", false),
+    STARTUP_SYNC("startup clipboard synchronization", false)
 }
 
 enum class DiagnosticKind {
@@ -47,8 +48,9 @@ data class DiagnosticIssue(val component: DiagnosticComponent, val stage: Diagno
 
 enum class DiagnosticOutcome { START, READY, FAILURE }
 data class DiagnosticEvent(val component: DiagnosticComponent, val stage: DiagnosticStage,
-    val outcome: DiagnosticOutcome, val kind: DiagnosticKind? = null) {
-    fun line(): String = "${component.name}/${stage.name}/${outcome.name}" + (kind?.let { "/${it.name}" } ?: "")
+    val outcome: DiagnosticOutcome, val kind: DiagnosticKind? = null, val durationMs: Long? = null) {
+    fun line(): String = "${component.name}/${stage.name}/${outcome.name}" + (kind?.let { "/${it.name}" } ?: "") +
+        (durationMs?.let { " duration_ms=${it.coerceAtLeast(0L)}" } ?: "")
 }
 
 /** Only the fixed issue is exposed to IPC/logging. The cause remains available locally for control flow. */
@@ -63,6 +65,23 @@ class DiagnosticReporter(private val clock: () -> Long, private val sink: (Diagn
     /** DIAGNOSTICS: an explicit point event, independent of automatic operation start/ready tracing. */
     fun trace(component: DiagnosticComponent, stage: DiagnosticStage) {
         emit(DiagnosticEvent(component, stage, DiagnosticOutcome.READY))
+    }
+
+    /** DIAGNOSTICS: one duration event per attempt; preserve the result and original exception. */
+    fun <T> measure(component: DiagnosticComponent, stage: DiagnosticStage, operation: () -> T): T {
+        if (!enabled) return operation()
+        val startedAt = clock()
+        var failureKind: DiagnosticKind? = null
+        try {
+            return operation()
+        } catch (error: Throwable) {
+            failureKind = kind(error)
+            throw error
+        } finally {
+            emit(DiagnosticEvent(component, stage,
+                if (failureKind == null) DiagnosticOutcome.READY else DiagnosticOutcome.FAILURE,
+                failureKind, (clock() - startedAt).coerceAtLeast(0L)))
+        }
     }
 
     fun <T> atStage(component: DiagnosticComponent, stage: DiagnosticStage, operation: () -> T): T {

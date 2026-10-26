@@ -20,6 +20,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ipa_board.R
+import com.example.ipa_board.FloatingActionMenu
 import com.example.ipa_board.selectedImportUris
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -53,7 +54,8 @@ class KaomojiManagerActivity : AppCompatActivity() {
     private lateinit var rvKaomojis: RecyclerView
     private lateinit var tvEmpty: TextView
 
-    private var isFabMenuExpanded = false
+    private lateinit var actionMenu: FloatingActionMenu
+    private val isFabMenuExpanded get() = actionMenu.isExpanded
     private var isReversedSort = false
 
     private val exportLauncher = registerForActivityResult(
@@ -126,6 +128,7 @@ class KaomojiManagerActivity : AppCompatActivity() {
         fabMain = findViewById(R.id.fab_main)
         overlayMask = findViewById(R.id.overlay_mask)
         fabMenuContainer = findViewById(R.id.fab_menu_container)
+        actionMenu = FloatingActionMenu(fabMain, overlayMask, fabMenuContainer)
 
         btnAddKaomoji = findViewById(R.id.btn_add_kaomoji)
         btnBatchManage = findViewById(R.id.btn_batch_manage)
@@ -269,22 +272,11 @@ class KaomojiManagerActivity : AppCompatActivity() {
     }
 
     private fun toggleFabMenu() {
-        isFabMenuExpanded = !isFabMenuExpanded
-        if (isFabMenuExpanded) {
-            overlayMask.visibility = View.VISIBLE
-            fabMenuContainer.visibility = View.VISIBLE
-            fabMain.animate().rotation(45f).setDuration(200).start()
-        } else {
-            overlayMask.visibility = View.GONE
-            fabMenuContainer.visibility = View.GONE
-            fabMain.animate().rotation(0f).setDuration(200).start()
-        }
+        actionMenu.toggle()
     }
 
     private fun closeFabMenu() {
-        if (isFabMenuExpanded) {
-            toggleFabMenu()
-        }
+        actionMenu.close()
     }
 
     private fun refreshData() {
