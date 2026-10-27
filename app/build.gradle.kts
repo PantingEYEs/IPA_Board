@@ -4,6 +4,8 @@ plugins {
 
 android {
     namespace = "com.example.ipa_board"
+    // Match the NDK recorded in the pinned Trime/Rime ELF note.
+    ndkVersion = "28.0.13004108"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -18,8 +20,16 @@ android {
         versionCode = 4
         versionName = "0.0.4-dev"
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
+        externalNativeBuild { cmake { arguments += "-DANDROID_STL=c++_static" } }
 
         testInstrumentationRunner = "com.example.ipa_board.RegressionTestRunner"
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
     }
 
     lint {

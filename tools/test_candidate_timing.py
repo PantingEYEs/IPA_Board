@@ -81,3 +81,35 @@ class CandidateTimingReportTest(unittest.TestCase):
     def test_percentiles_use_nearest_rank_and_preserve_small_measurements(self):
         self.assertEqual({"n": 3, "min_ms": .0001, "median_ms": .25, "p95_ms": 8, "max_ms": 8},
                          timing.distribution([8, .0001, .25]))
+
+
+class RimeBatchTimingReportTest(unittest.TestCase):
+    def rows(self):
+        return [dict(schema=1, case="yes", mode=mode, round=i, duration_ns=duration, count=6)
+                for i in range(2) for mode, duration in [("legacy", 10_000_000), ("batch", 1_000_000)]]
+
+    def export(self, rows):
+        with tempfile.TemporaryDirectory() as directory, redirect_stdout(io.StringIO()):
+            output = "\n".join(timing.RIME_PREFIX + json.dumps(r) for r in rows)
+            return timing.export_rime_batch_report(output, Path(directory))
+
+    def test_comparison_uses_matched_rounds_and_keeps_counts(self):
+        row = self.export(self.rows())["cases"][0]
+        self.assertEqual(2, row["paired_rounds"])
+        self.assertEqual(10.0, row["paired_median_speedup"])
+        self.assertTrue(row["equal_candidate_counts"])
+
+    def test_unmatched_or_mismatched_samples_cannot_claim_speedup(self):
+        self.assertIsNone(self.export([self.rows()[0]])["cases"][0]["paired_median_speedup"])
+        rows = self.rows(); rows[1]["count"] = 5
+        self.assertIsNone(self.export(rows)["cases"][0]["paired_median_speedup"])
+
+    def test_rejects_private_extra_fields_duplicate_samples_and_bad_types(self):
+        for changes in ({"raw": "private"}, {"duration_ns": -1}, {"round": True}, {"count": 81}, {"mode": "unknown"}):
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                self.export([{**self.rows()[0], **changes}])
+        with self.assertRaises(ValueError):
+            self.export([self.rows()[0], self.rows()[0]])
+
+    def test_unrelated_output_does_not_create_report(self):
+        self.assertIsNone(timing.export_rime_batch_report("OK (1 test)", Path("unused")))

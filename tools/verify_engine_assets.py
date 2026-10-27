@@ -14,6 +14,20 @@ for item in manifest['files']:
     path = root / item['path']
     if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != item['sha256']:
         errors.append(item['path'])
+# The C++ reader is pinned independently: accepting a new engine asset hash is not an ABI review.
+bridge_root = root / 'app/src/main/cpp/vendor/librime'
+bridge_lock = json.loads((bridge_root / 'manifest.json').read_text())
+for vendor in ['librime', 'boost']:
+    vendor_root = root / 'app/src/main/cpp/vendor' / vendor
+    header_lock = json.loads((vendor_root / 'manifest.json').read_text())
+    for name, digest in header_lock['headers'].items():
+        path = vendor_root / name
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+            errors.append(str(path.relative_to(root)))
+for abi, digest in bridge_lock['runtimeSha256'].items():
+    path = root / 'app/src/main/jniLibs' / abi / 'librime_jni.so'
+    if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+        errors.append('Rime bridge ABI requires review: ' + abi)
 if errors:
     sys.exit('Missing or modified resources:\n' + '\n'.join(errors))
 print(f"Verified {len(manifest['files'])} engine resource hashes.")

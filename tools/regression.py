@@ -27,7 +27,7 @@ import uuid
 from datetime import datetime, timezone
 
 from validate_test_suites import validate_suites
-from candidate_timing import export_report as export_candidate_timing
+from candidate_timing import export_report as export_candidate_timing, export_rime_batch_report
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = "com.example.ipa_board"
@@ -1021,6 +1021,7 @@ def run_suite(device: Device, classes: list[str], suite: str, apks: list[Path], 
                     timing_summary = export_candidate_timing(output, report)
                     if class_name == APP + ".CandidateTimingTest" and timing_summary is None:
                         raise RegressionError("Candidate timing test emitted no measurements")
+                    export_rime_batch_report(output, report)
                     result.update(instrumentation_metrics(output))
                     result["status"] = "skipped" if result["skipped"] and not result["failed"] else "failed"
                     if not instrumentation_passed(output):

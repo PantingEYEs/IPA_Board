@@ -38,7 +38,8 @@
         "com.example.ipa_board.MultilingualEngineTest",
         "com.example.ipa_board.ZhuyinEngineTest",
         "com.example.ipa_board.IpaEngineRuntimeTest",
-        "com.example.ipa_board.CandidateTimingTest"
+        "com.example.ipa_board.CandidateTimingTest",
+        "com.example.ipa_board.RimeBatchTest"
       ]
     },
     "ui": {
@@ -137,7 +138,8 @@
         "com.example.ipa_board.PageEngineBindingImeTest",
         "com.example.ipa_board.ClipboardStartupSyncTest",
         "com.example.ipa_board.ClipboardManagementTest",
-        "com.example.ipa_board.CandidateTimingTest"
+        "com.example.ipa_board.CandidateTimingTest",
+        "com.example.ipa_board.RimeBatchTest"
       ]
     },
     "ipa": {
@@ -268,6 +270,14 @@
     },
     "candidate-timing": {
       "classes": [
+        "com.example.ipa_board.CandidateTimingTest"
+      ]
+    },
+    "rime-batch": {
+      "classes": [
+        "com.example.ipa_board.RimeBatchTest",
+        "com.example.ipa_board.MultilingualEngineTest",
+        "com.example.ipa_board.ZhuyinEngineTest",
         "com.example.ipa_board.CandidateTimingTest"
       ]
     }

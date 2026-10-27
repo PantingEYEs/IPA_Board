@@ -9,7 +9,7 @@
 | 组件 | 精确来源 | 本项目接入方式 |
 | --- | --- | --- |
 | Mozc JNI + mozc.data | [Libre Japanese Input v0.1.2](https://github.com/elizagamedev/android-libre-japanese-input/tree/v0.1.2)，其 Mozc revision 为 `ddd9730b068387631e3b4d212314ef0ed93befe0` | 从原始 APK 取出 arm64-v8a/x86_64 的 libmozc.so 和 mozc.data，修改上游 Java JNI 加载器以移除前端依赖；JNI 方法签名保持原样 |
-| Rime + OpenCC | [Trime v3.3.12](https://github.com/osfans/trime/tree/v3.3.12)，librime submodule `33e78140250125871856cdc5b42ddc6a5fcd3cd4` | 取对应 ABI 的 librime_jni.so，经 JNA 调用其中公开的 Rime C API 和 OpenCC C API，不启动 Trime Java 前端 |
+| Rime + OpenCC | [Trime v3.3.12](https://github.com/osfans/trime/tree/v3.3.12)，librime submodule `33e78140250125871856cdc5b42ddc6a5fcd3cd4` | 取对应 ABI 的 librime_jni.so，经 JNA 调用公开 C API、OpenCC 和项目自建候选批量桥接，不启动 Trime Java 前端 |
 | 中文资源 | 上述 Trime APK 的 assets/shared | 保留拼音、词典、OpenCC 数据；本项目修改 t2s.json 使用文本词典，并增加禁用学习的 schema patch |
 | LatinIME 英文核心与词库 | [HeliBoard 4.1，revision `9f5bb635c2e8609dcd95dc7506c0c58fba82a52c`](https://github.com/HeliBorg/HeliBoard/tree/9f5bb635c2e8609dcd95dc7506c0c58fba82a52c) | 从官方 APK 原样提取两个 ABI 的 libjni_latinime.so 与 main_en-US.dict；保留四个 JNI 注册类的方法签名，使用本项目的最小只读适配器，替换 easy_en |
 | JNA | [5.17.0](https://github.com/java-native-access/jna/tree/5.17.0) | 原始 Android AAR；ABI 过滤只保留 arm64-v8a/x86_64 |
@@ -22,7 +22,7 @@ Engine Management 展示已接入的输入功能及版本，也单独标记计�
 
 Rime function table顺序来自 librime 1.14.0 的 rime_api.h。适配器限定 64 位 ABI，并在访问函数前检查表大小。Mozc 的小型 wire reader 对应上述 revision 的 commands.proto / candidates.proto，支持该协议使用的 group、嵌套消息、未知字段跳过及输入长度限制。
 
-Rime 的原生候选可能只覆盖原串前缀。本版本在禁用用户学习的 session 中重放、选择并检查实际 commit 和剩余编码，只把完整消费原串的结果交给 UI；这比直接展示全部返回值更慢，但不会把未消费编码丢掉。
+Rime 的原生候选可能只覆盖输入前缀。适配器现在只输入一次，通过自建的只读 C++ 批量桥接取得候选文本、原生输入起止字节位置与已有前缀分段，只返回完整覆盖查询编码的候选，不再逐候选重放或实际选词。已产生的前缀输出会保留；无有效提交输出的编码丢弃仍回退原样输入，保留非法注音声调保护。桥接与现有 Rime 共用同一运行时，原始二进制不变，不使用高亮或提交预览。原生 ABI、头文件、构建依赖与锁定要求见 [桥接说明](../app/src/main/cpp/README.md)。
 
 ## 生命周期与隐私
 
@@ -111,7 +111,7 @@ Engine Management 删除重复的拼音纠错条目及 `Pinyin Correction Engine
 
 中文进程按原始输入字符选择 `luna_pinyin` 或 `bopomofo` session。`ZhuyinInput` 把 Unicode 基础注音符号和五声映射到官方大千式按键；输入框和预输入区仍显示原始符号。轻声可使用前置点，编码时转成 Rime 的音节后置键。不是先将注音转换成无调拼音：注音方案使用带声调的 Terra Pinyin 字典，保留声调筛选，允许省略声调及声母简写。
 
-方案与拼写规则来自 [rime-bopomofo revision 6085c9a38a4a728047862b33d67eee18aa86f3b9](https://github.com/rime/rime-bopomofo/tree/6085c9a38a4a728047862b33d67eee18aa86f3b9)，字典来自 [rime-terra-pinyin revision 723e51bc266cf9464530c1ddedb856aa18e3da34](https://github.com/rime/rime-terra-pinyin/tree/723e51bc266cf9464530c1ddedb856aa18e3da34)。官方文件不改写，通过 `bopomofo.custom.yaml` 禁用学习与补全，并使用共享 OpenCC 设置控制简体候选。查询 session 开启 Rime 的 `_auto_commit`，使完整选词产生内部 commit；应用仍只在用户点击候选后上屏，部分选择不提交。查询后检查原生保留的编码与原始映射一致，防止忽略非法前置声调后误替换整个输入。许可证与 CC-CEDICT 原始归属随资源保存。
+方案与拼写规则来自 [rime-bopomofo revision 6085c9a38a4a728047862b33d67eee18aa86f3b9](https://github.com/rime/rime-bopomofo/tree/6085c9a38a4a728047862b33d67eee18aa86f3b9)，字典来自 [rime-terra-pinyin revision 723e51bc266cf9464530c1ddedb856aa18e3da34](https://github.com/rime/rime-terra-pinyin/tree/723e51bc266cf9464530c1ddedb856aa18e3da34)。官方文件不改写，通过 `bopomofo.custom.yaml` 禁用学习与补全，并使用共享 OpenCC 设置控制简体候选。查询 session 保留原有 `_auto_commit` 设置；批量枚举不会选词或提交，应用仍只在用户点击候选后上屏。桥接检查原生保留的注音编码与原始映射一致，防止忽略非法前置声调后误替换整个输入。许可证与 CC-CEDICT 原始归属随资源保存。
 
 混输分段由各引擎声明输入语法，中文引擎可处理拼音和注音片段，英文/日文引擎只查询各自支持的字母片段。数字、汉字、表情及标点仍原样保留。关闭混输分段后，完整注音串仍可转换；含其他文字的组合只允许原样提交。中文转换关闭同时停用拼音与注音候选，不影响单独开启的中文联想。布局初始化保留用户既有配置，已有注音页面会直接获得汉字候选。
 
