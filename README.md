@@ -4,7 +4,9 @@
 
 当前开发版本：**0.0.4-dev**，`versionCode = 4`，开发分支为 `0.0.4-dev`。最新正式版本为 **v0.0.3**；版本说明见 [v0.0.3 Release Notes](docs/releases/RELEASE_NOTES_0.0.3.md) 和 [更新日志](CHANGELOG.md)，正式安装包以 [GitHub Releases](https://github.com/PantingEYEs/IPA_Board/releases) 为准。
 
-0.0.4 计划先在 App 内实现蓝牙键盘，从官方源下载并在客户端适配安装第三方引擎，新增 About、宽屏 Stretch/Split 和 Shortcut 配置导出，并改善基础输入稳定性。四方向连续光标控制已加入开发版，其余目标继续按 [0.0.4 开发计划](docs/0.0.4-development-plan.md) 推进。IPA Engine 与配套词典继续内置，现有 UTF-16 退格行为保留。
+0.0.4 计划成为首个不再按 GPL-3.0 整体发行的版本，具体后续协议在依赖与接入代码的许可核验完成后敲定。Rime/OpenCC、Mozc、ONNX Runtime Extensions 将从各自官方源码构建；LatinIME 从 HeliBoard 取得并独立构建适用 Apache-2.0 的代码；OpenBoard 英文词表继续使用现成的 `main_en-US.dict`，不自行编译。这些第三方运行资源将改为应用内下载，不随正式发布 APK 提供；Rime/OpenCC 构建与桥接不使用 Trime 工具，Mozc 和 Extensions 同时修复 ELF 段对齐。上述迁移尚未完成，当前开发版仍包含既有资源，详见 [0.0.4 开发计划](docs/0.0.4-development-plan.md)。
+
+其他目标包括 App 内蓝牙键盘、About、宽屏 Stretch/Split、Shortcut 配置导出和基础输入稳定性。连续光标、长按队列与 Rime 批量查询优化已加入开发版；IPA Engine 与配套词典继续内置，现有 UTF-16 退格行为保留。
 
 0.0.3 修复同一输入框重新打开键盘时无候选的问题，加入 Popup 多功能操作、按页引擎绑定、可编辑多功能栏、科学计算、只读引擎仪表盘、日志管理与 Remote Keyboard Mode（Phase 1），改进 Emoji 浏览，并提供 IPA 预置键盘和实验性 IPA 引擎。开发周期的交付范围与后续目标见 [归档计划](docs/archive/0.0.3-development-plan.md)。
 
