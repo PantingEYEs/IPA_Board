@@ -1,4 +1,4 @@
 <resources>
-    <string name="clipboard_startup_sync">Sync clipboard when keyboard opens</string>
-    <string name="clipboard_startup_sync_help">Read the current system clipboard each time the keyboard is shown, including after switching back from another input method. Sync duration is recorded when Debug diagnostics is enabled.</string>
+    <string name="clipboard_startup_sync">Sync clipboard</string>
+    <string name="clipboard_startup_sync_help">Record clipboard changes while IPA Board is the current input method and its service is running, even when the keyboard is hidden. Also read the current clipboard whenever the keyboard opens. Copies missed while the service is not running cannot be recovered. When off, recording continues only while the keyboard is shown or its clipboard panel is opened. Debug diagnostics records opening sync duration without clipboard text.</string>
 </resources>

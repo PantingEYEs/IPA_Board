@@ -13,6 +13,7 @@ import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.ipa_board.clipboard.ClipboardRepository
+import com.example.ipa_board.clipboard.ClipboardObservation
 import com.example.ipa_board.diagnostics.AppDiagnostics
 import com.example.ipa_board.diagnostics.DebugDiagnosticsSettings
 import com.example.ipa_board.ime.ImeChromeView
@@ -25,6 +26,41 @@ import java.util.UUID
 /** Synthetic ClipData only: these tests neither read nor write the system clipboard. */
 class ClipboardStartupSyncTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
+
+    @Test fun enabledObservationKeepsBothCopiesWhileHiddenAndOpeningDoesNotDuplicateThem() = withFixture { f ->
+        // Drive the production event reader, with a synthetic listener binding (no system clipboard).
+        f.observation.setInputViewShown(true)
+        f.observation.setInputViewShown(false)
+        val older = ClipData.newPlainText("test", "Synthetic hidden older ɑ😀")
+        val newer = ClipData.newPlainText("test", "Synthetic hidden newer β")
+        f.service.onClipboardChanged { older }
+        f.service.onClipboardChanged { newer }
+        assertEquals(setOf("Synthetic hidden older ɑ😀", "Synthetic hidden newer β"),
+            f.repository.getItems().map { it.text }.toSet())
+        val before = f.repository.getItems()
+        f.observation.setInputViewShown(true)
+        f.service.syncClipboardOnInputViewStart { newer }
+        assertEquals(before, f.repository.getItems())
+        assertEquals(ImeChromeView.Panel.KEYBOARD, f.chrome.panel)
+        assertFalse(f.log.exists())
+    }
+
+    @Test fun savedSettingControlsHiddenReadsAndDestroyedServiceIgnoresQueuedEvents() = withFixture { f ->
+        f.prefs.edit().putBoolean(SettingsConstants.KEY_CLIPBOARD_SYNC_ON_START, false).commit()
+        f.service.onClipboardChanged { error("Disabled hidden listener must not read") }
+        f.observation.setInputViewShown(true)
+        f.service.onClipboardChanged { ClipData.newPlainText("test", "Synthetic visible copy") }
+        f.observation.setInputViewShown(false)
+        f.service.onClipboardChanged { error("Hiding with sync off must stop reading") }
+        f.prefs.edit().putBoolean(SettingsConstants.KEY_CLIPBOARD_SYNC_ON_START, true).commit()
+        f.service.onClipboardChanged { null }
+        f.service.onClipboardChanged { throw SecurityException("Synthetic denial") }
+        f.service.onClipboardChanged { ClipData.newPlainText("test", "Synthetic hidden copy") }
+        assertEquals(setOf("Synthetic visible copy", "Synthetic hidden copy"),
+            f.repository.getItems().map { it.text }.toSet())
+        f.observation.stop()
+        f.service.onClipboardChanged { error("A queued event after destroy must not read") }
+    }
 
     @Test fun defaultOnImportsBeforeOpeningThePanelAndDoesNotReviveDeletedItems() = withFixture { f ->
         val clip = ClipData.newPlainText("test", "Synthetic startup ɑ😀")
@@ -133,6 +169,14 @@ class ClipboardStartupSyncTest {
         }
         val repository = ClipboardRepository(prefsOverride = prefs)
         val service = IpaBoardService()
+        val observation = ClipboardObservation(subscribe = {}, unsubscribe = {})
+        // Only exercise the sync preference branch; unrelated engine/UI fields are not initialized.
+        private val syncListener = SharedPreferences.OnSharedPreferenceChangeListener { shared, key ->
+            if (key == SettingsConstants.KEY_CLIPBOARD_SYNC_ON_START) {
+                (field("prefsListener") as SharedPreferences.OnSharedPreferenceChangeListener)
+                    .onSharedPreferenceChanged(shared, key)
+            }
+        }
         val chrome = ImeChromeView(base)
         val log = File(directory, "diagnostics.log")
         init {
@@ -140,6 +184,9 @@ class ClipboardStartupSyncTest {
             field("prefs", prefs)
             field("chrome", chrome)
             field("clipboardRepository\$delegate", lazyOf(repository))
+            field("clipboardObservation\$delegate", lazyOf(observation))
+            prefs.registerOnSharedPreferenceChangeListener(syncListener)
+            observation.start(true)
             AppDiagnostics.configure(context)
         }
         fun field(name: String): Any? = IpaBoardService::class.java.getDeclaredField(name).apply { isAccessible = true }.get(service)
@@ -147,6 +194,8 @@ class ClipboardStartupSyncTest {
             IpaBoardService::class.java.getDeclaredField(name).apply { isAccessible = true }.set(service, value)
         }
         override fun close() {
+            observation.stop()
+            prefs.unregisterOnSharedPreferenceChangeListener(syncListener)
             (field("quickPasteHandler") as Handler).removeCallbacksAndMessages(null)
             AppDiagnostics.configure(base)
             base.deleteSharedPreferences(prefix)
