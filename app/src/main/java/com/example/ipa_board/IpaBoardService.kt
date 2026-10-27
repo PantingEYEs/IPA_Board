@@ -68,8 +68,17 @@ class IpaBoardService : InputMethodService() {
     private var quickPasteRunnable: Runnable? = null
 
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
-        syncClipboardHistory()
-        if (chrome?.panel == ImeChromeView.Panel.CLIPBOARD) showClipboard()
+        onClipboardChanged()
+    }
+    private val clipboardObservation by lazy {
+        ClipboardObservation(
+            subscribe = { clipboard.addPrimaryClipChangedListener(clipboardListener) },
+            unsubscribe = { clipboard.removePrimaryClipChangedListener(clipboardListener) }
+        )
+    }
+    internal fun onClipboardChanged(readClip: () -> android.content.ClipData? = { clipboard.primaryClip }) {
+        // Ignore a callback already queued when observation was disabled or the service destroyed.
+        if (clipboardObservation.isListening) syncClipboardHistory(readClip)
     }
     private fun syncClipboardHistory(readClip: () -> android.content.ClipData? = { clipboard.primaryClip }) {
         val clip = try { readClip() } catch (_: SecurityException) { null }
@@ -184,6 +193,9 @@ class IpaBoardService : InputMethodService() {
     }
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == SettingsConstants.KEY_CLIPBOARD_SYNC_ON_START) {
+            clipboardObservation.setSyncEnabled(prefs.getBoolean(key, true))
+        }
         if (key == ClipboardRepository.KEY_CLIPBOARD_ITEMS) {
             clipboardPanel?.refreshList()
             updateQuickPasteStatus()
@@ -224,6 +236,9 @@ class IpaBoardService : InputMethodService() {
             composition.acceptResults(id, candidates)
             refreshCandidates()
         }
+        // Capture copies even before the first input view opens. Android still controls access
+        // (normally the current/default IME); this cannot retrieve overwritten system history.
+        clipboardObservation.start(prefs.getBoolean(SettingsConstants.KEY_CLIPBOARD_SYNC_ON_START, true))
     }
     override fun onCreateInputView(): View {
         menuPopup?.dismiss()
@@ -927,7 +942,7 @@ class IpaBoardService : InputMethodService() {
         super.onStartInputView(editorInfo, restarting)
         calculatorSession.reset()
         AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT_VIEW)
-        clipboard.addPrimaryClipChangedListener(clipboardListener)
+        clipboardObservation.setInputViewShown(true)
         composition.start()
         applySettings()
         syncClipboardOnInputViewStart()
@@ -966,7 +981,7 @@ class IpaBoardService : InputMethodService() {
         menuPopup?.dismiss()
         closeDashboardObservation()
         AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT_VIEW)
-        clipboard.removePrimaryClipChangedListener(clipboardListener)
+        clipboardObservation.setInputViewShown(false)
         chrome?.showPanel(ImeChromeView.Panel.KEYBOARD)
         composition.finish(); engines.suspendSemantic(); inputController.reset()
         super.onFinishInputView(finishingInput)
@@ -984,7 +999,7 @@ class IpaBoardService : InputMethodService() {
         emojiRequest++
         emojiExecutor.shutdownNow()
         emojiHandler.removeCallbacksAndMessages(null)
-        clipboard.removePrimaryClipChangedListener(clipboardListener)
+        clipboardObservation.stop()
         updatePanelBack(false)
         engines.close(); prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
         super.onDestroy()
