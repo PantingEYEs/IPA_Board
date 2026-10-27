@@ -1,0 +1,24 @@
+{
+  "revision": "33e78140250125871856cdc5b42ddc6a5fcd3cd4",
+  "runtimeSha256": {
+    "arm64-v8a": "6e2543f874f247016d791c91ab82e53979157f217be80efc472c9537afaff75f",
+    "x86_64": "98869ae0866f4f5ea452f76cfaa0889b98bf9b11ac33a62d0534d43c14cb9128"
+  },
+  "headers": {
+    "LICENSE": "f67d27a6d2d586fcfed4b4c886a83747095396a39b6641e18e855086be2ec400",
+    "rime/candidate.h": "b7eaa7b40f097963dee1c153685f6ba6eddde39b6b3626d4789964ad72c01d36",
+    "rime/commit_history.h": "03e9d23e00a6ec4fbcbf6d26565787e98763b1e8bc346f8d97fa0e62f880e6a9",
+    "rime/common.h": "98bfb59188dfbce7b838340cdb0c8a979eaaf6323020d437ce5e6a4e74a9538a",
+    "rime/component.h": "5352aaa68d0de67f8ff9f7785015ba19eb567c548b25b4c4fe301c1f7652cb65",
+    "rime/composition.h": "49664712f76e304671c4753752633aea4884cdd6d9375ccef4656669dc472e84",
+    "rime/context.h": "d9bd9fe926f9ef6123f173841331e99d0d399b78408730c23ce6c2890f0b4dbc",
+    "rime/deployer.h": "b772a1cc5de4c01c0561e21c6eb94daf186a6dc6c3e34a86d71ba6a9a6c65dcb",
+    "rime/menu.h": "eb998dffd6fa874c61dc7747092ce1aaef10f8ede184622a8cceb6440853c29a",
+    "rime/messenger.h": "48e71783fe724692f6ae7454f6cf5eb64f5a4e5354543635391697d4733503e8",
+    "rime/no_logging.h": "389350305090b6d3d511c08b53498db900cded63775b187589516385e49f1c3c",
+    "rime/registry.h": "f1a6042563640d6e860977b1f6b45357f35ba5ac1ce510669ac3053e39530fb7",
+    "rime/segmentation.h": "c00eacd5ec8c396f152604cdf7699a53db00136b1c2e3ee7248d8d8a562d2a3b",
+    "rime/service.h": "d82664a6397f8102906d5cc4944c4a3a55d0b590d7e76ea6d65299ab226472b8",
+    "rime_api.h": "6eb5629162c44761e7b878f1b122f464de5c8685bd3cd5ac1e8519badc6d6424"
+  }
+}

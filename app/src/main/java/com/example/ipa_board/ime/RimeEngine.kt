@@ -10,7 +10,7 @@ import com.sun.jna.Pointer
 import java.io.File
 import java.util.Locale
 
-/** C API only: loading through dlopen intentionally does not initialize Trime's Java frontend. */
+/** Uses the existing Rime runtime through C API and a pinned read-only C++ candidate bridge. */
 internal class RimeEngine(private val context: Context) : QueryEngine {
     // DIAGNOSTICS: identify native-library loading without logging its private path.
     private val library = AppDiagnostics.atStage(DiagnosticComponent.RIME, DiagnosticStage.LIBRARY) {
@@ -19,6 +19,9 @@ internal class RimeEngine(private val context: Context) : QueryEngine {
     // DIAGNOSTICS: distinguish the C API lookup from library loading.
     private val api = AppDiagnostics.atStage(DiagnosticComponent.RIME, DiagnosticStage.API) {
         library.getFunction("rime_get_api").invokePointer(emptyArray()).also { check(Pointer.nativeValue(it) != 0L) }
+    }
+    private val batchReader = AppDiagnostics.atStage(DiagnosticComponent.RIME, DiagnosticStage.API) {
+        RimeBatchReader(context)
     }
     private val strings = mutableListOf<Memory>()
     private val sessions = mutableMapOf<String, Long>()
@@ -91,8 +94,8 @@ internal class RimeEngine(private val context: Context) : QueryEngine {
                 sessions[schema] = id
                 void("set_option", id, "ascii_mode", 0)
                 void("set_option", id, "simplification", 0)
-                // Bopomofo's fluency editor normally defers commits to Return. This query-only session
-                // must commit a fully selected phrase so the same remaining-input check applies.
+                // Preserve schema behavior for compatibility; batch enumeration itself never selects
+                // or commits a candidate. The replay reference lives only in instrumentation tests.
                 void("set_option", id, "_auto_commit", 1)
                 // Emit traditional text once; the shared OpenCC switch supplies simplified variants.
                 for (option in listOf("zh_hans", "zh_hant_hk", "zh_hant_tw")) void("set_option", id, option, 0)
@@ -152,38 +155,26 @@ internal class RimeEngine(private val context: Context) : QueryEngine {
                 if (scriptConversionEnabled) Candidate(convert(phrase.text), "简", rank, CandidateKind.PREDICTION) else null)
         }
     }
-    override fun query(raw: String): List<Candidate> {
+    override fun query(raw: String): List<Candidate> = queryWithReader(raw, batchReader::read)
+
+    /** Reader injection compares the native snapshot against the test-only legacy replay algorithm. */
+    internal fun queryWithReader(raw: String, reader: (Long, String) -> List<RimeNativeCandidate>): List<Candidate> {
         if (!acceptsInput(raw)) return emptyList()
         val schema = if (ZhuyinInput.containsSymbols(raw)) "bopomofo" else "luna_pinyin"
         val input = if (schema == "bopomofo") ZhuyinInput.encode(raw) ?: return emptyList()
             else raw.lowercase(Locale.ROOT)
         val id = sessions.getValue(schema)
-        val result = mutableListOf<Candidate>()
-        replay(id, input)
-        if (schema == "bopomofo" && fn("get_input").invokePointer(arrayOf(id))?.getString(0, "UTF-8") != input) {
-            // Do not replace symbols that the native speller ignored (e.g. a leading tone key).
+        val inputBytes = input.toByteArray(Charsets.UTF_8).size
+        return try {
+            replay(id, input)
+            // Native snapshot validates the retained input and returns ranges without selecting.
+            reader(id, input).filter { it.startByte == it.prefixEndByte && it.endByte + it.committedInputBytes == inputBytes }.flatMap { item ->
+                listOfNotNull(Candidate(item.text, "繁", item.rank),
+                    if (scriptConversionEnabled) Candidate(convert(item.text), "简", item.rank) else null)
+            }
+        } finally {
             void("clear_composition", id)
             drainCommit(id)
-            return emptyList()
         }
-        val iterator = Memory(40).apply { clear() }
-        val indices = mutableListOf<Int>()
-        if (int("candidate_list_begin", id, iterator) != 0) {
-            try {
-                while (indices.size < 40 && int("candidate_list_next", iterator) != 0) indices.add(iterator.getInt(8))
-            } finally { void("candidate_list_end", iterator) }
-        }
-        for (index in indices) {
-            replay(id, input)
-            if (int("select_candidate", id, index.toLong()) == 0) continue
-            // Partial candidates do not generate a commit. Do not accidentally consume the suffix.
-            val text = drainCommit(id) ?: continue
-            val remaining = fn("get_input").invokePointer(arrayOf(id))?.getString(0, "UTF-8").orEmpty()
-            if (remaining.isNotEmpty()) continue
-            result.add(Candidate(text, "繁", index))
-            if (scriptConversionEnabled) result.add(Candidate(convert(text), "简", index))
-        }
-        void("clear_composition", id)
-        return result
     }
 }

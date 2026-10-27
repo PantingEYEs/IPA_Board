@@ -1,0 +1,1502 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Accepted existing NewApi findings from minSdk 26 diagnostic installation support.
+     Minimum supported API remains 35. New findings are not automatically accepted. -->
+<issues format="6" by="lint 9.4.1" type="baseline" client="gradle" dependencies="false" name="AGP (9.4.1)" variant="all" version="9.4.1">
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets#getInsets`"
+        errorLine1="            val insets = windowInsets.getInsets("
+        errorLine2="                                      ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ClipboardManagerActivity.kt"
+            line="77"
+            column="39"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#displayCutout`"
+        errorLine1="                android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()"
+        errorLine2="                                                                                              ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ClipboardManagerActivity.kt"
+            line="78"
+            column="95"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#systemBars`"
+        errorLine1="                android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()"
+        errorLine2="                                               ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ClipboardManagerActivity.kt"
+            line="78"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#bottom`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                                                   ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ClipboardManagerActivity.kt"
+            line="80"
+            column="68"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#left`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                            ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ClipboardManagerActivity.kt"
+            line="80"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#right`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                                     ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ClipboardManagerActivity.kt"
+            line="80"
+            column="54"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#top`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                         ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ClipboardManagerActivity.kt"
+            line="80"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.View#setStateDescription`"
+        errorLine1="        btnSort.stateDescription = context.getString("
+        errorLine2="                ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/clipboard/ClipboardPanelView.kt"
+            line="428"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.View#setStateDescription`"
+        errorLine1="        btnSort.stateDescription = context.getString("
+        errorLine2="                                 ~">
+        <location
+            file="src/main/java/com/example/ipa_board/clipboard/ClipboardPanelView.kt"
+            line="428"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 33 (current min is 26): `java.math.BigDecimal#sqrt`"
+        errorLine1="        repeat(8) { reduced = reduced.sqrt(mc) }"
+        errorLine2="                                      ~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/DecimalPowers.kt"
+            line="68"
+            column="39"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 33 (current min is 26): `java.math.BigDecimal#sqrt`"
+        errorLine1="            reduced = reduced.divide(BigDecimal.ONE.add(BigDecimal.ONE.add(reduced.multiply(reduced, mc), mc).sqrt(mc), mc), mc)"
+        errorLine2="                                                                                                              ~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/DecimalPowers.kt"
+            line="113"
+            column="111"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 33 (current min is 26): `java.math.BigDecimal#sqrt`"
+        errorLine1="        val radius = z.real.multiply(z.real,mc).add(z.imaginary.multiply(z.imaginary,mc),mc).sqrt(mc)"
+        errorLine2="                                                                                             ~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/DecimalTrigonometry.kt"
+            line="29"
+            column="94"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 33 (current min is 26): `java.math.BigDecimal#sqrt`"
+        errorLine1="        val imaginary = imaginarySquare.sqrt(mc)"
+        errorLine2="                                        ~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/DecimalTrigonometry.kt"
+            line="32"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 33 (current min is 26): `java.math.BigDecimal#sqrt`"
+        errorLine1="        return value(realSquare.sqrt(mc), if (z.imaginary.signum() &lt; 0) imaginary.negate() else imaginary)"
+        errorLine2="                                ~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/DecimalTrigonometry.kt"
+            line="33"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets#getInsets`"
+        errorLine1="            val insets = windowInsets.getInsets("
+        errorLine2="                                      ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/EmojiManagerActivity.kt"
+            line="20"
+            column="39"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#displayCutout`"
+        errorLine1="                android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()"
+        errorLine2="                                                                                              ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/EmojiManagerActivity.kt"
+            line="21"
+            column="95"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#systemBars`"
+        errorLine1="                android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()"
+        errorLine2="                                               ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/EmojiManagerActivity.kt"
+            line="21"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#bottom`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                                                   ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/EmojiManagerActivity.kt"
+            line="23"
+            column="68"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#left`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                            ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/EmojiManagerActivity.kt"
+            line="23"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#right`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                                     ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/EmojiManagerActivity.kt"
+            line="23"
+            column="54"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#top`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                         ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/EmojiManagerActivity.kt"
+            line="23"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets#getInsets`"
+        errorLine1="        grid.setPadding(0, 0, 0, insets.getInsets(WindowInsets.Type.navigationBars()).bottom)"
+        errorLine2="                                        ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/emoji/EmojiPickerView.kt"
+            line="112"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#navigationBars`"
+        errorLine1="        grid.setPadding(0, 0, 0, insets.getInsets(WindowInsets.Type.navigationBars()).bottom)"
+        errorLine2="                                                                    ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/emoji/EmojiPickerView.kt"
+            line="112"
+            column="69"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#bottom`"
+        errorLine1="        grid.setPadding(0, 0, 0, insets.getInsets(WindowInsets.Type.navigationBars()).bottom)"
+        errorLine2="                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/emoji/EmojiPickerView.kt"
+            line="112"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 28 (current min is 26): `android.view.View#setAccessibilityHeading`"
+        errorLine1="            label.isAccessibilityHeading = item is EmojiSections.Item.Header"
+        errorLine2="                  ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/emoji/EmojiPickerView.kt"
+            line="148"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 28 (current min is 26): `android.view.View#setAccessibilityHeading`"
+        errorLine1="            label.isAccessibilityHeading = item is EmojiSections.Item.Header"
+        errorLine2="                                         ~">
+        <location
+            file="src/main/java/com/example/ipa_board/emoji/EmojiPickerView.kt"
+            line="148"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets#getInsets`"
+        errorLine1="            val insets = windowInsets.getInsets("
+        errorLine2="                                      ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/EngineManagementActivity.kt"
+            line="57"
+            column="39"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#displayCutout`"
+        errorLine1="                WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()"
+        errorLine2="                                                                    ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/EngineManagementActivity.kt"
+            line="58"
+            column="69"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#systemBars`"
+        errorLine1="                WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()"
+        errorLine2="                                  ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/EngineManagementActivity.kt"
+            line="58"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#bottom`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                                                   ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/EngineManagementActivity.kt"
+            line="60"
+            column="68"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#left`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                            ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/EngineManagementActivity.kt"
+            line="60"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#right`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                                     ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/EngineManagementActivity.kt"
+            line="60"
+            column="54"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#top`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                         ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/EngineManagementActivity.kt"
+            line="60"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 33 (current min is 26): `android.content.pm.PackageManager#getPackageInfo`"
+        errorLine1="        packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0)).versionName"
+        errorLine2="                       ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/EngineManagementActivity.kt"
+            line="242"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 33 (current min is 26): `android.content.pm.PackageManager.PackageInfoFlags#of`"
+        errorLine1="        packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0)).versionName"
+        errorLine2="                                                                                   ~~">
+        <location
+            file="src/main/java/com/example/ipa_board/EngineManagementActivity.kt"
+            line="242"
+            column="84"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.View#setStateDescription`"
+        errorLine1="            heading.stateDescription = getString("
+        errorLine2="                    ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/EngineManagementActivity.kt"
+            line="292"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.View#setStateDescription`"
+        errorLine1="            heading.stateDescription = getString("
+        errorLine2="                                     ~">
+        <location
+            file="src/main/java/com/example/ipa_board/EngineManagementActivity.kt"
+            line="292"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.graphics.Paint#setBlendMode`"
+        errorLine1="            pointerPaint.blendMode = android.graphics.BlendMode.DIFFERENCE"
+        errorLine2="                         ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ime/ImeChromeView.kt"
+            line="309"
+            column="26"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.graphics.Paint#setBlendMode`"
+        errorLine1="            pointerPaint.blendMode = android.graphics.BlendMode.DIFFERENCE"
+        errorLine2="                                   ~">
+        <location
+            file="src/main/java/com/example/ipa_board/ime/ImeChromeView.kt"
+            line="309"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.BlendMode#DIFFERENCE`"
+        errorLine1="            pointerPaint.blendMode = android.graphics.BlendMode.DIFFERENCE"
+        errorLine2="                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ime/ImeChromeView.kt"
+            line="309"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.BlendMode#DIFFERENCE`"
+        errorLine1="            pointerPaint.blendMode = android.graphics.BlendMode.DIFFERENCE"
+        errorLine2="                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ime/ImeChromeView.kt"
+            line="309"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.graphics.Paint#setBlendMode`"
+        errorLine1="            axisPaint.blendMode = android.graphics.BlendMode.DIFFERENCE"
+        errorLine2="                      ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ime/ImeChromeView.kt"
+            line="311"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.graphics.Paint#setBlendMode`"
+        errorLine1="            axisPaint.blendMode = android.graphics.BlendMode.DIFFERENCE"
+        errorLine2="                                ~">
+        <location
+            file="src/main/java/com/example/ipa_board/ime/ImeChromeView.kt"
+            line="311"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.BlendMode#DIFFERENCE`"
+        errorLine1="            axisPaint.blendMode = android.graphics.BlendMode.DIFFERENCE"
+        errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ime/ImeChromeView.kt"
+            line="311"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.BlendMode#DIFFERENCE`"
+        errorLine1="            axisPaint.blendMode = android.graphics.BlendMode.DIFFERENCE"
+        errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ime/ImeChromeView.kt"
+            line="311"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.graphics.Paint#setBlendMode`"
+        errorLine1="            pointerPaint.blendMode = null"
+        errorLine2="                         ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ime/ImeChromeView.kt"
+            line="314"
+            column="26"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.graphics.Paint#setBlendMode`"
+        errorLine1="            pointerPaint.blendMode = null"
+        errorLine2="                                   ~">
+        <location
+            file="src/main/java/com/example/ipa_board/ime/ImeChromeView.kt"
+            line="314"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.graphics.Paint#setBlendMode`"
+        errorLine1="            axisPaint.blendMode = null"
+        errorLine2="                      ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ime/ImeChromeView.kt"
+            line="316"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.graphics.Paint#setBlendMode`"
+        errorLine1="            axisPaint.blendMode = null"
+        errorLine2="                                ~">
+        <location
+            file="src/main/java/com/example/ipa_board/ime/ImeChromeView.kt"
+            line="316"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.graphics.Paint#setBlendMode`"
+        errorLine1="        pointPaint.blendMode = null"
+        errorLine2="                   ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ime/ImeChromeView.kt"
+            line="319"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.graphics.Paint#setBlendMode`"
+        errorLine1="        pointPaint.blendMode = null"
+        errorLine2="                             ~">
+        <location
+            file="src/main/java/com/example/ipa_board/ime/ImeChromeView.kt"
+            line="319"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 33 (current min is 26): `android.app.Dialog#getOnBackInvokedDispatcher`"
+        errorLine1="        if (open) window.onBackInvokedDispatcher.registerOnBackInvokedCallback("
+        errorLine2="                         ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/IpaBoardService.kt"
+            line="943"
+            column="26"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 33 (current min is 26): `android.window.OnBackInvokedDispatcher#registerOnBackInvokedCallback`"
+        errorLine1="        if (open) window.onBackInvokedDispatcher.registerOnBackInvokedCallback("
+        errorLine2="                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/IpaBoardService.kt"
+            line="943"
+            column="50"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 33 (current min is 26): `android.app.Dialog#getOnBackInvokedDispatcher`"
+        errorLine1="        ) else window.onBackInvokedDispatcher.unregisterOnBackInvokedCallback(panelBackCallback)"
+        errorLine2="                      ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/IpaBoardService.kt"
+            line="945"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 33 (current min is 26): `android.window.OnBackInvokedDispatcher#unregisterOnBackInvokedCallback`"
+        errorLine1="        ) else window.onBackInvokedDispatcher.unregisterOnBackInvokedCallback(panelBackCallback)"
+        errorLine2="                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/IpaBoardService.kt"
+            line="945"
+            column="47"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets#getInsets`"
+        errorLine1="            val insets = windowInsets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())"
+        errorLine2="                                      ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/IpaEngineManagementActivity.kt"
+            line="42"
+            column="39"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#displayCutout`"
+        errorLine1="            val insets = windowInsets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())"
+        errorLine2="                                                                                                    ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/IpaEngineManagementActivity.kt"
+            line="42"
+            column="101"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#systemBars`"
+        errorLine1="            val insets = windowInsets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())"
+        errorLine2="                                                                  ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/IpaEngineManagementActivity.kt"
+            line="42"
+            column="67"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#bottom`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                                                   ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/IpaEngineManagementActivity.kt"
+            line="43"
+            column="68"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#left`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                            ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/IpaEngineManagementActivity.kt"
+            line="43"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#right`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                                     ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/IpaEngineManagementActivity.kt"
+            line="43"
+            column="54"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#top`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                         ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/IpaEngineManagementActivity.kt"
+            line="43"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets#getInsets`"
+        errorLine1="        val bottom = insets.getInsets(WindowInsets.Type.navigationBars()).bottom"
+        errorLine2="                            ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/kaomoji/KaomojiPanelView.kt"
+            line="157"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#navigationBars`"
+        errorLine1="        val bottom = insets.getInsets(WindowInsets.Type.navigationBars()).bottom"
+        errorLine2="                                                        ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/kaomoji/KaomojiPanelView.kt"
+            line="157"
+            column="57"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#bottom`"
+        errorLine1="        val bottom = insets.getInsets(WindowInsets.Type.navigationBars()).bottom"
+        errorLine2="                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/kaomoji/KaomojiPanelView.kt"
+            line="157"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowManager#getCurrentWindowMetrics`"
+        errorLine1="        val metrics = context.getSystemService(WindowManager::class.java).currentWindowMetrics"
+        errorLine2="                                                                          ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyEditorScrollView.kt"
+            line="12"
+            column="75"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets#getInsetsIgnoringVisibility`"
+        errorLine1="        val insets = metrics.windowInsets.getInsetsIgnoringVisibility("
+        errorLine2="                                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyEditorScrollView.kt"
+            line="13"
+            column="43"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowMetrics#getWindowInsets`"
+        errorLine1="        val insets = metrics.windowInsets.getInsetsIgnoringVisibility("
+        errorLine2="                             ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyEditorScrollView.kt"
+            line="13"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#displayCutout`"
+        errorLine1="            WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())"
+        errorLine2="                                                                ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyEditorScrollView.kt"
+            line="14"
+            column="65"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#systemBars`"
+        errorLine1="            WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())"
+        errorLine2="                              ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyEditorScrollView.kt"
+            line="14"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowMetrics#getBounds`"
+        errorLine1="        val availableHeight = metrics.bounds.height() - insets.top - insets.bottom"
+        errorLine2="                                      ~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyEditorScrollView.kt"
+            line="15"
+            column="39"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#bottom`"
+        errorLine1="        val availableHeight = metrics.bounds.height() - insets.top - insets.bottom"
+        errorLine2="                                                                     ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyEditorScrollView.kt"
+            line="15"
+            column="70"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#top`"
+        errorLine1="        val availableHeight = metrics.bounds.height() - insets.top - insets.bottom"
+        errorLine2="                                                        ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyEditorScrollView.kt"
+            line="15"
+            column="57"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowManager#getMaximumWindowMetrics`"
+        errorLine1="        val metrics = context.getSystemService(WindowManager::class.java).maximumWindowMetrics"
+        errorLine2="                                                                          ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyPreviewFrameLayout.kt"
+            line="273"
+            column="75"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowMetrics#getBounds`"
+        errorLine1="        val screen = metrics.bounds"
+        errorLine2="                             ~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyPreviewFrameLayout.kt"
+            line="274"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets#getInsetsIgnoringVisibility`"
+        errorLine1="        val insets = metrics.windowInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())"
+        errorLine2="                                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyPreviewFrameLayout.kt"
+            line="275"
+            column="43"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#displayCutout`"
+        errorLine1="        val insets = metrics.windowInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())"
+        errorLine2="                                                                                                                          ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyPreviewFrameLayout.kt"
+            line="275"
+            column="123"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#systemBars`"
+        errorLine1="        val insets = metrics.windowInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())"
+        errorLine2="                                                                                        ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyPreviewFrameLayout.kt"
+            line="275"
+            column="89"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowMetrics#getWindowInsets`"
+        errorLine1="        val insets = metrics.windowInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())"
+        errorLine2="                             ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyPreviewFrameLayout.kt"
+            line="275"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#left`"
+        errorLine1="        val usable = android.graphics.Rect(screen.left + insets.left, screen.top + insets.top,"
+        errorLine2="                                                         ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyPreviewFrameLayout.kt"
+            line="276"
+            column="58"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#top`"
+        errorLine1="        val usable = android.graphics.Rect(screen.left + insets.left, screen.top + insets.top,"
+        errorLine2="                                                                                   ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyPreviewFrameLayout.kt"
+            line="276"
+            column="84"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#bottom`"
+        errorLine1="            screen.right - insets.right, screen.bottom - insets.bottom)"
+        errorLine2="                                                         ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyPreviewFrameLayout.kt"
+            line="277"
+            column="58"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#right`"
+        errorLine1="            screen.right - insets.right, screen.bottom - insets.bottom)"
+        errorLine2="                           ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyPreviewFrameLayout.kt"
+            line="277"
+            column="28"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.widget.PopupWindow#setIsLaidOutInScreen`"
+        errorLine1="            setIsLaidOutInScreen(true)"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyPreviewFrameLayout.kt"
+            line="294"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets#getInsets`"
+        errorLine1="            val insets = windowInsets.getInsets("
+        errorLine2="                                      ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyboardPageActivity.kt"
+            line="96"
+            column="39"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#displayCutout`"
+        errorLine1="                android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()"
+        errorLine2="                                                                                              ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyboardPageActivity.kt"
+            line="97"
+            column="95"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#systemBars`"
+        errorLine1="                android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()"
+        errorLine2="                                               ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyboardPageActivity.kt"
+            line="97"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#bottom`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                                                   ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyboardPageActivity.kt"
+            line="99"
+            column="68"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#left`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                            ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyboardPageActivity.kt"
+            line="99"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#right`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                                     ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyboardPageActivity.kt"
+            line="99"
+            column="54"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#top`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                         ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyboardPageActivity.kt"
+            line="99"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.View#setStateDescription`"
+        errorLine1="                        stateDescription = context.getString(when (shiftState) {"
+        errorLine2="                        ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyboardRenderer.kt"
+            line="59"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.View#setStateDescription`"
+        errorLine1="                        stateDescription = context.getString(when (shiftState) {"
+        errorLine2="                                         ~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyboardRenderer.kt"
+            line="59"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.View#setStateDescription`"
+        errorLine1="                        stateDescription = context.getString(if (remoteKeyboardEnabled)"
+        errorLine2="                        ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyboardRenderer.kt"
+            line="65"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.View#setStateDescription`"
+        errorLine1="                        stateDescription = context.getString(if (remoteKeyboardEnabled)"
+        errorLine2="                                         ~">
+        <location
+            file="src/main/java/com/example/ipa_board/KeyboardRenderer.kt"
+            line="65"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.View#setStateDescription`"
+        errorLine1="            button.stateDescription = if (editing) null else when (action) {"
+        errorLine2="                   ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/MultifunctionBarView.kt"
+            line="113"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.View#setStateDescription`"
+        errorLine1="            button.stateDescription = if (editing) null else when (action) {"
+        errorLine2="                                    ~">
+        <location
+            file="src/main/java/com/example/ipa_board/MultifunctionBarView.kt"
+            line="113"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.graphics.Paint#setBlendMode`"
+        errorLine1="                if (differenceBlend) { paint.color = Color.WHITE; paint.blendMode = BlendMode.DIFFERENCE }"
+        errorLine2="                                                                        ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/PopupActionEditorView.kt"
+            line="297"
+            column="73"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.graphics.Paint#setBlendMode`"
+        errorLine1="                if (differenceBlend) { paint.color = Color.WHITE; paint.blendMode = BlendMode.DIFFERENCE }"
+        errorLine2="                                                                                  ~">
+        <location
+            file="src/main/java/com/example/ipa_board/PopupActionEditorView.kt"
+            line="297"
+            column="83"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.BlendMode#DIFFERENCE`"
+        errorLine1="                if (differenceBlend) { paint.color = Color.WHITE; paint.blendMode = BlendMode.DIFFERENCE }"
+        errorLine2="                                                                                    ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/PopupActionEditorView.kt"
+            line="297"
+            column="85"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.BlendMode#DIFFERENCE`"
+        errorLine1="                if (differenceBlend) { paint.color = Color.WHITE; paint.blendMode = BlendMode.DIFFERENCE }"
+        errorLine2="                                                                                    ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/PopupActionEditorView.kt"
+            line="297"
+            column="85"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.graphics.Paint#setBlendMode`"
+        errorLine1="            paint.blendMode = null"
+        errorLine2="                  ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/PopupActionEditorView.kt"
+            line="302"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.graphics.Paint#setBlendMode`"
+        errorLine1="            paint.blendMode = null"
+        errorLine2="                            ~">
+        <location
+            file="src/main/java/com/example/ipa_board/PopupActionEditorView.kt"
+            line="302"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.graphics.Paint#setBlendMode`"
+        errorLine1="            paint.blendMode = null"
+        errorLine2="                  ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/PopupActionEditorView.kt"
+            line="305"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.graphics.Paint#setBlendMode`"
+        errorLine1="            paint.blendMode = null"
+        errorLine2="                            ~">
+        <location
+            file="src/main/java/com/example/ipa_board/PopupActionEditorView.kt"
+            line="305"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 33 (current min is 26): `java.math.BigInteger#TWO`"
+        errorLine1="    private val two = constant(Rational.of(BigInteger.TWO))"
+        errorLine2="                                           ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/RadicalArithmetic.kt"
+            line="52"
+            column="44"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 33 (current min is 26): `java.math.BigInteger#sqrt`"
+        errorLine1="        val n = r.numerator.sqrt()"
+        errorLine2="                            ~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/RadicalArithmetic.kt"
+            line="125"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 33 (current min is 26): `java.math.BigInteger#sqrt`"
+        errorLine1="        val d = r.denominator.sqrt()"
+        errorLine2="                              ~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/RadicalArithmetic.kt"
+            line="126"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 33 (current min is 26): `java.math.BigInteger#TWO`"
+        errorLine1="        var divisor = BigInteger.TWO"
+        errorLine2="                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/RadicalArithmetic.kt"
+            line="199"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 33 (current min is 26): `java.math.BigInteger#sqrt`"
+        errorLine1="                val root = remainder.sqrt()"
+        errorLine2="                                     ~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/RadicalArithmetic.kt"
+            line="204"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 33 (current min is 26): `java.math.BigInteger#TWO`"
+        errorLine1="            divisor = if (divisor == BigInteger.TWO) BigInteger.valueOf(3) else divisor + BigInteger.TWO"
+        errorLine2="                                     ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/RadicalArithmetic.kt"
+            line="214"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 33 (current min is 26): `java.math.BigInteger#TWO`"
+        errorLine1="            divisor = if (divisor == BigInteger.TWO) BigInteger.valueOf(3) else divisor + BigInteger.TWO"
+        errorLine2="                                                                                          ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/RadicalArithmetic.kt"
+            line="214"
+            column="91"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 33 (current min is 26): `java.math.BigInteger#TWO`"
+        errorLine1="        val c2 = (a + normRoot) / Rational.of(BigInteger.TWO)"
+        errorLine2="                                              ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/RadicalArithmetic.kt"
+            line="228"
+            column="47"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 33 (current min is 26): `java.math.BigInteger#TWO`"
+        errorLine1="        val d2 = (a - normRoot) / Rational.of(BigInteger.TWO)"
+        errorLine2="                                              ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/RadicalArithmetic.kt"
+            line="229"
+            column="47"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 33 (current min is 26): `java.math.BigDecimal#sqrt`"
+        errorLine1="        generators += Generator(square, prime, decimal.sqrt(precision))"
+        errorLine2="                                                       ~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/RadicalArithmetic.kt"
+            line="241"
+            column="56"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets#getInsets`"
+        errorLine1="            val insets = windowInsets.getInsets("
+        errorLine2="                                      ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/SettingsActivity.kt"
+            line="42"
+            column="39"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#displayCutout`"
+        errorLine1="                android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()"
+        errorLine2="                                                                                              ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/SettingsActivity.kt"
+            line="43"
+            column="95"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#systemBars`"
+        errorLine1="                android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()"
+        errorLine2="                                               ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/SettingsActivity.kt"
+            line="43"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#bottom`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                                                   ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/SettingsActivity.kt"
+            line="45"
+            column="68"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#left`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                            ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/SettingsActivity.kt"
+            line="45"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#right`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                                     ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/SettingsActivity.kt"
+            line="45"
+            column="54"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#top`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                         ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/SettingsActivity.kt"
+            line="45"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets#getInsets`"
+        errorLine1="            val insets = windowInsets.getInsets("
+        errorLine2="                                      ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ShortcutManagerActivity.kt"
+            line="30"
+            column="39"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#displayCutout`"
+        errorLine1="                android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()"
+        errorLine2="                                                                                              ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ShortcutManagerActivity.kt"
+            line="31"
+            column="95"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#systemBars`"
+        errorLine1="                android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout()"
+        errorLine2="                                               ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ShortcutManagerActivity.kt"
+            line="31"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#bottom`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                                                   ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ShortcutManagerActivity.kt"
+            line="33"
+            column="68"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#left`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                            ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ShortcutManagerActivity.kt"
+            line="33"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#right`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                                     ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ShortcutManagerActivity.kt"
+            line="33"
+            column="54"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 29 (current min is 26): `android.graphics.Insets#top`"
+        errorLine1="            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)"
+        errorLine2="                                         ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/ShortcutManagerActivity.kt"
+            line="33"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 33 (current min is 26): `java.math.BigInteger#TWO`"
+        errorLine1="        while (denominator.mod(BigInteger.TWO) == BigInteger.ZERO) { denominator /= BigInteger.TWO; halves++ }"
+        errorLine2="                               ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/SymbolicArithmetic.kt"
+            line="221"
+            column="32"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 33 (current min is 26): `java.math.BigInteger#TWO`"
+        errorLine1="        while (denominator.mod(BigInteger.TWO) == BigInteger.ZERO) { denominator /= BigInteger.TWO; halves++ }"
+        errorLine2="                                                                                    ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/SymbolicArithmetic.kt"
+            line="221"
+            column="85"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Field requires API level 33 (current min is 26): `java.math.BigInteger#TWO`"
+        errorLine1="        val n = angle.numerator.mod(angle.denominator * BigInteger.TWO).toInt()"
+        errorLine2="                                                        ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/SymbolicArithmetic.kt"
+            line="232"
+            column="57"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 33 (current min is 26): `java.math.BigDecimal#sqrt`"
+        errorLine1="                &apos;φ&apos; -> BigDecimal(5).sqrt(context).add(BigDecimal.ONE).divide(BigDecimal(2), context)"
+        errorLine2="                                     ~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/SymbolicArithmetic.kt"
+            line="450"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 33 (current min is 26): `java.math.BigDecimal#sqrt`"
+        errorLine1="            is Root -> decimal(a.radicand).sqrt(context)"
+        errorLine2="                                           ~~~~">
+        <location
+            file="src/main/java/com/example/ipa_board/calculator/SymbolicArithmetic.kt"
+            line="453"
+            column="44"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="`android:windowLightNavigationBar` requires API level 27 (current min is 26)"
+        errorLine1="        &lt;item name=&quot;android:windowLightNavigationBar&quot;>false&lt;/item>"
+        errorLine2="              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-night/themes.xml"
+            line="20"
+            column="15"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="`android:windowLightNavigationBar` requires API level 27 (current min is 26)"
+        errorLine1="        &lt;item name=&quot;android:windowLightNavigationBar&quot;>false&lt;/item>"
+        errorLine2="              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/themes.xml"
+            line="20"
+            column="15"/>
+    </issue>
+
+</issues>

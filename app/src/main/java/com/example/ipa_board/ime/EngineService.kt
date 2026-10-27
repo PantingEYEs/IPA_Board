@@ -30,20 +30,26 @@ abstract class EngineService : Service() {
         AppDiagnostics.configure(data)
         if (message.what == 2) return@Handler true // Diagnostics-only control, not an engine query.
         val reply = message.replyTo
+        // TIMING PROBE: no-op unless a debug test explicitly requests timestamps.
+        val timing = EngineQueryTiming.begin(this, data)
         // Coalesce pending requests. A running native call may finish, but its result is versioned.
         work.removeCallbacksAndMessages(null)
         work.post {
+            timing?.mark("worker")
             val result = Bundle().apply { putLong("revision", data.getLong("revision")); putLong("requestId", data.getLong("requestId")) }
             try {
                 val raw = data.getString("raw").orEmpty()
                 val policy = EngineQueryPolicy.from(data)
                 val candidates = if (!policy.wantsQuery(language, raw.isEmpty())) emptyList() else {
+                    timing?.mark("initializeStart")
                     if (engine == null && failure == null) {
                         // DIAGNOSTICS: nested load stages preserve the most specific failure.
                         runtimeReporter.update(EngineRuntimeState.INITIALIZING)
                         engine = AppDiagnostics.atStage(component, DiagnosticStage.INITIALIZE) { createEngine() }
                         runtimeReporter.update(EngineRuntimeState.READY)
                     }
+                    timing?.mark("initializeEnd")
+                    timing?.mark("queryStart")
                     if (failure != null) { result.putString("error", failure!!.code); emptyList() }
                     else engine?.let {
                         runtimeReporter.update(EngineRuntimeState.BUSY)
@@ -58,13 +64,16 @@ abstract class EngineService : Service() {
                         else emptyList()
                     } } ?: emptyList()
                 }
+                timing?.mark("queryEnd")
                 if (engine != null && failure == null) runtimeReporter.update(EngineRuntimeState.READY)
+                timing?.mark("serializeStart")
                 result.putStringArrayList("text", ArrayList(candidates.map { it.text }))
                 result.putStringArrayList("language", ArrayList(candidates.map { it.language }))
                 result.putIntArray("rank", candidates.map { it.rank }.toIntArray())
                 result.putIntArray("kind", candidates.map { it.kind.ordinal }.toIntArray())
                 result.putIntArray("score", candidates.map { it.nativeScore }.toIntArray())
                 result.putFloatArray("affinity", candidates.map { it.contextAffinity }.toFloatArray())
+                timing?.mark("serializeEnd")
             } catch (e: Exception) {
                 // DIAGNOSTICS: keep the process-wide circuit breaker, without repeated stack traces.
                 failure = AppDiagnostics.failure(component, DiagnosticStage.QUERY, e)
@@ -80,6 +89,7 @@ abstract class EngineService : Service() {
                 result.putString("error", failure!!.code)
             }
             // DIAGNOSTICS: a dead receiver must not crash the native worker or reveal its payload.
+            timing?.reply(result)
             if (reply == null) AppDiagnostics.signal(component, DiagnosticStage.REPLY, DiagnosticKind.INVALID_RESPONSE)
             else try { reply.send(Message.obtain(null, 1).apply { this.data = result }) }
             catch (_: RemoteException) { AppDiagnostics.signal(component, DiagnosticStage.REPLY, DiagnosticKind.IPC) }

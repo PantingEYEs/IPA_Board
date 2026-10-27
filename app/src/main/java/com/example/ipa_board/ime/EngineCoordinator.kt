@@ -14,6 +14,9 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
     private var closed = false
     private var started = false
     private var requestId = 0L
+    // TIMING PROBE: test-owned observer; detached by close(), never enabled by app settings.
+    internal var timing: CandidateTiming? = null
+    private var queryStartedNs = 0L
     private val runtimeStates = EngineRuntimeStates()
     private val runtimeListeners = linkedSetOf<() -> Unit>()
     private val semantic = SemanticRankerClient(context, runtimeStates) { id, items, state ->
@@ -74,7 +77,9 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
     }
     fun query(nextRevision: Long, value: String, contextBeforeCursor: String = "", contextAfterCursor: String = "") {
         requestId++
+        queryStartedNs = if (timing != null) CandidateTiming.now() else 0L
         revision = nextRevision; raw = value; beforeCursor = contextBeforeCursor.takeLast(256); afterCursor = contextAfterCursor.take(256)
+        timing?.record(requestId, revision, "ALL", "query_started", queryStartedNs, queryStartedNs)
         clients.forEach { it.items = emptyList(); it.send() }
         publish()
     }
@@ -83,13 +88,18 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
         closed = true; semantic.release(); preferences.unregisterOnSharedPreferenceChangeListener(preferenceListener)
         clients.forEach { it.unbind() }
         runtimeListeners.clear()
+        timing = null
     }
     private fun nativeState() = if (clients.none { policy.needsRuntime(it.label) }) "Literal input" else clients.filter { policy.needsRuntime(it.label) && it.state != "" }.joinToString(" · ") { it.label + it.state }
     private fun publish() {
         if (closed) return
+        val mergeStarted = if (timing != null) CandidateTiming.now() else 0L
         val all = clients.flatMap { it.items }
         val base = if (policy.enabled(EngineFeature.RANKING)) CandidateRanker.merge(raw, all) else CandidateRanker.unranked(all)
+        val callbackStarted = if (timing != null) CandidateTiming.now() else 0L
+        timing?.record(requestId, revision, "ALL", "merge", mergeStarted, callbackStarted, base.size)
         changed(revision, base, nativeState())
+        timing?.record(requestId, revision, "ALL", "publish_callback", callbackStarted, count = base.size)
         semantic.query(revision, raw, beforeCursor, afterCursor, base)
     }
     private inner class Client(val type: Class<out android.app.Service>, val label: String) : ServiceConnection {
@@ -104,10 +114,15 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
         var items = emptyList<Candidate>()
         var state = "Loading"
         val response = Messenger(Handler(Looper.getMainLooper()) { message ->
+            val received = if (timing != null) CandidateTiming.now() else 0L
+            // TIMING PROBE: collect even rejected stale replies, with their original request IDs.
+            val d = message.data
+            val responseRequest = d.getLong("requestId")
+            val responseRevision = d.getLong("revision")
+            collectWorkerTiming(d, received)
             if (!closed && policy.wantsQuery(label, raw.isEmpty()) && message.data.getLong("revision") == revision &&
                 message.data.getLong("requestId") == requestId &&
                 (label != "IPA" || message.data.getString(IpaResourceManager.KEY_GENERATION) == ipaGeneration)) {
-                val d = message.data
                 val texts = d.getStringArrayList("text").orEmpty()
                 val languages = d.getStringArrayList("language").orEmpty()
                 val ranks = d.getIntArray("rank") ?: intArrayOf()
@@ -116,6 +131,7 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
                 val affinities = d.getFloatArray("affinity") ?: floatArrayOf()
                 // DIAGNOSTICS: reject incomplete IPC arrays instead of silently truncating candidates.
                 if (texts.size != languages.size || texts.size != ranks.size) {
+                    timing?.record(responseRequest, responseRevision, label, "reply", received, outcome = "invalid")
                     unavailable(AppDiagnostics.signal(component, DiagnosticStage.RESPONSE, DiagnosticKind.INVALID_RESPONSE))
                     return@Handler true
                 }
@@ -130,10 +146,32 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
                         ?: AppDiagnostics.signal(component, DiagnosticStage.RESPONSE, DiagnosticKind.INVALID_RESPONSE)
                     "Unavailable (${issue.stage.label})"
                 } else ""
+                timing?.record(responseRequest, responseRevision, label, "decode", received, count = items.size)
                 publish()
+                timing?.record(responseRequest, responseRevision, label, "reply", received, count = items.size,
+                    outcome = if (d.containsKey("error")) "error" else if (items.isEmpty()) "empty" else "ok")
+            } else {
+                timing?.record(responseRequest, responseRevision, label, "reply", received, outcome = "stale")
             }
             true
         })
+        private fun collectWorkerTiming(data: Bundle, received: Long) {
+            val probe = timing ?: return
+            val stamps = data.getBundle(CandidateTiming.KEY) ?: return
+            val id = data.getLong("requestId")
+            val rev = data.getLong("revision")
+            fun span(stage: String, start: String, end: String) {
+                val a = stamps.getLong(start); val b = stamps.getLong(end)
+                if (a > 0L && b >= a) probe.record(id, rev, label, stage, a, b)
+            }
+            span("outbound_ipc", "sent", "received")
+            span("worker_queue", "received", "worker")
+            span("initialize", "initializeStart", "initializeEnd")
+            span("engine_query", "queryStart", "queryEnd")
+            span("serialize", "serializeStart", "serializeEnd")
+            val sent = stamps.getLong("reply")
+            if (sent > 0L && received >= sent) probe.record(id, rev, label, "inbound_ipc", sent, received)
+        }
         fun bind() {
             state = "Loading"
             runtimeStates.connecting(backend)
@@ -172,10 +210,14 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
         }
         fun send() {
             if (!policy.wantsQuery(label, raw.isEmpty())) { items = emptyList(); state = ""; return }
-            try { remote?.send(Message.obtain(null, 1).apply {
+            val target = remote ?: return
+            val sent = if (timing != null) CandidateTiming.now() else 0L
+            timing?.record(requestId, revision, label, "dispatch_wait", queryStartedNs, sent)
+            try { target.send(Message.obtain(null, 1).apply {
                 replyTo = response
                 data = Bundle().apply {
                     putLong("revision", revision); putLong("requestId", requestId); putString("raw", raw)
+                    if (timing != null) putLong(CandidateTiming.KEY, sent)
                     if (label == "IPA") putString(IpaResourceManager.KEY_GENERATION, ipaGeneration)
                     policy.writeTo(this)
                     // DIAGNOSTICS: workers do not read SharedPreferences across processes.
