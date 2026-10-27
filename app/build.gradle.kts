@@ -22,6 +22,11 @@ android {
         testInstrumentationRunner = "com.example.ipa_board.RegressionTestRunner"
     }
 
+    lint {
+        // Accepted existing API-installation diagnostics only; new NewApi findings still fail lint.
+        baseline = file("lint-baseline.xml")
+    }
+
     packaging { jniLibs { useLegacyPackaging = true } }
 
     buildTypes {

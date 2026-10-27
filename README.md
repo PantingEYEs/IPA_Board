@@ -125,6 +125,6 @@ python3 tools/regression.py run --suite full --serial DEVICE_SERIAL --no-build
 
 Mozc 与语义分词 Extensions 原生库为 4KB 对齐，尚未验证 16KB 页设备兼容性。既有 debug 回归结果不代表正式签名 release 或其他设备已通过。
 
-预输入目前按 UTF-16 单元退格，可能留下半个 Emoji 代理对；按用户选择保留这一行为，不纳入 0.0.4 稳定性修复。部分回归中的输入法窗口等待超时仍待调查。API 31 诊断中，Engine Management 和 Dashboard 仍有较新系统接口调用导致的崩溃，API 26 与鸿蒙实机未验证。放宽安装门槛后，lint 仍会报告未适配的 API 调用；编译成功不代表低版本兼容或全部检查通过。
+预输入目前按 UTF-16 单元退格，可能留下半个 Emoji 代理对；按用户选择保留这一行为，不纳入 0.0.4 稳定性修复。部分回归中的输入法窗口等待超时仍待调查。API 31 诊断中，Engine Management 和 Dashboard 仍有较新系统接口调用导致的崩溃，API 26 与鸿蒙实机未验证。放宽安装门槛产生的既有 136 项 `NewApi` 错误已登记为 Lint 开发基线，新增问题仍会报告；基线通过或编译成功不代表低版本兼容。
 
 各专题说明与历史记录见 [文档索引](docs/README.md)。

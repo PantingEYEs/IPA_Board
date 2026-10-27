@@ -29,8 +29,11 @@ class IpaService : Service() {
         if (message.what == 2) return@Handler true
         if (destroyed || message.what != 1) return@Handler true
         val reply = message.replyTo
+        // TIMING PROBE: explicit debug-only envelope, no user content.
+        val timing = EngineQueryTiming.begin(this, data)
         work.removeCallbacksAndMessages(null)
         work.post {
+            timing?.mark("worker")
             val requestedGeneration = data.getString(IpaResourceManager.KEY_GENERATION).orEmpty()
             val result = Bundle().apply {
                 putLong("revision", data.getLong("revision"))
@@ -42,7 +45,10 @@ class IpaService : Service() {
                 val policy = EngineQueryPolicy.from(data)
                 if (!policy.wantsQuery("IPA", raw.isEmpty()) || raw.length > 64) emptyList()
                 else {
+                    timing?.mark("initializeStart")
                     val engine = load(requestedGeneration)
+                    timing?.mark("initializeEnd")
+                    timing?.mark("queryStart")
                     runtimeReporter.update(EngineRuntimeState.BUSY)
                     AppDiagnostics.atStage(DiagnosticComponent.IPA, DiagnosticStage.QUERY) {
                         val before = data.getString("beforeCursor").orEmpty().takeLast(256)
@@ -56,13 +62,17 @@ class IpaService : Service() {
             } catch (error: Exception) { failed(requestedGeneration, result, error) }
             catch (error: LinkageError) { failed(requestedGeneration, result, error) }
             catch (error: OutOfMemoryError) { failed(requestedGeneration, result, error) }
+            timing?.mark("queryEnd")
             if (!result.containsKey("error") && runtime != null) runtimeReporter.update(EngineRuntimeState.READY)
+            timing?.mark("serializeStart")
             result.putStringArrayList("text", ArrayList(candidates.map { it.text }))
             result.putStringArrayList("language", ArrayList(candidates.map { it.language }))
             result.putIntArray("rank", candidates.map { it.rank }.toIntArray())
             result.putIntArray("kind", candidates.map { it.kind.ordinal }.toIntArray())
             result.putIntArray("score", candidates.map { it.nativeScore }.toIntArray())
             result.putFloatArray("affinity", candidates.map { it.contextAffinity }.toFloatArray())
+            timing?.mark("serializeEnd")
+            timing?.reply(result)
             if (!destroyed) {
                 // DIAGNOSTICS: no user content is logged when a receiver disappears.
                 if (reply == null) AppDiagnostics.signal(DiagnosticComponent.IPA, DiagnosticStage.REPLY, DiagnosticKind.INVALID_RESPONSE)

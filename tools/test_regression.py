@@ -203,6 +203,18 @@ class TransactionTest(unittest.TestCase):
         self.assertIn("regressionSnapshot", instrumentation)
         self.assertIn(reg.RUNNER, instrumentation)
 
+    def test_timing_export_failure_still_restores_original_application(self):
+        device = FakeDevice()
+        original = copy.deepcopy(device.packages)
+        device.test_output = 'INSTRUMENTATION_STATUS: candidate_timing={"raw":"unexpected"}\nOK (1 test)\n'
+        with self.assertRaisesRegex(ValueError, "schema"):
+            self.run_suite(device)
+        self.assertEqual(original, device.packages)
+        self.assertFalse(list((self.root / "backups").glob("snapshot-*")))
+        summary = next((self.root / "app/build/reports/regression").glob("*/summary.json"))
+        self.assertTrue(json.loads(summary.read_text())["restored"])
+        self.assertFalse(json.loads(summary.read_text())["success"])
+
     def test_disk_snapshot_contains_only_software_private_data_and_metadata(self):
         device = FakeDevice()
         transaction = reg.Transaction.snapshot(device, self.root / "backups")

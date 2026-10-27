@@ -37,7 +37,8 @@
       "classes": [
         "com.example.ipa_board.MultilingualEngineTest",
         "com.example.ipa_board.ZhuyinEngineTest",
-        "com.example.ipa_board.IpaEngineRuntimeTest"
+        "com.example.ipa_board.IpaEngineRuntimeTest",
+        "com.example.ipa_board.CandidateTimingTest"
       ]
     },
     "ui": {
@@ -135,7 +136,8 @@
         "com.example.ipa_board.PageEngineBindingUiTest",
         "com.example.ipa_board.PageEngineBindingImeTest",
         "com.example.ipa_board.ClipboardStartupSyncTest",
-        "com.example.ipa_board.ClipboardManagementTest"
+        "com.example.ipa_board.ClipboardManagementTest",
+        "com.example.ipa_board.CandidateTimingTest"
       ]
     },
     "ipa": {
@@ -262,6 +264,11 @@
         "com.example.ipa_board.ClipboardStartupSyncTest",
         "com.example.ipa_board.QuickPasteStatusTest",
         "com.example.ipa_board.ClipboardPanelOrderTest"
+      ]
+    },
+    "candidate-timing": {
+      "classes": [
+        "com.example.ipa_board.CandidateTimingTest"
       ]
     }
   }

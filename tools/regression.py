@@ -27,6 +27,7 @@ import uuid
 from datetime import datetime, timezone
 
 from validate_test_suites import validate_suites
+from candidate_timing import export_report as export_candidate_timing
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = "com.example.ipa_board"
@@ -1016,6 +1017,10 @@ def run_suite(device: Device, classes: list[str], suite: str, apks: list[Path], 
                                              "-e", "regressionSnapshot", transaction.manifest["id"], RUNNER]), timeout=timeout,
                     ).decode("utf-8", "replace")
                     (report / (class_name.replace("#", "-") + ".txt")).write_text(output, encoding="utf-8")
+                    # Timing rows also survive ordinary JUnit failure; restoration still runs on export errors.
+                    timing_summary = export_candidate_timing(output, report)
+                    if class_name == APP + ".CandidateTimingTest" and timing_summary is None:
+                        raise RegressionError("Candidate timing test emitted no measurements")
                     result.update(instrumentation_metrics(output))
                     result["status"] = "skipped" if result["skipped"] and not result["failed"] else "failed"
                     if not instrumentation_passed(output):
