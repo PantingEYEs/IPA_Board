@@ -4,6 +4,11 @@
 
 Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划](docs/0.0.4-development-plan.md)。
 
+- Shortcut 替代文字（[Issue #39](https://github.com/PantingEYEs/IPA_Board/issues/39)）已通过 [PR #44](https://github.com/PantingEYEs/IPA_Board/pull/44) 合入 `0.0.4-dev`（2026-10-29，merge commit `293d537`）：Shortcut Management 底部新增 **Replacement Text**，可添加、编辑、删除及调整规则顺序，支持同一源文字绑定多个替代文字并保存重复项。例如原候选存在完整 `鞥` 时，按规则在所有原候选后追加 `嗯`，不改写或移除原词，不要求引擎学习。
+- 替代规则仅匹配追加前的完整候选，不匹配子串、不递归触发；每条规则按表顺序追加一次，即使原候选或其他追加项已有相同文字仍保留。引擎／语义结果、计算器覆盖与规则变化后重新生成追加项，不累积旧项；配置修改即时刷新正在显示的候选。
+- 同文字多范围候选优先继承完整输入候选，无完整输入时继承首个匹配项；保留原生输入消耗范围，分段替代后剩余编码仍待输入。联想沿用插入行为，计算器替代项仍写回预输入继续计算。追加项使用独立身份，重复文字可分别显示和选择。
+- 新增版本化 `replacementText` 类别及无损读写接口，为 #33 后续导出保留源／目标全文、顺序和重复条目；本次未增加用户导出／导入入口，也不更改已有 Shift／Ctrl 与多功能栏配置。详见 [Shortcut 替代文字说明](docs/shortcut-replacements.md)。
+- 替代文字验证：238 项 JVM、61 项工具测试、debug／AndroidTest 编译、资源及套件校验、Lint 通过（保留 289 条警告及既有 NewApi 基线）。API 35／ARM64 独立模拟器专项 4 类 31/31 通过，覆盖规则编辑与持久化、完整匹配与非递归、重复项独立选择、过期选择拒绝、分段／联想／计算器行为，以及真实注音输入触发与实时修改规则。软件与私有数据恢复校验通过并删除备份，维护者确认实测通过；未运行完整回归、真实 E5 推理专项、其他 API／ABI 或签名 release，详见[测试记录](docs/testing.md)。
 - 应用内词汇反查 IPA（[Issue #41](https://github.com/PantingEYEs/IPA_Board/issues/41)）已通过 [PR #43](https://github.com/PantingEYEs/IPA_Board/pull/43) 合入 `0.0.4-dev`（2026-10-29，merge commit `d588c15`）：Engine Management → Manage IPA engine and dictionary → IPA Engine 页面底部新增 **Word to IPA**，输入完整词条后点击 **Lookup**，离线显示活动词典中的多条 IPA，按地区分组并保留 **Derived** 标记，结果可选中复制。
 - 反查独立于输入法 IPA 开关，不开启引擎、不访问网络，也不加载引擎 DEX／JNI。只对完整词条做 NFC 精确匹配，不自动转换大小写或繁简、不猜测读音；`学校` 与 `學校` 分别查询。后台读取编译词典，不需要源数据库、客户端编译或磁盘索引；成功切换词典后拒绝旧 generation 结果，失败更新保留原资源，最多显示 500 条并明确标注截断。
 - 修复查询页键盘遮挡：明确窗口调整模式并结合系统栏与 IME Insets 缩小滚动视口，键盘弹出时搜索框和结果仍可滚动查看，收起时恢复可用空间。
