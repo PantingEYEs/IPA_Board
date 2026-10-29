@@ -73,6 +73,10 @@ abstract class EngineService : Service() {
                 result.putIntArray("kind", candidates.map { it.kind.ordinal }.toIntArray())
                 result.putIntArray("score", candidates.map { it.nativeScore }.toIntArray())
                 result.putFloatArray("affinity", candidates.map { it.contextAffinity }.toFloatArray())
+                result.putStringArrayList("consumptionInput", ArrayList(candidates.map { it.consumption?.input.orEmpty() }))
+                result.putIntArray("consumptionEnd", candidates.map { it.consumption?.end ?: 0 }.toIntArray())
+                result.putStringArrayList("consumptionSource", ArrayList(candidates.map { it.consumption?.source.orEmpty() }))
+                result.putStringArrayList("consumptionSelection", ArrayList(candidates.map { it.consumption?.selection.orEmpty() }))
                 timing?.mark("serializeEnd")
             } catch (e: Exception) {
                 // DIAGNOSTICS: keep the process-wide circuit breaker, without repeated stack traces.

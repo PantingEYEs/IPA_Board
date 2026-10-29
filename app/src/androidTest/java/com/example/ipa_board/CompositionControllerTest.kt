@@ -173,7 +173,7 @@ class CompositionControllerTest {
             assertEquals("IPA hello 漢語", editor.text.toString())
         }
     }
-    @Test fun movingCursorEndsCompositionWithoutReinsertingAtNewCursor() {
+    @Test fun movingCursorPreservesCompositionAndTypingUsesItsCaret() {
         instrumentation.runOnMainSync {
             val editor = EditText(instrumentation.targetContext)
             val ic = editor.onCreateInputConnection(EditorInfo())!!
@@ -182,10 +182,12 @@ class CompositionControllerTest {
             controller.externalSelection(5, 5, 5)
             editor.setSelection(0)
             controller.externalSelection(0, 0, 5)
-            assertEquals("", controller.raw)
+            assertEquals("hello", controller.raw)
             assertEquals("hello", editor.text.toString())
+            controller.input("a")
+            assertEquals("ahello", controller.raw)
             assertTrue(controller.literal())
-            assertEquals("hello", editor.text.toString())
+            assertEquals("ahello", editor.text.toString())
         }
     }
     @Test fun editorRejectingCompositionStillAcceptsOneLiteralCommit() {

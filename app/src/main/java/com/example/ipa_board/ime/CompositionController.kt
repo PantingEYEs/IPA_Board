@@ -1,6 +1,7 @@
 package com.example.ipa_board.ime
 
 import android.view.inputmethod.InputConnection
+import android.view.inputmethod.ExtractedTextRequest
 
 /** Owns all composing writes. Native engines only propose text. Main-thread confined. */
 class CompositionController(
@@ -18,6 +19,13 @@ class CompositionController(
     private var inEditor = false
     private var composingText = ""
     private var active = true
+    var caret = 0; private set
+    private var composingStart = -1
+    private fun editorCaret(): Int? = connection()?.getExtractedText(ExtractedTextRequest(), 0)?.let {
+        if (it.selectionStart == it.selectionEnd) it.startOffset + it.selectionStart else null
+    }
+    private fun displayOffset(offset: Int): Int = if (offset < 0) offset else
+        transformOutput(raw.take(offset.coerceAtMost(raw.length))).length
 
     fun start() { active = true; reset() }
     fun input(text: String) {
@@ -25,13 +33,53 @@ class CompositionController(
             if (!literal()) return
             if (text.length > 64) { connection()?.commitText(transformOutput(text), 1); return }
         }
-        if (raw.isEmpty()) connection()?.finishComposingText()
-        raw += text
+        if (raw.isEmpty()) {
+            connection()?.finishComposingText()
+            composingStart = editorCaret() ?: -1
+            caret = 0
+        }
+        if (caret < 0 || caret > raw.length) {
+            val ic = connection() ?: return
+            val position = editorCaret() ?: return
+            ic.beginBatchEdit()
+            try {
+                ic.finishComposingText()
+                if (ic.commitText(transformOutput(text), 1)) {
+                    val length = transformOutput(text).length
+                    if (position <= composingStart) composingStart += length
+                    inEditor = ic.setComposingRegion(composingStart, composingStart + composingText.length)
+                    ic.setSelection(position + length, position + length)
+                    caret = position + length - composingStart
+                    revision++; candidates = emptyList(); request(); changed()
+                }
+            } finally { ic.endBatchEdit() }
+            return
+        }
+        raw = raw.substring(0, caret) + text + raw.substring(caret)
+        caret += text.length
         refreshComposition()
     }
     fun backspace(): Boolean {
         if (raw.isEmpty()) return false
-        raw = raw.dropLast(1)
+        if (caret <= 0 || caret > raw.length) {
+            val ic = connection() ?: return false
+            if (composingStart < 0) return false
+            val position = editorCaret() ?: return true
+            if (position == 0) return true
+            ic.beginBatchEdit()
+            try {
+                ic.finishComposingText()
+                if (ic.deleteSurroundingText(1, 0)) {
+                    if (caret <= 0) composingStart-- else caret--
+                }
+                inEditor = ic.setComposingRegion(composingStart, composingStart + composingText.length)
+                revision++; candidates = emptyList(); request(); changed()
+            } finally { ic.endBatchEdit() }
+            return true
+        }
+        // Preserve the established UTF-16-unit deletion behavior.
+        raw = raw.removeRange(caret - 1, caret)
+        caret--
         refreshComposition()
         if (raw.isEmpty()) { connection()?.finishComposingText(); inEditor = false }
         return true
@@ -40,6 +88,11 @@ class CompositionController(
         val ic = connection() ?: return reset()
         composingText = transformOutput(raw)
         inEditor = ic.setComposingText(composingText, 1)
+        if (inEditor && composingStart < 0) composingStart = (editorCaret() ?: -1).let { if (it < 0) -1 else it - composingText.length }
+        if (inEditor && composingStart >= 0) {
+            val position = composingStart + displayOffset(caret)
+            ic.setSelection(position, position)
+        }
         revision++; candidates = emptyList()
         request(); changed()
     }
@@ -78,17 +131,35 @@ class CompositionController(
             replaceRaw(cleanResult)
             return true
         }
+        candidate.consumption?.let { consumption ->
+            if (!consumption.validFor(raw) || !inEditor || composingStart < 0) return false
+            val ic = connection() ?: return false
+            val suffix = raw.substring(consumption.end)
+            val prefix = transformOutput(candidate.text)
+            val pending = transformOutput(suffix)
+            ic.beginBatchEdit()
+            try {
+                if (!ic.setComposingRegion(composingStart, composingStart + composingText.length)) return false
+                if (!ic.setComposingText(prefix + pending, 1)) return false
+                if (!ic.setComposingRegion(composingStart + prefix.length, composingStart + prefix.length + pending.length)) {
+                    // Keep the original composing span until the suffix range is accepted, so a
+                    // refusing editor can be rolled back without intentionally committing raw text.
+                    ic.setComposingText(composingText, 1)
+                    return false
+                }
+                composingStart += prefix.length
+                raw = suffix; caret = suffix.length; composingText = pending
+                inEditor = true
+                revision++; candidates = emptyList(); request(); changed()
+                return inEditor
+            } finally { ic.endBatchEdit() }
+        }
         return commit(candidate.text + if (appendSpace && candidate.language.split('/').contains("EN")) " " else "")
     }
     fun replaceRaw(newRaw: String) {
-        val ic = connection() ?: return reset()
         raw = newRaw
-        composingText = transformOutput(raw)
-        inEditor = ic.setComposingText(composingText, 1)
-        revision++
-        candidates = emptyList()
-        request()
-        changed()
+        caret = raw.length
+        refreshComposition()
     }
     fun literal(): Boolean = if (raw.isEmpty()) true else commit(raw)
     fun space(): Boolean {
@@ -102,15 +173,44 @@ class CompositionController(
         if (!ic.commitText(transformOutput(text), 1)) return false
         ic.finishComposingText(); reset(); return true
     }
+    /** Horizontal movement keeps the raw composing range; returning false uses ordinary editor keys. */
+    fun moveCaret(delta: Int): Boolean {
+        if (raw.isEmpty() || !inEditor || composingStart < 0) return false
+        val ic = connection() ?: return false
+        val position = editorCaret() ?: return false
+        val target = (position + delta).coerceAtLeast(0)
+        if (!ic.setSelection(target, target)) return false
+        caret = when {
+            target < composingStart -> target - composingStart
+            target > composingStart + composingText.length -> raw.length + target - composingStart - composingText.length
+            else -> (0..raw.length).minBy { kotlin.math.abs(displayOffset(it) - (target - composingStart)) }
+        }
+        revision++; candidates = emptyList(); request(); changed()
+        return true
+    }
     fun externalSelection(start: Int, end: Int, composingEnd: Int) {
         if (!active) return
         if (raw.isEmpty()) { refreshContext(); return }
         if (!inEditor) return
-        // The expected composing end is authoritative for our own asynchronous editor callbacks.
-        if (start == end && end == composingEnd) { refreshContext(); return }
-        if (composingEnd < 0 || start != end || end != composingEnd) {
-            connection()?.finishComposingText(); reset()
+        // Ignore queued callbacks describing an earlier programmatic selection.
+        val actual = editorCaret()
+        if (actual != null && (start != actual || end != actual)) return
+        if (start == end && composingEnd >= 0 && composingStart >= 0) {
+            caret = when {
+                start < composingStart -> start - composingStart
+                start > composingEnd -> raw.length + start - composingEnd
+                else -> (0..raw.length).minBy { kotlin.math.abs(displayOffset(it) - (start - composingStart)) }
+            }
+            refreshContext()
+            return
         }
+        if (start == end) {
+            // A host may stop reporting composing ranges. Do not deliberately commit the suffix
+            // or show a warning; retain the raw buffer for explicit candidate/literal selection.
+            refreshContext()
+            return
+        }
+        connection()?.finishComposingText(); reset()
     }
     fun finish() {
         if (inEditor) connection()?.finishComposingText()
@@ -125,19 +225,25 @@ class CompositionController(
     }
     private fun readBeforeCursor(): String {
         val text = connection()?.getTextBeforeCursor(256 + composingText.length, 0)?.toString().orEmpty()
-        return (if (inEditor && composingText.isNotEmpty() && text.endsWith(composingText)) text.dropLast(composingText.length) else text).takeLast(256)
+        val precedingPending = if (inEditor) composingText.take(displayOffset(caret.coerceIn(0, raw.length))) else ""
+        return (if (precedingPending.isNotEmpty() && text.endsWith(precedingPending)) text.dropLast(precedingPending.length) else text).takeLast(256)
     }
     private fun request() {
         val context = readContext()
         beforeCursor = context.first; afterCursor = context.second
         query(revision, raw)
     }
-    private fun readAfterCursor(): String = connection()?.getTextAfterCursor(256, 0)?.toString().orEmpty().take(256)
+    private fun readAfterCursor(): String {
+        val text = connection()?.getTextAfterCursor(256 + composingText.length, 0)?.toString().orEmpty()
+        val pending = if (inEditor && caret in 0..raw.length) composingText.drop(displayOffset(caret)) else ""
+        return (if (pending.isNotEmpty() && text.startsWith(pending)) text.drop(pending.length) else text).take(256)
+    }
     private fun readContext(): Pair<String, String> =
         if (active && contextAllowed() && connection()?.getSelectedText(0).isNullOrEmpty())
             readBeforeCursor() to readAfterCursor() else "" to ""
     private fun reset() {
         raw = ""; candidates = emptyList(); inEditor = false; composingText = ""
+        caret = 0; composingStart = -1
         revision++; request(); changed()
     }
 }

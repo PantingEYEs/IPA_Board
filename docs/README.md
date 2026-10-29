@@ -20,6 +20,7 @@
 ## 开发与验证
 
 - [0.0.4 开发计划](0.0.4-development-plan.md)：本版范围、官方源码构建与下载拆分、GPL-3.0 迁移目标及待确定的新协议。
+- [自适应按键区域开发计划](adaptive-key-regions-development-plan.md)：个人词典之后的 Lv.0/Lv.1、广义 Voronoi 命中、页面学习、数学与开源参考；尚未排期。
 - [测试流程、套件选择与验证记录](testing.md)
 - [仓库测试规则](../AGENTS.md)
 - [英文 PR 写作规范](pull-request-guidelines.md)：草稿及描述副本存于被 Git 忽略的 `docs/pull-requests/`，不强制提交。

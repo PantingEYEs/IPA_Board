@@ -135,10 +135,20 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
                     unavailable(AppDiagnostics.signal(component, DiagnosticStage.RESPONSE, DiagnosticKind.INVALID_RESPONSE))
                     return@Handler true
                 }
+                val inputs = d.getStringArrayList("consumptionInput")
+                val ends = d.getIntArray("consumptionEnd")
+                val sources = d.getStringArrayList("consumptionSource")
+                val selections = d.getStringArrayList("consumptionSelection")
                 items = texts.mapIndexedNotNull { i, text ->
+                    val consumption = if ((ends?.getOrNull(i) ?: 0) != 0) {
+                        CandidateConsumption(inputs?.getOrNull(i).orEmpty(), ends!![i],
+                            sources?.getOrNull(i).orEmpty(), selections?.getOrNull(i).orEmpty())
+                            .takeIf { it.validFor(raw) && it.source == (if (label == "ZH") "Rime" else if (label == "JA") "Mozc" else "") }
+                            ?: return@mapIndexedNotNull null
+                    } else null
                     if (i < languages.size && i < ranks.size) Candidate(text, languages[i], ranks[i],
                         CandidateKind.entries.getOrNull(kinds.getOrNull(i) ?: 0) ?: CandidateKind.CONVERSION,
-                        scores.getOrNull(i) ?: 0, affinities.getOrNull(i) ?: 0f) else null
+                        scores.getOrNull(i) ?: 0, affinities.getOrNull(i) ?: 0f, consumption) else null
                 }
                 state = if (d.containsKey("error")) {
                     val issue = DiagnosticIssue.fromWire(d.getString("error"))

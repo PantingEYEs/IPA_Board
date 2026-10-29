@@ -37,7 +37,7 @@ class RimeBatchTest {
                         val rows = batch.read(session, input)
                         assertEquals("Batch enumeration must preserve input/caret/highlight", before, reference.state(session))
                         partialCandidates += rows.count { it.startByte != it.prefixEndByte || it.endByte + it.committedInputBytes != input.toByteArray().size }
-                        rows
+                        rows.filter { it.endByte + it.committedInputBytes == input.toByteArray().size }
                     }
                     if (raw == "'nihao") {
                         // Approved behavior: one real input produces one quote direction for the whole list.
@@ -77,7 +77,7 @@ class RimeBatchTest {
                     val modes = if (round % 2 == 0) listOf("legacy", "batch") else listOf("batch", "legacy")
                     for (mode in modes) {
                         val start = android.os.SystemClock.elapsedRealtimeNanos()
-                        val candidates = if (mode == "legacy") engine.queryWithReader(raw, reference::read) else engine.query(raw)
+                        val candidates = (if (mode == "legacy") engine.queryWithReader(raw, reference::read) else engine.query(raw)).filter { it.consumption == null }
                         val duration = android.os.SystemClock.elapsedRealtimeNanos() - start
                         results[mode] = candidates
                         timings.add(JSONObject().apply {

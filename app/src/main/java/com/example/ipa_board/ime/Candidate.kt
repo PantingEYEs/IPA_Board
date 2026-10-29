@@ -2,11 +2,18 @@ package com.example.ipa_board.ime
 
 enum class CandidateKind { CONVERSION, EXACT, COMPLETION, CORRECTION, PREDICTION }
 
-/** Word candidates replace the complete composition; predictions insert at the current cursor. */
+/** A reconstructed, prefix conversion. Offsets are raw UTF-16, never output text lengths.
+ * The query revision guards freshness; source/input/selection distinguish native semantics.
+ */
+data class CandidateConsumption(val input: String, val end: Int, val source: String, val selection: String) {
+    fun validFor(raw: String) = input == raw && end in 1 until raw.length && source in setOf("Rime", "Mozc")
+}
+
+/** Unannotated candidates replace the whole composition; predictions insert at the caret. */
 data class Candidate(val text: String, val language: String, val rank: Int = 0,
     val kind: CandidateKind = CandidateKind.CONVERSION, val nativeScore: Int = 0,
-    val contextAffinity: Float = 0f) {
-    val id: String get() = "$text:${kind == CandidateKind.PREDICTION}"
+    val contextAffinity: Float = 0f, val consumption: CandidateConsumption? = null) {
+    val id: String get() = "$text:${kind == CandidateKind.PREDICTION}" + (consumption?.let { ":${it.source}:${it.end}:${it.selection}" } ?: "")
 }
 
 object CandidateRanker {

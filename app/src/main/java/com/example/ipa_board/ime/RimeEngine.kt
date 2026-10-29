@@ -164,13 +164,21 @@ internal class RimeEngine(private val context: Context) : QueryEngine {
         val input = if (schema == "bopomofo") ZhuyinInput.encode(raw) ?: return emptyList()
             else raw.lowercase(Locale.ROOT)
         val id = sessions.getValue(schema)
-        val inputBytes = input.toByteArray(Charsets.UTF_8).size
         return try {
             replay(id, input)
             // Native snapshot validates the retained input and returns ranges without selecting.
-            reader(id, input).filter { it.startByte == it.prefixEndByte && it.endByte + it.committedInputBytes == inputBytes }.flatMap { item ->
-                listOfNotNull(Candidate(item.text, "繁", item.rank),
-                    if (scriptConversionEnabled) Candidate(convert(item.text), "简", item.rank) else null)
+            reader(id, input).filter { it.startByte == it.prefixEndByte }.flatMap { item ->
+                val encodedEnd = item.endByte + item.committedInputBytes
+                // All encoded schema keys are ASCII. Neutral Zhuyin tones can reorder keys:
+                // accept only an exact re-encoding boundary, never proportional offsets.
+                val end = (1..raw.length).lastOrNull { index ->
+                    val prefix = raw.take(index)
+                    val encoded = if (schema == "bopomofo") ZhuyinInput.encode(prefix) else prefix.lowercase(Locale.ROOT)
+                    encoded == input.take(encodedEnd)
+                } ?: return@flatMap emptyList()
+                val consumption = if (end < raw.length) CandidateConsumption(raw, end, "Rime", "$schema:${item.rank}") else null
+                listOfNotNull(Candidate(item.text, "繁", item.rank, consumption = consumption),
+                    if (scriptConversionEnabled) Candidate(convert(item.text), "简", item.rank, consumption = consumption) else null)
             }
         } finally {
             void("clear_composition", id)
