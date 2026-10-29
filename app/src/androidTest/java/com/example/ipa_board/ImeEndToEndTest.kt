@@ -25,6 +25,30 @@ class ImeEndToEndTest {
     private fun find(predicate: (AccessibilityNodeInfo) -> Boolean) = driver.find(predicate)
     private fun awaitNode(predicate: (AccessibilityNodeInfo) -> Boolean) = driver.awaitNode(predicate)
 
+    @Test fun segmentedCandidateSurvivesServiceIpcAndEditingCommittedPrefix() {
+        val layout = KeyboardLayout("Segmented E2E", listOf(RowLayout(1f, listOf(
+            KeySlot(1f, "nihaoshijie"), KeySlot(1f, action = KeyAction.LEFT),
+            KeySlot(1f, action = KeyAction.BACKSPACE), KeySlot(1f, action = KeyAction.RIGHT)
+        ))))
+        withIsolatedKeyboard(listOf(layout)) { scenario, _ ->
+            fun key(column: Int) = driver.click {
+                it.contentDescription?.toString()?.startsWith("Row 1, key $column:") == true
+            }
+            key(1)
+            driver.select(scenario, "你好", "你好shijie", expectedComposingStart = 2)
+            awaitEditorText(scenario, "你好shijie", composing = true)
+            repeat(6) { key(2) }
+            key(3)
+            awaitEditorText(scenario, "你shijie", composing = true)
+            scenario.onActivity {
+                assertEquals(1, BaseInputConnection.getComposingSpanStart(it.editor.text))
+                assertEquals(1, it.editor.selectionStart)
+            }
+            driver.select(scenario, "世界", "你世界")
+            awaitEditorText(scenario, "你世界", composing = false)
+        }
+    }
+
     @Test fun capsLockIndicatorTracksTemporaryShiftLockedInputAndUnlocking() {
         val layout = KeyboardLayout("Caps Lock E2E", listOf(RowLayout(1f, listOf(
             KeySlot(1f, action = KeyAction.SHIFT), KeySlot(1f, "a"),

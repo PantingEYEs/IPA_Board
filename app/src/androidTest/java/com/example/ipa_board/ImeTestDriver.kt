@@ -86,7 +86,7 @@ internal class ImeTestDriver {
         missingNode()
     }
 
-    fun select(scenario: ActivityScenario<ImeTestEditorActivity>, word: String, expectedText: String) {
+    fun select(scenario: ActivityScenario<ImeTestEditorActivity>, word: String, expectedText: String, expectedComposingStart: Int = -1) {
         val deadline = SystemClock.uptimeMillis() + 30_000
         var accepted = false
         var rejected = 0
@@ -129,10 +129,10 @@ internal class ImeTestDriver {
                 actualText = it.editor.text.toString()
                 composingStart = BaseInputConnection.getComposingSpanStart(it.editor.text)
             }
-            if (actualText == expectedText && composingStart == -1) return
+            if (actualText == expectedText && composingStart == expectedComposingStart) return
             Thread.sleep(40)
         } while (SystemClock.uptimeMillis() < commitDeadline)
         assertEquals("Accepted candidate '$word' must commit exactly once", expectedText, actualText)
-        assertEquals("Accepted candidate '$word' must finish composition", -1, composingStart)
+        assertEquals("Accepted candidate '$word' must retain only the expected pending suffix", expectedComposingStart, composingStart)
     }
 }

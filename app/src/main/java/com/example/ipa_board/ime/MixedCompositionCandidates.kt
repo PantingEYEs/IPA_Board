@@ -26,7 +26,7 @@ internal object MixedCompositionCandidates {
             Segment(start, end, engine.query(match.value,
                 (beforeCursor + raw.substring(0, start)).takeLast(256),
                 (raw.substring(end) + afterCursor).take(256))
-                .filter { it.text.isNotBlank() && it.text.length <= 1000 && it.rank >= 0 && it.kind != CandidateKind.PREDICTION })
+                .filter { it.text.isNotBlank() && it.text.length <= 1000 && it.rank >= 0 && it.kind != CandidateKind.PREDICTION && it.consumption == null })
         }
         if (segments.isEmpty()) return emptyList()
 

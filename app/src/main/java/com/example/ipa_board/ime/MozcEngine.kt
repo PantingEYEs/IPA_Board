@@ -54,8 +54,10 @@ internal class MozcEngine(context: Context) : QueryEngine {
             // Turn on Hiragana mode. Each query uses a fresh session, so no stale conversion state.
             send(n(1, 5) + n(2, id) + m(4, n(1, 5) + n(3, 1)))
             var output = emptyList<ProtoWire.Field>()
-            raw.lowercase(java.util.Locale.ROOT).forEach { c ->
+            val boundaries = mutableListOf<Pair<Int, String>>()
+            raw.lowercase(java.util.Locale.ROOT).forEachIndexed { index, c ->
                 output = send(n(1, 3) + n(2, id) + m(3, n(1, c.code.toLong()) + n(7, 1) + n(9, 1)) + surrounding)
+                boundaries += index + 1 to reading(output)
             }
             val list = ProtoWire.read(output.blob(14))
             val results = list.filter { it.tag == 2 }.take(60).mapIndexedNotNull { rank, item ->
@@ -65,9 +67,29 @@ internal class MozcEngine(context: Context) : QueryEngine {
             // The live phonetic composition is also a valid full-input candidate.
             val kana = ProtoWire.read(output.blob(5)).filter { it.tag == 2 }.joinToString("") { it.group.text(4) }
             if (kana.isNotBlank()) results.add(Candidate(kana, "日", 12))
-            return results.distinctBy { it.text }
+            // Ask the same transient session for native conversion segmentation. Record each
+            // input-prefix reading during the original replay, rather than replaying candidates.
+            val converted = send(n(1, 3) + n(2, id) + m(3, n(3, 4)) + surrounding) // SPACE
+            val segments = ProtoWire.read(converted.blob(5)).filter { it.tag == 2 }.map { it.group }
+            val firstKey = segments.firstOrNull()?.text(6).orEmpty()
+            val end = boundaries.lastOrNull { it.second == firstKey }?.first
+            if (segments.size > 1 && firstKey.isNotEmpty() && end != null && end < raw.length) {
+                ProtoWire.read(converted.blob(14)).filter { it.tag == 2 }.take(40).forEachIndexed { rank, item ->
+                    val fields = ProtoWire.read(item.bytes)
+                    val text = fields.text(4)
+                    if (text.isNotBlank()) results += Candidate(text, "日", rank,
+                        consumption = CandidateConsumption(raw, end, "Mozc", fields.value(1).toString()))
+                }
+                // The native best conversion across all segments remains a full-input option.
+                val whole = segments.joinToString("") { it.text(4) }
+                if (whole.isNotBlank()) results += Candidate(whole, "日", 0)
+            }
+            return results.distinctBy { it.id }
         } finally { send(n(1, 2) + n(2, id)) }
     }
+
+    private fun reading(output: List<ProtoWire.Field>): String =
+        ProtoWire.read(output.blob(5)).filter { it.tag == 2 }.joinToString("") { it.group.text(4) }
 
     private fun predict(id: Long, beforeCursor: String, surrounding: ByteArray): List<Candidate> {
         val previous = PredictionContext.japanese(beforeCursor)

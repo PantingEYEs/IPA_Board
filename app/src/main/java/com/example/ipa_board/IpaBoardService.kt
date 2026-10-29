@@ -509,7 +509,13 @@ class IpaBoardService : InputMethodService() {
 
         if (!directOnly && !beforeCtrl && !isModifier) {
             when {
-                (slot.action == KeyAction.BACKSPACE || slot.action == KeyAction.REPEAT_BACKSPACE) && composition.backspace() -> {
+                (slot.action == KeyAction.LEFT || slot.action == KeyAction.RIGHT) && composition.raw.isNotEmpty() -> {
+                    composition.moveCaret(if (slot.action == KeyAction.LEFT) -1 else 1)
+                    if (inputController.consumeSingleShift()) applySettings()
+                    return
+                }
+                (slot.action == KeyAction.BACKSPACE || slot.action == KeyAction.REPEAT_BACKSPACE) && composition.raw.isNotEmpty() -> {
+                    composition.backspace()
                     if (inputController.consumeSingleShift()) applySettings()
                     return
                 }

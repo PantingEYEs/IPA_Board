@@ -8,8 +8,9 @@ candidates, or read a hypothetical commit preview. `RimeEngine` submits the spel
 source order and the candidate's native UTF-8 byte range. It also records the end of the
 already converted prefix and the number of input bytes already committed during spelling.
 The returned text includes those existing prefix segments/output. Kotlin accepts a candidate
-only when its span continues that prefix and reaches the end of the supplied spelling.
-Displayed Zhuyin UTF-16 offsets are never compared to native encoded byte offsets.
+only when its span continues that prefix and maps to an exact boundary in the supplied
+spelling. Full coverage remains a whole-composition candidate; shorter coverage carries
+explicit raw-input consumption metadata for segmented selection. Displayed Zhuyin UTF-16 offsets are never compared to native encoded byte offsets.
 `ipa_rime_free_candidates` releases the snapshot; no C++ object pointers leave this library.
 Malformed packets, invalid sessions and ABI/load failures follow the existing engine error
 fallback. An input mismatch without a valid committed prefix yields no conversions, retaining
