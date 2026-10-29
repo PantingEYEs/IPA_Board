@@ -17,6 +17,10 @@ import com.example.ipa_board.ipa.IpaPackageSnapshot
 import com.example.ipa_board.ipa.IpaRemoteRelease
 import com.example.ipa_board.ipa.IpaResourceException
 import com.example.ipa_board.ipa.IpaResourceManager
+import com.example.ipa_board.ipa.IpaLookupPanel
+import com.example.ipa_board.ipa.IpaLookupResult
+import android.content.SharedPreferences
+import com.example.ipa_board.ime.EngineSettings
 import java.util.concurrent.Executors
 
 /** App-owned controls for the development IPA package; resource work never runs on the UI thread. */
@@ -24,6 +28,11 @@ class IpaEngineManagementActivity : Activity() {
     private val executor = Executors.newSingleThreadExecutor()
     @Volatile private var destroyed = false
     private var busy = false
+    private lateinit var lookupPanel: IpaLookupPanel
+    private lateinit var preferences: SharedPreferences
+    private val resourceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == IpaResourceManager.KEY_GENERATION) runOnUiThread { if (!destroyed) lookupPanel.invalidate() }
+    }
     private lateinit var backend: IpaManagementBackend
     private lateinit var buttons: List<Button>
     private lateinit var status: TextView
@@ -71,6 +80,11 @@ class IpaEngineManagementActivity : Activity() {
                 Outcome(local = backend.updateDictionary(report))
             }
         }
+        lookupPanel = IpaLookupPanel(this, backend::snapshot, lookupFactory ?: { resources, text ->
+            com.example.ipa_board.ipa.IpaDictionaryLookup(resources.dictionaryFile).use { it.lookup(text) }
+        })
+        preferences = EngineSettings.preferences(this)
+        preferences.registerOnSharedPreferenceChangeListener(resourceListener)
         runOperation(R.string.ipa_management_installing, R.string.ipa_management_ready) {
             Outcome(local = backend.ensureInstalled())
         }
@@ -78,6 +92,7 @@ class IpaEngineManagementActivity : Activity() {
 
     private fun runOperation(initialStatus: Int, successStatus: Int, action: ((String) -> Unit) -> Outcome) {
         if (busy || destroyed || isFinishing) return
+        lookupPanel.invalidate()
         setBusy(true)
         status.setText(initialStatus)
         executor.execute {
@@ -158,6 +173,8 @@ class IpaEngineManagementActivity : Activity() {
 
     override fun onDestroy() {
         destroyed = true
+        preferences.unregisterOnSharedPreferenceChangeListener(resourceListener)
+        lookupPanel.close()
         // Finish resource publication/cleanup even when the page closes; never interrupt an active replacement.
         executor.shutdown()
         super.onDestroy()
@@ -183,6 +200,9 @@ class IpaEngineManagementActivity : Activity() {
         const val TEST_TAG_CHECK = "ipa-management-check"
         const val TEST_TAG_UPDATE_ENGINE = "ipa-management-update-engine"
         const val TEST_TAG_UPDATE_DICTIONARY = "ipa-management-update-dictionary"
+
+        @Volatile @VisibleForTesting
+        internal var lookupFactory: ((IpaPackageSnapshot, String) -> IpaLookupResult)? = null
 
         @Volatile @VisibleForTesting
         var backendFactory: ((Context) -> IpaManagementBackend)? = null

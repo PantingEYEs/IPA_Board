@@ -40,7 +40,8 @@
         "com.example.ipa_board.ZhuyinEngineTest",
         "com.example.ipa_board.IpaEngineRuntimeTest",
         "com.example.ipa_board.CandidateTimingTest",
-        "com.example.ipa_board.RimeBatchTest"
+        "com.example.ipa_board.RimeBatchTest",
+        "com.example.ipa_board.IpaReverseLookupTest"
       ]
     },
     "ui": {
@@ -141,7 +142,8 @@
         "com.example.ipa_board.ClipboardManagementTest",
         "com.example.ipa_board.CandidateTimingTest",
         "com.example.ipa_board.RimeBatchTest",
-        "com.example.ipa_board.SegmentedCompositionTest"
+        "com.example.ipa_board.SegmentedCompositionTest",
+        "com.example.ipa_board.IpaReverseLookupTest"
       ]
     },
     "ipa": {
@@ -291,6 +293,13 @@
         "com.example.ipa_board.ZhuyinEngineTest",
         "com.example.ipa_board.RimeBatchTest",
         "com.example.ipa_board.ImeEndToEndTest"
+      ]
+    },
+    "ipa-reverse": {
+      "classes": [
+        "com.example.ipa_board.IpaReverseLookupTest",
+        "com.example.ipa_board.IpaEngineManagementUiTest",
+        "com.example.ipa_board.IpaResourceManagerTest"
       ]
     }
   }

@@ -4,10 +4,14 @@ import android.graphics.Color
 import android.os.Looper
 import android.os.SystemClock
 import android.view.View
+import android.widget.EditText
 import android.widget.Button
 import android.widget.TextView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
+import com.example.ipa_board.ipa.IpaReading
+import com.example.ipa_board.ipa.IpaLookupResult
+import com.example.ipa_board.ipa.UnsupportedIpaDictionary
 import com.example.ipa_board.ipa.IpaFailure
 import com.example.ipa_board.ipa.IpaPackageSnapshot
 import com.example.ipa_board.ipa.IpaRemoteRelease
@@ -27,9 +31,12 @@ import java.util.concurrent.atomic.AtomicInteger
 /** UI contracts use owned fixtures; no real dictionary, private input or repository request is inspected. */
 class IpaEngineManagementUiTest {
     private lateinit var fixture: Fixture
+    private var oldIpaToggle: Boolean? = null
 
     @Before fun setUp() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
+        oldIpaToggle = com.example.ipa_board.ime.EngineSettings.preferences(context).all[
+            com.example.ipa_board.ime.EngineFeature.IPA_CONVERSION.key] as? Boolean
         fixture = Fixture(File(context.cacheDir, "ipa-ui-contract-${UUID.randomUUID()}"))
         IpaEngineManagementActivity.backendFactory = { fixture }
     }
@@ -37,7 +44,11 @@ class IpaEngineManagementUiTest {
     @After fun tearDown() {
         fixture.gate?.release?.countDown()
         IpaEngineManagementActivity.backendFactory = null
+        IpaEngineManagementActivity.lookupFactory = null
         fixture.directory.deleteRecursively()
+        val prefs = com.example.ipa_board.ime.EngineSettings.preferences(InstrumentationRegistry.getInstrumentation().targetContext)
+        val key = com.example.ipa_board.ime.EngineFeature.IPA_CONVERSION.key
+        prefs.edit().apply { oldIpaToggle?.let { putBoolean(key, it) } ?: remove(key) }.commit()
     }
 
     @Test fun engineManagementEntryOpensTheGrayResourceControls() {
@@ -160,6 +171,110 @@ class IpaEngineManagementUiTest {
             gate.release.countDown()
             scenario.close()
         }
+    }
+
+    @Test fun lookupAtBottomDisplaysOfflineReadingsAndDistinguishesMissingAndFailure() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        com.example.ipa_board.ime.EngineSettings.setEnabled(context, com.example.ipa_board.ime.EngineFeature.IPA_CONVERSION, false)
+        val requests = mutableListOf<String>()
+        IpaEngineManagementActivity.lookupFactory = { _, text ->
+            assertNotEquals(Looper.getMainLooper(), Looper.myLooper())
+            synchronized(requests) { requests += text }
+            when (text) {
+                "hello" -> IpaLookupResult(listOf(IpaReading("həˈloʊ", "en-US", false, 120),
+                    IpaReading("həˈləʊ", "en-GB", true, 80)))
+                "absent" -> IpaLookupResult(emptyList())
+                else -> throw UnsupportedIpaDictionary()
+            }
+        }
+        ActivityScenario.launch(IpaEngineManagementActivity::class.java).use { scenario ->
+            awaitStatus(scenario, R.string.ipa_management_ready)
+            lookup(scenario, "hello")
+            awaitLookup(scenario) { it.contains("Stored readings: 2") }
+            scenario.onActivity { activity ->
+                assertEquals("en-US\nhəˈloʊ\n\nen-GB\nhəˈləʊ · Derived",
+                    activity.findViewById<TextView>(R.id.ipa_lookup_results).text.toString())
+                val button = activity.findViewById<Button>(R.id.ipa_lookup_button)
+                assertEquals(Color.WHITE, button.currentTextColor)
+                assertEquals(Color.rgb(51, 51, 51), button.backgroundTintList!!.defaultColor)
+            }
+            lookup(scenario, "absent")
+            awaitLookup(scenario) { it == InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.ipa_lookup_not_found) }
+            lookup(scenario, "invalid")
+            awaitLookup(scenario) { it == InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.ipa_lookup_unsupported) }
+            assertEquals(0, fixture.remoteChecks.get())
+            assertEquals(0, fixture.engineUpdates.get())
+            assertEquals(0, fixture.dictionaryUpdates.get())
+            assertFalse(com.example.ipa_board.ime.EngineSettings.enabled(context, com.example.ipa_board.ime.EngineFeature.IPA_CONVERSION))
+        }
+    }
+
+    @Test fun inputEditsAndGenerationChangesRejectLateLookupResults() {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val completed = CountDownLatch(1)
+        IpaEngineManagementActivity.lookupFactory = { _, text ->
+            if (text == "old") {
+                entered.countDown()
+                // Deliberately emulate a foreign operation which ignores cancellation.
+                while (release.count > 0) try { release.await() } catch (_: InterruptedException) {}
+                completed.countDown()
+            }
+            IpaLookupResult(listOf(IpaReading(if (text == "old") "old" else "fresh", "en-US", false, 1)))
+        }
+        try {
+            ActivityScenario.launch(IpaEngineManagementActivity::class.java).use { scenario ->
+                awaitStatus(scenario, R.string.ipa_management_ready)
+                lookup(scenario, "old")
+                assertTrue(entered.await(5, TimeUnit.SECONDS))
+                scenario.onActivity { it.findViewById<EditText>(R.id.ipa_lookup_input).setText("new") }
+                fixture.current = fixture.current.copy(generation = "fixture-2")
+                release.countDown()
+                assertTrue(completed.await(5, TimeUnit.SECONDS))
+                // A second request gives a deterministic worker/UI barrier after the stale task.
+                lookup(scenario, "new")
+                awaitLookup(scenario) { it.contains("Stored readings: 1") }
+                scenario.onActivity {
+                    assertEquals("en-US\nfresh", it.findViewById<TextView>(R.id.ipa_lookup_results).text.toString())
+                }
+            }
+        } finally { release.countDown() }
+    }
+
+    @Test fun dictionaryChangeDuringLookupRequiresARepeatInsteadOfShowingOldData() {
+        val entered = CountDownLatch(1); val release = CountDownLatch(1)
+        IpaEngineManagementActivity.lookupFactory = { _, _ ->
+            entered.countDown(); assertTrue(release.await(5, TimeUnit.SECONDS))
+            IpaLookupResult(listOf(IpaReading("stale", "en-US", false, 1)))
+        }
+        try {
+            ActivityScenario.launch(IpaEngineManagementActivity::class.java).use { scenario ->
+                awaitStatus(scenario, R.string.ipa_management_ready)
+                lookup(scenario, "hello")
+                assertTrue(entered.await(5, TimeUnit.SECONDS))
+                fixture.current = fixture.current.copy(generation = "fixture-next", dictionaryVersion = "next")
+                release.countDown()
+                awaitLookup(scenario) { it == InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.ipa_lookup_changed) }
+                scenario.onActivity { assertEquals("", it.findViewById<TextView>(R.id.ipa_lookup_results).text.toString()) }
+                lookup(scenario, "hello")
+                awaitLookup(scenario) { it.contains("Dictionary next") }
+            }
+        } finally { release.countDown() }
+    }
+
+    private fun lookup(scenario: ActivityScenario<IpaEngineManagementActivity>, text: String) = scenario.onActivity {
+        it.findViewById<EditText>(R.id.ipa_lookup_input).setText(text)
+        it.findViewById<Button>(R.id.ipa_lookup_button).performClick()
+    }
+    private fun awaitLookup(scenario: ActivityScenario<IpaEngineManagementActivity>, predicate: (String) -> Boolean) {
+        val deadline = SystemClock.elapsedRealtime() + 5000
+        var value = ""
+        do {
+            scenario.onActivity { value = it.findViewById<TextView>(R.id.ipa_lookup_status).text.toString() }
+            if (predicate(value)) return
+            SystemClock.sleep(20)
+        } while (SystemClock.elapsedRealtime() < deadline)
+        fail("Unexpected lookup status: $value")
     }
 
     private fun awaitStatus(scenario: ActivityScenario<IpaEngineManagementActivity>, resource: Int) {
