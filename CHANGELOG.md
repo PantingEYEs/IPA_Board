@@ -4,6 +4,11 @@
 
 Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划](docs/0.0.4-development-plan.md)。
 
+- 中日文分段选词（[Issue #38](https://github.com/PantingEYEs/IPA_Board/issues/38)）已通过 [PR #42](https://github.com/PantingEYEs/IPA_Board/pull/42) 合入 `0.0.4-dev`（2026-10-29，merge commit `6724033`）：拼音、注音（简繁）与日文支持选择前缀候选后立即上屏已选段，剩余原始编码继续待输入，同时保留整段候选。候选始终从剩余编码开头转换，暂不提供手动分段边界调整。
+- 预输入支持左右光标移动、光标处输入与退格；移到已上屏前缀处退格时保留待输入后缀并重映射范围。宿主拒绝相关编辑接口时不提示、不因方向键主动上屏；仍需实机确认第三方编辑器兼容性。原有 UTF-16 单元退格行为不变。
+- Rime 继续使用一次输入的原生批量桥接，将前缀覆盖精确映射至拼音／注音编码；Mozc 使用原生首段读音与输入前缀对应，不按候选文字长度推算消耗范围。范围、来源和选择标识随候选跨进程传递并参与去重，过期／非法选择被拒绝；英文、IPA 和含符号混输本期仍采用整段转换。
+- 分段验证：229 项 JVM、61 项工具测试、debug／AndroidTest 编译、资源及套件校验、Lint 通过（289 条警告与既有 NewApi 基线保留）。API 35／ARM64 独立模拟器专项 6 类 49/49 通过，覆盖真实 IME 候选 IPC、前缀删除、范围保留及拒绝接口回退；各轮软件与私有数据恢复校验通过，备份已删除。维护者确认功能试用通过；未执行完整设备回归、其他 API／ABI 或签名 release 验证，详见[测试记录](docs/testing.md)。
+- 新增[自适应按键区域开发计划](docs/adaptive-key-regions-development-plan.md)，整理加权广义 Voronoi 区域、按页学习与经验值、共享绘制／命中几何状态、前置依赖和待定边界；仅为后续规划，尚未实装。
 - 更新 0.0.4 开发计划、README 与文档索引：明确 Rime/OpenCC、Mozc、ONNX Runtime Extensions 的官方源码构建、HeliBoard 中 LatinIME 授权子集的独立构建、现成 OpenBoard 英文词表与应用内资源下载方案，以及待许可核验后敲定后续协议的发布目标。这些仍是开发计划，当前尚未完成构建链替换、拆包或许可证迁移。
 - 剪贴板隐藏期间监听已通过 [PR #32](https://github.com/PantingEYEs/IPA_Board/pull/32) 合入 `0.0.4-dev`（2026-10-27，merge commit `148431e`）。默认开启的开关更名为 **Sync clipboard**，沿用原设置键；服务创建后即监听，隐藏键盘不再注销。保存开关立即生效，关闭后保留键盘可见期间的监听和面板读取；服务销毁时停止监听并忽略排队回调，打开键盘时仍补读当前内容并保留可选耗时日志。
 - 此变更通过持续记录减少隐藏键盘期间复制内容遗漏，不会从系统补齐全部历史；无法追回服务未运行期间已被覆盖的内容，也不保证极短间隔复制零遗漏。Samsung Keyboard 的具体记录机制尚未核实，原始“最新内容也缺失”的偶发故障仍待实机调查；[Issue #15](https://github.com/PantingEYEs/IPA_Board/issues/15) 保持开启。
