@@ -43,13 +43,19 @@ class IpaEngineManagementActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Own the insets consistently, including target-35 edge-to-edge windows. The scroll
+        // viewport must end above the IME rather than remaining behind the keyboard.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) window.setDecorFitsSystemWindows(false)
         setContentView(R.layout.activity_ipa_engine_management)
         backend = backendFactory?.invoke(applicationContext) ?: ResourceBackend(applicationContext)
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener { finish() }
         val root = findViewById<View>(R.id.ipa_management_root).apply { tag = TEST_TAG_ROOT }
         root.setOnApplyWindowInsetsListener { view, windowInsets ->
-            val insets = windowInsets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
-            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val insets = windowInsets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+                val ime = windowInsets.getInsets(WindowInsets.Type.ime())
+                view.setPadding(insets.left, insets.top, insets.right, maxOf(insets.bottom, ime.bottom))
+            }
             windowInsets
         }
         root.requestApplyInsets()

@@ -42,7 +42,7 @@
 
 ## 应用内词汇反查 IPA
 
-Engine Management → Manage IPA engine and dictionary → **IPA Engine** 页面最下方新增 **Word to IPA**。输入完整词条后点击 **Lookup**，结果按 `en-US`、`en-GB`、`zh-CN`、`zh-TW`、`ja-JP` 分组，保留同一词的多条读音；标为 **Derived** 的记录来自词典中的派生标志。结果文本可选中复制。
+Engine Management → Manage IPA engine and dictionary → **IPA Engine** 页面最下方新增 **Word to IPA**。输入完整词条后点击 **Lookup**，结果按 `en-US`、`en-GB`、`zh-CN`、`zh-TW`、`ja-JP` 分组，保留同一词的多条读音；标为 **Derived** 的记录来自词典中的派生标志。结果文本可选中复制。页面按键盘占用区域调整滚动视口，键盘弹出时仍可上下滚动查看搜索框和结果，收起键盘后恢复可用区域。
 
 反查独立于输入法的 IPA 开关，不会开启引擎或访问网络。使用当前活动 `.ipad`，只做 NFC 与完整词条精确匹配，不自动转换大小写或繁简、不分句、不猜测读音。例如 `学校` 与 `學校` 是不同查询；词典中的开发期读音不代表已经语言学校验。
 

@@ -262,6 +262,86 @@ class IpaEngineManagementUiTest {
         } finally { release.countDown() }
     }
 
+    @Test fun keyboardInsetsShrinkTheScrollableViewportAndRestoreItWhenHidden() {
+        if (android.os.Build.VERSION.SDK_INT < 30) return
+        ActivityScenario.launch(IpaEngineManagementActivity::class.java).use { scenario ->
+            awaitStatus(scenario, R.string.ipa_management_ready)
+            var originalHeight = 0
+            scenario.onActivity { activity ->
+                val root = activity.findViewById<View>(R.id.ipa_management_root)
+                originalHeight = root.height
+                val system = android.graphics.Insets.of(12, 30, 18, 40)
+                root.dispatchApplyWindowInsets(android.view.WindowInsets.Builder()
+                    .setInsets(android.view.WindowInsets.Type.systemBars(), system)
+                    .setInsets(android.view.WindowInsets.Type.ime(), android.graphics.Insets.of(0, 0, 0, 650))
+                    .build())
+                assertEquals(650, root.paddingBottom)
+                assertEquals(30, root.paddingTop)
+                assertEquals(12, root.paddingLeft)
+                assertEquals(18, root.paddingRight)
+            }
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            scenario.onActivity { activity ->
+                val root = activity.findViewById<View>(R.id.ipa_management_root)
+                val scroll = activity.findViewById<android.widget.ScrollView>(R.id.ipa_management_scroll)
+                assertTrue(scroll.height <= originalHeight - 650 - 30)
+                scroll.fullScroll(View.FOCUS_DOWN)
+                root.dispatchApplyWindowInsets(android.view.WindowInsets.Builder()
+                    .setInsets(android.view.WindowInsets.Type.systemBars(), android.graphics.Insets.of(12, 30, 18, 40))
+                    .setInsets(android.view.WindowInsets.Type.ime(), android.graphics.Insets.NONE)
+                    .build())
+                assertEquals(40, root.paddingBottom)
+            }
+        }
+    }
+
+    @Test fun realKeyboardLeavesLookupControlsAndResultsScrollable() {
+        if (android.os.Build.VERSION.SDK_INT < 30) return
+        IpaEngineManagementActivity.lookupFactory = { _, _ ->
+            IpaLookupResult(List(30) { IpaReading("reading-$it", "en-US", false, 1) })
+        }
+        ActivityScenario.launch(IpaEngineManagementActivity::class.java).use { scenario ->
+            awaitStatus(scenario, R.string.ipa_management_ready)
+            scenario.onActivity { activity ->
+                val input = activity.findViewById<EditText>(R.id.ipa_lookup_input)
+                input.requestFocus()
+                activity.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+                    .showSoftInput(input, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+            }
+            val deadline = SystemClock.elapsedRealtime() + 5000
+            var visible = false
+            do {
+                scenario.onActivity { visible = it.window.decorView.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == true }
+                if (visible) break
+                SystemClock.sleep(20)
+            } while (SystemClock.elapsedRealtime() < deadline)
+            assertTrue("The real IME must be visible for this check", visible)
+            lookup(scenario, "hello")
+            awaitLookup(scenario) { it.contains("Stored readings: 30") }
+            scenario.onActivity { activity ->
+                val root = activity.findViewById<View>(R.id.ipa_management_root)
+                val scroll = activity.findViewById<android.widget.ScrollView>(R.id.ipa_management_scroll)
+                val input = activity.findViewById<View>(R.id.ipa_lookup_input)
+                val result = activity.findViewById<View>(R.id.ipa_lookup_results)
+                val imeBottom = root.rootWindowInsets.getInsets(android.view.WindowInsets.Type.ime()).bottom
+                assertTrue(imeBottom > 0)
+                assertEquals(imeBottom, root.paddingBottom)
+                val rect = android.graphics.Rect()
+                input.getDrawingRect(rect)
+                scroll.offsetDescendantRectToMyCoords(input, rect)
+                scroll.smoothScrollTo(0, rect.top)
+                // Programmatic scrolling uses the same viewport/range as a vertical drag.
+                scroll.scrollTo(0, rect.top)
+                assertTrue(input.getGlobalVisibleRect(android.graphics.Rect()))
+                scroll.scrollTo(0, scroll.getChildAt(0).height)
+                assertTrue("Results remain reachable above the keyboard", result.getGlobalVisibleRect(android.graphics.Rect()))
+                assertTrue(scroll.scrollY > 0)
+                activity.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+                    .hideSoftInputFromWindow(input.windowToken, 0)
+            }
+        }
+    }
+
     private fun lookup(scenario: ActivityScenario<IpaEngineManagementActivity>, text: String) = scenario.onActivity {
         it.findViewById<EditText>(R.id.ipa_lookup_input).setText(text)
         it.findViewById<Button>(R.id.ipa_lookup_button).performClick()
