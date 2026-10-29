@@ -45,6 +45,7 @@ class ShortcutManagerActivity : Activity() {
         findViewById<ViewGroup>(R.id.multifunction_bar_preview).addView(barPreview)
         refreshBarPreview()
 
+        com.example.ipa_board.shortcuts.ReplacementRuleEditor(this, findViewById(R.id.replacement_rules))
         findViewById<Button>(R.id.btn_manage_shift_shortcuts).setOnClickListener {
             showShortcutManagerDialog(isShift = true)
         }

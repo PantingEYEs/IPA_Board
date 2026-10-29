@@ -12,8 +12,8 @@ data class CandidateConsumption(val input: String, val end: Int, val source: Str
 /** Unannotated candidates replace the whole composition; predictions insert at the caret. */
 data class Candidate(val text: String, val language: String, val rank: Int = 0,
     val kind: CandidateKind = CandidateKind.CONVERSION, val nativeScore: Int = 0,
-    val contextAffinity: Float = 0f, val consumption: CandidateConsumption? = null) {
-    val id: String get() = "$text:${kind == CandidateKind.PREDICTION}" + (consumption?.let { ":${it.source}:${it.end}:${it.selection}" } ?: "")
+    val contextAffinity: Float = 0f, val consumption: CandidateConsumption? = null, val replacementId: String? = null) {
+    val id: String get() = "$text:${kind == CandidateKind.PREDICTION}" + (consumption?.let { ":${it.source}:${it.end}:${it.selection}" } ?: "") + (replacementId?.let { ":replacement:$it" } ?: "")
 }
 
 object CandidateRanker {

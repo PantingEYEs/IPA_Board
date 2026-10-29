@@ -25,6 +25,33 @@ class ImeEndToEndTest {
     private fun find(predicate: (AccessibilityNodeInfo) -> Boolean) = driver.find(predicate)
     private fun awaitNode(predicate: (AccessibilityNodeInfo) -> Boolean) = driver.awaitNode(predicate)
 
+    @Test fun replacementFromRealZhuyinCandidateIsSelectableInExpandedPage() {
+        val context = instrumentation.targetContext
+        val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        val key = com.example.ipa_board.shortcuts.ReplacementSettings.KEY
+        val previous = prefs.getString(key, null)
+        try {
+            assertTrue(com.example.ipa_board.shortcuts.ReplacementSettings.save(context, listOf(
+                com.example.ipa_board.shortcuts.ReplacementRule("e2e", "鞥", "replacement-output"))))
+            val layout = KeyboardLayout("Replacement E2E", listOf(RowLayout(1f, listOf(
+                KeySlot(1f, "ㄥ"), KeySlot(1f, action = KeyAction.CANDIDATES)
+            ))))
+            withIsolatedKeyboard(listOf(layout)) { scenario, _ ->
+                driver.click { it.contentDescription?.toString()?.startsWith("Row 1, key 1:") == true }
+                awaitNode { it.contentDescription?.toString() == "replacement-output" }
+                assertTrue(com.example.ipa_board.shortcuts.ReplacementSettings.save(context, listOf(
+                    com.example.ipa_board.shortcuts.ReplacementRule("e2e", "鞥", "updated-output"))))
+                driver.awaitAbsent { it.contentDescription?.toString() == "replacement-output" }
+                awaitNode { it.contentDescription?.toString() == "updated-output" }
+                driver.click { it.contentDescription?.toString()?.startsWith("Row 1, key 2:") == true }
+                driver.click { it.contentDescription?.toString() == "updated-output" && it.isClickable }
+                awaitEditorText(scenario, "updated-output", composing = false)
+            }
+        } finally {
+            prefs.edit().apply { previous?.let { putString(key, it) } ?: remove(key) }.commit()
+        }
+    }
+
     @Test fun segmentedCandidateSurvivesServiceIpcAndEditingCommittedPrefix() {
         val layout = KeyboardLayout("Segmented E2E", listOf(RowLayout(1f, listOf(
             KeySlot(1f, "nihaoshijie"), KeySlot(1f, action = KeyAction.LEFT),
