@@ -92,6 +92,14 @@
                 android:textSize="@dimen/management_caption_size"
                 android:layout_marginBottom="16dp" />
 
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="@string/replacement_title" android:textSize="@dimen/management_section_size"
+                android:textColor="@color/management_text" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="@string/replacement_help" android:textSize="@dimen/management_caption_size"
+                android:textColor="@color/management_text_secondary" android:paddingVertical="8dp" />
+            <LinearLayout android:id="@+id/replacement_rules" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:orientation="vertical" />
         </LinearLayout>
     </ScrollView>
 

@@ -1,0 +1,15 @@
+<resources>
+    <string name="replacement_title">Replacement Text</string>
+    <string name="replacement_help">When an original candidate exactly matches a source, append its replacement after all original candidates. Originals and duplicate replacements are kept. Rules run in list order without recursion.</string>
+    <string name="replacement_empty">No replacement rules.</string>
+    <string name="replacement_add">Add replacement</string>
+    <string name="replacement_edit">Edit</string>
+    <string name="replacement_up">Up</string>
+    <string name="replacement_down">Down</string>
+    <string name="replacement_delete">Delete</string>
+    <string name="replacement_source">Source candidate</string>
+    <string name="replacement_target">Replacement text</string>
+    <string name="replacement_required">Enter text.</string>
+    <string name="replacement_read_failed">Unable to read replacement rules. Existing data was preserved.</string>
+    <string name="replacement_save_failed">Unable to save replacement rules.</string>
+</resources>

@@ -200,6 +200,7 @@ class IpaBoardService : InputMethodService() {
             clipboardPanel?.refreshList()
             updateQuickPasteStatus()
         }
+        if (key == com.example.ipa_board.shortcuts.ReplacementSettings.KEY && ::composition.isInitialized) refreshCandidates()
         if (key == MultifunctionBarSettings.KEY_BINDINGS) {
             // Rebind only the toolbar: editing shortcuts must not reset modifiers, composition,
             // the open panel, or its custom status controls.
@@ -322,7 +323,10 @@ class IpaBoardService : InputMethodService() {
         val raw = composition.raw
         val baseStatus = if (directOnly) "Direct Input" else engineStatus
 
-        val displayCandidates = CalculatorCandidates.merge(raw, calculatorEnabled(), composition.candidates, calculatorSession)
+        val originals = composition.candidates.filter { it.replacementId == null }
+        val rules = runCatching { com.example.ipa_board.shortcuts.ReplacementSettings.load(this) }.getOrDefault(emptyList())
+        val displayCandidates = com.example.ipa_board.shortcuts.ReplacementRules.append(
+            CalculatorCandidates.merge(raw, calculatorEnabled(), originals, calculatorSession), rules)
 
         composition.updateCandidates(displayCandidates)
         chrome?.render(raw, displayCandidates, baseStatus, composition.revision)

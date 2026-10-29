@@ -31,7 +31,8 @@
         "com.example.ipa_board.RemoteKeyboardEnginePolicyTest",
         "com.example.ipa_board.PopupConfigurationPersistenceTest",
         "com.example.ipa_board.PageEngineBindingContractTest",
-        "com.example.ipa_board.SegmentedCompositionTest"
+        "com.example.ipa_board.SegmentedCompositionTest",
+        "com.example.ipa_board.ReplacementTextTest"
       ]
     },
     "engines": {
@@ -143,7 +144,8 @@
         "com.example.ipa_board.CandidateTimingTest",
         "com.example.ipa_board.RimeBatchTest",
         "com.example.ipa_board.SegmentedCompositionTest",
-        "com.example.ipa_board.IpaReverseLookupTest"
+        "com.example.ipa_board.IpaReverseLookupTest",
+        "com.example.ipa_board.ReplacementTextTest"
       ]
     },
     "ipa": {
@@ -300,6 +302,14 @@
         "com.example.ipa_board.IpaReverseLookupTest",
         "com.example.ipa_board.IpaEngineManagementUiTest",
         "com.example.ipa_board.IpaResourceManagerTest"
+      ]
+    },
+    "replacement-text": {
+      "classes": [
+        "com.example.ipa_board.ReplacementTextTest",
+        "com.example.ipa_board.CompositionControllerTest",
+        "com.example.ipa_board.SegmentedCompositionTest",
+        "com.example.ipa_board.ImeEndToEndTest"
       ]
     }
   }
