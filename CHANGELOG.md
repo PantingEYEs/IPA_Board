@@ -4,6 +4,10 @@
 
 Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划](docs/0.0.4-development-plan.md)。
 
+- 应用内词汇反查 IPA（[Issue #41](https://github.com/PantingEYEs/IPA_Board/issues/41)）已通过 [PR #43](https://github.com/PantingEYEs/IPA_Board/pull/43) 合入 `0.0.4-dev`（2026-10-29，merge commit `d588c15`）：Engine Management → Manage IPA engine and dictionary → IPA Engine 页面底部新增 **Word to IPA**，输入完整词条后点击 **Lookup**，离线显示活动词典中的多条 IPA，按地区分组并保留 **Derived** 标记，结果可选中复制。
+- 反查独立于输入法 IPA 开关，不开启引擎、不访问网络，也不加载引擎 DEX／JNI。只对完整词条做 NFC 精确匹配，不自动转换大小写或繁简、不猜测读音；`学校` 与 `學校` 分别查询。后台读取编译词典，不需要源数据库、客户端编译或磁盘索引；成功切换词典后拒绝旧 generation 结果，失败更新保留原资源，最多显示 500 条并明确标注截断。
+- 修复查询页键盘遮挡：明确窗口调整模式并结合系统栏与 IME Insets 缩小滚动视口，键盘弹出时搜索框和结果仍可滚动查看，收起时恢复可用空间。
+- 反查及遮挡修复验证：234 项 JVM、61 项工具测试、debug／AndroidTest 编译、资源与套件校验、Lint 通过；289 条警告保留，基线文件未改动，7 项既有记录因 API 保护不再命中。API 35／ARM64 独立模拟器最终专项 3 类 14/14 通过，包含真实键盘可见时的滚动、旧结果隔离、开关独立、真实词典与资源更新合同；软件与私有数据备份恢复往返及最终恢复校验通过，备份已删除。维护者确认功能与遮挡修复实测通过；未执行完整回归、其他 API／ABI、真实远程发布下载或签名 release 验证，详见[测试记录](docs/testing.md)。
 - 中日文分段选词（[Issue #38](https://github.com/PantingEYEs/IPA_Board/issues/38)）已通过 [PR #42](https://github.com/PantingEYEs/IPA_Board/pull/42) 合入 `0.0.4-dev`（2026-10-29，merge commit `6724033`）：拼音、注音（简繁）与日文支持选择前缀候选后立即上屏已选段，剩余原始编码继续待输入，同时保留整段候选。候选始终从剩余编码开头转换，暂不提供手动分段边界调整。
 - 预输入支持左右光标移动、光标处输入与退格；移到已上屏前缀处退格时保留待输入后缀并重映射范围。宿主拒绝相关编辑接口时不提示、不因方向键主动上屏；仍需实机确认第三方编辑器兼容性。原有 UTF-16 单元退格行为不变。
 - Rime 继续使用一次输入的原生批量桥接，将前缀覆盖精确映射至拼音／注音编码；Mozc 使用原生首段读音与输入前缀对应，不按候选文字长度推算消耗范围。范围、来源和选择标识随候选跨进程传递并参与去重，过期／非法选择被拒绝；英文、IPA 和含符号混输本期仍采用整段转换。
