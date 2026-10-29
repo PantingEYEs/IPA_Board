@@ -33,4 +33,20 @@
     <string name="ipa_management_failure_unsupported">These resources are not supported by the current engine or device.</string>
     <string name="ipa_management_failure_busy">Another resource operation is in progress. Wait for it to finish and retry.</string>
     <string name="ipa_management_failure_other">The operation could not finish. Please retry.</string>
+    <string name="ipa_lookup_title">Word to IPA</string>
+    <string name="ipa_lookup_help">Look up an exact dictionary entry offline, independently of the keyboard engine switch. Readings are grouped by region. Development dictionary entries may be incomplete or incorrect.</string>
+    <string name="ipa_lookup_hint">Word or expression</string>
+    <string name="ipa_lookup_button">Lookup</string>
+    <string name="ipa_lookup_derived">Derived</string>
+    <string name="ipa_lookup_empty">Enter a word or expression.</string>
+    <string name="ipa_lookup_too_long">Use at most 2000 characters.</string>
+    <string name="ipa_lookup_searching">Looking up stored IPA readings…</string>
+    <string name="ipa_lookup_unavailable">No installed dictionary is available. Prepare or update the resources above.</string>
+    <string name="ipa_lookup_not_found">No exact dictionary entry found.</string>
+    <string name="ipa_lookup_count">Stored readings: %1$d · Dictionary %2$s</string>
+    <string name="ipa_lookup_truncated">Stored readings: %1$d (partial result; more exist) · Dictionary %2$s</string>
+    <string name="ipa_lookup_changed">The dictionary changed. Look up the entry again.</string>
+    <string name="ipa_lookup_unsupported">Reverse lookup does not support this dictionary format. Forward input settings are unchanged.</string>
+    <string name="ipa_lookup_invalid">The dictionary could not be read as a valid reverse lookup resource.</string>
+    <string name="ipa_lookup_read_failed">Unable to read the installed dictionary. Retry or check local resources.</string>
 </resources>

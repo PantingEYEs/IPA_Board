@@ -33,6 +33,7 @@
     </LinearLayout>
 
     <ScrollView
+        android:id="@+id/ipa_management_scroll"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -163,6 +164,43 @@
                 android:accessibilityLiveRegion="polite"
                 android:textSize="@dimen/management_body_size"
                 android:textColor="@color/management_text" />
+
+            <TextView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:paddingTop="24dp" android:text="@string/ipa_lookup_title"
+                android:textSize="@dimen/management_section_size" android:textColor="@color/management_text" />
+            <TextView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:paddingTop="8dp" android:text="@string/ipa_lookup_help"
+                android:textSize="@dimen/management_caption_size" android:textColor="@color/management_text_secondary" />
+            <EditText
+                android:id="@+id/ipa_lookup_input"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:minHeight="48dp" android:hint="@string/ipa_lookup_hint"
+                android:inputType="text|textNoSuggestions" android:singleLine="true"
+                android:maxLength="2000" android:saveEnabled="false" android:importantForAutofill="no"
+                android:textSize="@dimen/management_body_size"
+                android:textColor="@color/management_text" android:textColorHint="@color/management_text_secondary"
+                android:backgroundTint="@color/management_text_secondary" />
+            <Button
+                android:id="@+id/ipa_lookup_button" style="@style/ManagementButton"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:minHeight="48dp" android:text="@string/ipa_lookup_button" />
+            <ProgressBar
+                android:id="@+id/ipa_lookup_progress" style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:indeterminate="true" android:visibility="gone"
+                android:indeterminateTint="@color/management_text_secondary" />
+            <TextView
+                android:id="@+id/ipa_lookup_status"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:paddingTop="8dp" android:accessibilityLiveRegion="polite"
+                android:textSize="@dimen/management_caption_size" android:textColor="@color/management_text_secondary" />
+            <TextView
+                android:id="@+id/ipa_lookup_results"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:paddingTop="8dp" android:textIsSelectable="true"
+                android:textSize="@dimen/management_body_size" android:textColor="@color/management_text" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

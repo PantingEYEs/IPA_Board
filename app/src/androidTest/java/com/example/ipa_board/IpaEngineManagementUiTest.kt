@@ -4,10 +4,14 @@ import android.graphics.Color
 import android.os.Looper
 import android.os.SystemClock
 import android.view.View
+import android.widget.EditText
 import android.widget.Button
 import android.widget.TextView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
+import com.example.ipa_board.ipa.IpaReading
+import com.example.ipa_board.ipa.IpaLookupResult
+import com.example.ipa_board.ipa.UnsupportedIpaDictionary
 import com.example.ipa_board.ipa.IpaFailure
 import com.example.ipa_board.ipa.IpaPackageSnapshot
 import com.example.ipa_board.ipa.IpaRemoteRelease
@@ -27,9 +31,12 @@ import java.util.concurrent.atomic.AtomicInteger
 /** UI contracts use owned fixtures; no real dictionary, private input or repository request is inspected. */
 class IpaEngineManagementUiTest {
     private lateinit var fixture: Fixture
+    private var oldIpaToggle: Boolean? = null
 
     @Before fun setUp() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
+        oldIpaToggle = com.example.ipa_board.ime.EngineSettings.preferences(context).all[
+            com.example.ipa_board.ime.EngineFeature.IPA_CONVERSION.key] as? Boolean
         fixture = Fixture(File(context.cacheDir, "ipa-ui-contract-${UUID.randomUUID()}"))
         IpaEngineManagementActivity.backendFactory = { fixture }
     }
@@ -37,7 +44,11 @@ class IpaEngineManagementUiTest {
     @After fun tearDown() {
         fixture.gate?.release?.countDown()
         IpaEngineManagementActivity.backendFactory = null
+        IpaEngineManagementActivity.lookupFactory = null
         fixture.directory.deleteRecursively()
+        val prefs = com.example.ipa_board.ime.EngineSettings.preferences(InstrumentationRegistry.getInstrumentation().targetContext)
+        val key = com.example.ipa_board.ime.EngineFeature.IPA_CONVERSION.key
+        prefs.edit().apply { oldIpaToggle?.let { putBoolean(key, it) } ?: remove(key) }.commit()
     }
 
     @Test fun engineManagementEntryOpensTheGrayResourceControls() {
@@ -160,6 +171,190 @@ class IpaEngineManagementUiTest {
             gate.release.countDown()
             scenario.close()
         }
+    }
+
+    @Test fun lookupAtBottomDisplaysOfflineReadingsAndDistinguishesMissingAndFailure() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        com.example.ipa_board.ime.EngineSettings.setEnabled(context, com.example.ipa_board.ime.EngineFeature.IPA_CONVERSION, false)
+        val requests = mutableListOf<String>()
+        IpaEngineManagementActivity.lookupFactory = { _, text ->
+            assertNotEquals(Looper.getMainLooper(), Looper.myLooper())
+            synchronized(requests) { requests += text }
+            when (text) {
+                "hello" -> IpaLookupResult(listOf(IpaReading("həˈloʊ", "en-US", false, 120),
+                    IpaReading("həˈləʊ", "en-GB", true, 80)))
+                "absent" -> IpaLookupResult(emptyList())
+                else -> throw UnsupportedIpaDictionary()
+            }
+        }
+        ActivityScenario.launch(IpaEngineManagementActivity::class.java).use { scenario ->
+            awaitStatus(scenario, R.string.ipa_management_ready)
+            lookup(scenario, "hello")
+            awaitLookup(scenario) { it.contains("Stored readings: 2") }
+            scenario.onActivity { activity ->
+                assertEquals("en-US\nhəˈloʊ\n\nen-GB\nhəˈləʊ · Derived",
+                    activity.findViewById<TextView>(R.id.ipa_lookup_results).text.toString())
+                val button = activity.findViewById<Button>(R.id.ipa_lookup_button)
+                assertEquals(Color.WHITE, button.currentTextColor)
+                assertEquals(Color.rgb(51, 51, 51), button.backgroundTintList!!.defaultColor)
+            }
+            lookup(scenario, "absent")
+            awaitLookup(scenario) { it == InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.ipa_lookup_not_found) }
+            lookup(scenario, "invalid")
+            awaitLookup(scenario) { it == InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.ipa_lookup_unsupported) }
+            assertEquals(0, fixture.remoteChecks.get())
+            assertEquals(0, fixture.engineUpdates.get())
+            assertEquals(0, fixture.dictionaryUpdates.get())
+            assertFalse(com.example.ipa_board.ime.EngineSettings.enabled(context, com.example.ipa_board.ime.EngineFeature.IPA_CONVERSION))
+        }
+    }
+
+    @Test fun inputEditsAndGenerationChangesRejectLateLookupResults() {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val completed = CountDownLatch(1)
+        IpaEngineManagementActivity.lookupFactory = { _, text ->
+            if (text == "old") {
+                entered.countDown()
+                // Deliberately emulate a foreign operation which ignores cancellation.
+                while (release.count > 0) try { release.await() } catch (_: InterruptedException) {}
+                completed.countDown()
+            }
+            IpaLookupResult(listOf(IpaReading(if (text == "old") "old" else "fresh", "en-US", false, 1)))
+        }
+        try {
+            ActivityScenario.launch(IpaEngineManagementActivity::class.java).use { scenario ->
+                awaitStatus(scenario, R.string.ipa_management_ready)
+                lookup(scenario, "old")
+                assertTrue(entered.await(5, TimeUnit.SECONDS))
+                scenario.onActivity { it.findViewById<EditText>(R.id.ipa_lookup_input).setText("new") }
+                fixture.current = fixture.current.copy(generation = "fixture-2")
+                release.countDown()
+                assertTrue(completed.await(5, TimeUnit.SECONDS))
+                // A second request gives a deterministic worker/UI barrier after the stale task.
+                lookup(scenario, "new")
+                awaitLookup(scenario) { it.contains("Stored readings: 1") }
+                scenario.onActivity {
+                    assertEquals("en-US\nfresh", it.findViewById<TextView>(R.id.ipa_lookup_results).text.toString())
+                }
+            }
+        } finally { release.countDown() }
+    }
+
+    @Test fun dictionaryChangeDuringLookupRequiresARepeatInsteadOfShowingOldData() {
+        val entered = CountDownLatch(1); val release = CountDownLatch(1)
+        IpaEngineManagementActivity.lookupFactory = { _, _ ->
+            entered.countDown(); assertTrue(release.await(5, TimeUnit.SECONDS))
+            IpaLookupResult(listOf(IpaReading("stale", "en-US", false, 1)))
+        }
+        try {
+            ActivityScenario.launch(IpaEngineManagementActivity::class.java).use { scenario ->
+                awaitStatus(scenario, R.string.ipa_management_ready)
+                lookup(scenario, "hello")
+                assertTrue(entered.await(5, TimeUnit.SECONDS))
+                fixture.current = fixture.current.copy(generation = "fixture-next", dictionaryVersion = "next")
+                release.countDown()
+                awaitLookup(scenario) { it == InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.ipa_lookup_changed) }
+                scenario.onActivity { assertEquals("", it.findViewById<TextView>(R.id.ipa_lookup_results).text.toString()) }
+                lookup(scenario, "hello")
+                awaitLookup(scenario) { it.contains("Dictionary next") }
+            }
+        } finally { release.countDown() }
+    }
+
+    @Test fun keyboardInsetsShrinkTheScrollableViewportAndRestoreItWhenHidden() {
+        if (android.os.Build.VERSION.SDK_INT < 30) return
+        ActivityScenario.launch(IpaEngineManagementActivity::class.java).use { scenario ->
+            awaitStatus(scenario, R.string.ipa_management_ready)
+            var originalHeight = 0
+            scenario.onActivity { activity ->
+                val root = activity.findViewById<View>(R.id.ipa_management_root)
+                originalHeight = root.height
+                val system = android.graphics.Insets.of(12, 30, 18, 40)
+                root.dispatchApplyWindowInsets(android.view.WindowInsets.Builder()
+                    .setInsets(android.view.WindowInsets.Type.systemBars(), system)
+                    .setInsets(android.view.WindowInsets.Type.ime(), android.graphics.Insets.of(0, 0, 0, 650))
+                    .build())
+                assertEquals(650, root.paddingBottom)
+                assertEquals(30, root.paddingTop)
+                assertEquals(12, root.paddingLeft)
+                assertEquals(18, root.paddingRight)
+            }
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            scenario.onActivity { activity ->
+                val root = activity.findViewById<View>(R.id.ipa_management_root)
+                val scroll = activity.findViewById<android.widget.ScrollView>(R.id.ipa_management_scroll)
+                assertTrue(scroll.height <= originalHeight - 650 - 30)
+                scroll.fullScroll(View.FOCUS_DOWN)
+                root.dispatchApplyWindowInsets(android.view.WindowInsets.Builder()
+                    .setInsets(android.view.WindowInsets.Type.systemBars(), android.graphics.Insets.of(12, 30, 18, 40))
+                    .setInsets(android.view.WindowInsets.Type.ime(), android.graphics.Insets.NONE)
+                    .build())
+                assertEquals(40, root.paddingBottom)
+            }
+        }
+    }
+
+    @Test fun realKeyboardLeavesLookupControlsAndResultsScrollable() {
+        if (android.os.Build.VERSION.SDK_INT < 30) return
+        IpaEngineManagementActivity.lookupFactory = { _, _ ->
+            IpaLookupResult(List(30) { IpaReading("reading-$it", "en-US", false, 1) })
+        }
+        ActivityScenario.launch(IpaEngineManagementActivity::class.java).use { scenario ->
+            awaitStatus(scenario, R.string.ipa_management_ready)
+            scenario.onActivity { activity ->
+                val input = activity.findViewById<EditText>(R.id.ipa_lookup_input)
+                input.requestFocus()
+                activity.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+                    .showSoftInput(input, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+            }
+            val deadline = SystemClock.elapsedRealtime() + 5000
+            var visible = false
+            do {
+                scenario.onActivity { visible = it.window.decorView.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == true }
+                if (visible) break
+                SystemClock.sleep(20)
+            } while (SystemClock.elapsedRealtime() < deadline)
+            assertTrue("The real IME must be visible for this check", visible)
+            lookup(scenario, "hello")
+            awaitLookup(scenario) { it.contains("Stored readings: 30") }
+            scenario.onActivity { activity ->
+                val root = activity.findViewById<View>(R.id.ipa_management_root)
+                val scroll = activity.findViewById<android.widget.ScrollView>(R.id.ipa_management_scroll)
+                val input = activity.findViewById<View>(R.id.ipa_lookup_input)
+                val result = activity.findViewById<View>(R.id.ipa_lookup_results)
+                val imeBottom = root.rootWindowInsets.getInsets(android.view.WindowInsets.Type.ime()).bottom
+                assertTrue(imeBottom > 0)
+                assertEquals(imeBottom, root.paddingBottom)
+                val rect = android.graphics.Rect()
+                input.getDrawingRect(rect)
+                scroll.offsetDescendantRectToMyCoords(input, rect)
+                scroll.smoothScrollTo(0, rect.top)
+                // Programmatic scrolling uses the same viewport/range as a vertical drag.
+                scroll.scrollTo(0, rect.top)
+                assertTrue(input.getGlobalVisibleRect(android.graphics.Rect()))
+                scroll.scrollTo(0, scroll.getChildAt(0).height)
+                assertTrue("Results remain reachable above the keyboard", result.getGlobalVisibleRect(android.graphics.Rect()))
+                assertTrue(scroll.scrollY > 0)
+                activity.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+                    .hideSoftInputFromWindow(input.windowToken, 0)
+            }
+        }
+    }
+
+    private fun lookup(scenario: ActivityScenario<IpaEngineManagementActivity>, text: String) = scenario.onActivity {
+        it.findViewById<EditText>(R.id.ipa_lookup_input).setText(text)
+        it.findViewById<Button>(R.id.ipa_lookup_button).performClick()
+    }
+    private fun awaitLookup(scenario: ActivityScenario<IpaEngineManagementActivity>, predicate: (String) -> Boolean) {
+        val deadline = SystemClock.elapsedRealtime() + 5000
+        var value = ""
+        do {
+            scenario.onActivity { value = it.findViewById<TextView>(R.id.ipa_lookup_status).text.toString() }
+            if (predicate(value)) return
+            SystemClock.sleep(20)
+        } while (SystemClock.elapsedRealtime() < deadline)
+        fail("Unexpected lookup status: $value")
     }
 
     private fun awaitStatus(scenario: ActivityScenario<IpaEngineManagementActivity>, resource: Int) {
