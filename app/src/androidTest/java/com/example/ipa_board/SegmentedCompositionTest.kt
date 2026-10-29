@@ -69,6 +69,98 @@ class SegmentedCompositionTest {
         }
     }
 
+    @Test fun leftBoundaryIsInclusiveButMovingIntoCommittedPrefixFinalizesInPlace() {
+        instrumentation.runOnMainSync {
+            val editor = EditText(instrumentation.targetContext)
+            val ic = requireNotNull(editor.onCreateInputConnection(EditorInfo()))
+            ic.commitText("待输入", 1)
+            val controller = CompositionController({ ic }, { _, _ -> }, {})
+            controller.input("wenben")
+            val old = controller.revision
+            val word = Candidate("文本", "简")
+            controller.acceptResults(old, listOf(word))
+            assertEquals(9, editor.selectionStart)
+            repeat(6) { index ->
+                assertTrue(controller.moveCaret(-1))
+                assertEquals("wenben", controller.raw)
+                assertEquals(3, BaseInputConnection.getComposingSpanStart(editor.text))
+                assertEquals(8 - index, editor.selectionStart)
+            }
+            assertTrue(controller.moveCaret(-1))
+            assertEquals("待输入wenben", editor.text.toString())
+            assertEquals(2, editor.selectionStart)
+            assertEquals(-1, BaseInputConnection.getComposingSpanStart(editor.text))
+            assertEquals("", controller.raw)
+            controller.acceptResults(old, listOf(word))
+            assertFalse(controller.select(word, old))
+            assertTrue(controller.candidates.isEmpty())
+            assertTrue(controller.literal())
+            assertEquals("待输入wenben", editor.text.toString())
+        }
+    }
+
+    @Test fun rightBoundaryIsInclusiveButMovingIntoFollowingTextFinalizes() {
+        instrumentation.runOnMainSync {
+            val editor = EditText(instrumentation.targetContext)
+            val ic = requireNotNull(editor.onCreateInputConnection(EditorInfo()))
+            ic.commitText("前後", 1); editor.setSelection(1)
+            val controller = CompositionController({ ic }, { _, _ -> }, {})
+            controller.input("wenben")
+            assertEquals(7, editor.selectionStart)
+            assertEquals("wenben", controller.raw)
+            assertTrue(controller.moveCaret(-1)); assertTrue(controller.moveCaret(1))
+            assertEquals("wenben", controller.raw)
+            assertTrue(controller.moveCaret(1))
+            assertEquals("前wenben後", editor.text.toString())
+            assertEquals(8, editor.selectionStart)
+            assertEquals("", controller.raw)
+            assertEquals(-1, BaseInputConnection.getComposingSpanStart(editor.text))
+        }
+    }
+
+    @Test fun externalCaretUsesTheSameBoundaryAndIgnoresQueuedOldPositions() {
+        instrumentation.runOnMainSync {
+            for (outside in listOf(0, 8)) {
+                val editor = EditText(instrumentation.targetContext)
+                val ic = requireNotNull(editor.onCreateInputConnection(EditorInfo()))
+                ic.commitText("前後", 1); editor.setSelection(1)
+                val controller = CompositionController({ ic }, { _, _ -> }, {})
+                controller.input("wenben")
+                for (position in listOf(1, 3, 7)) {
+                    editor.setSelection(position)
+                    controller.externalSelection(position, position, 7)
+                    assertEquals("wenben", controller.raw)
+                }
+                // A queued outside callback must not finalize the still-inside actual caret.
+                controller.externalSelection(outside, outside, 7)
+                assertEquals("wenben", controller.raw)
+                editor.setSelection(outside)
+                controller.externalSelection(outside, outside, 7)
+                assertEquals("", controller.raw)
+                assertEquals(outside, editor.selectionStart)
+                assertEquals("前wenben後", editor.text.toString())
+                assertEquals(-1, BaseInputConnection.getComposingSpanStart(editor.text))
+            }
+        }
+    }
+
+    @Test fun boundaryUsesDisplayedLengthWithoutApplyingWidthConversionTwice() {
+        instrumentation.runOnMainSync {
+            val editor = EditText(instrumentation.targetContext)
+            val ic = requireNotNull(editor.onCreateInputConnection(EditorInfo()))
+            ic.commitText("前後", 1); editor.setSelection(1)
+            val controller = CompositionController({ ic }, { _, _ -> }, {}, transformOutput = CharacterWidthConverter::swap)
+            controller.input("ｶﾞ")
+            assertEquals("前ガ後", editor.text.toString())
+            assertTrue(controller.moveCaret(-1)); assertEquals("ｶﾞ", controller.raw)
+            assertTrue(controller.moveCaret(1)); assertEquals("ｶﾞ", controller.raw)
+            assertTrue(controller.moveCaret(1)); assertEquals("", controller.raw)
+            assertEquals("前ガ後", editor.text.toString())
+            assertEquals(3, editor.selectionStart)
+            assertEquals(-1, BaseInputConnection.getComposingSpanStart(editor.text))
+        }
+    }
+
     @Test fun staleOrInvalidConsumptionCannotCommitAndFullCandidateRemainsAvailable() {
         instrumentation.runOnMainSync {
             val editor = EditText(instrumentation.targetContext)

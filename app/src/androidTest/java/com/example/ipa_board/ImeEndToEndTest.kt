@@ -52,6 +52,29 @@ class ImeEndToEndTest {
         }
     }
 
+    @Test fun leavingCompositionBoundaryCommitsInPlaceThroughRealIme() {
+        val layout = KeyboardLayout("Caret boundary E2E", listOf(RowLayout(1f, listOf(
+            KeySlot(1f, "wenben"), KeySlot(1f, action = KeyAction.LEFT),
+            KeySlot(1f, action = KeyAction.BACKSPACE)
+        ))))
+        withIsolatedKeyboard(listOf(layout)) { scenario, _ ->
+            scenario.onActivity { it.editor.setText("待输入"); it.editor.setSelection(3) }
+            fun key(column: Int) = driver.click {
+                it.contentDescription?.toString()?.startsWith("Row 1, key $column:") == true
+            }
+            key(1)
+            awaitEditorText(scenario, "待输入wenben", composing = true)
+            repeat(6) { key(2) }
+            awaitEditorText(scenario, "待输入wenben", composing = true)
+            scenario.onActivity { assertEquals(3, it.editor.selectionStart) }
+            key(2)
+            awaitEditorText(scenario, "待输入wenben", composing = false)
+            scenario.onActivity { assertEquals(2, it.editor.selectionStart) }
+            key(3)
+            awaitEditorText(scenario, "待入wenben", composing = false)
+        }
+    }
+
     @Test fun segmentedCandidateSurvivesServiceIpcAndEditingCommittedPrefix() {
         val layout = KeyboardLayout("Segmented E2E", listOf(RowLayout(1f, listOf(
             KeySlot(1f, "nihaoshijie"), KeySlot(1f, action = KeyAction.LEFT),

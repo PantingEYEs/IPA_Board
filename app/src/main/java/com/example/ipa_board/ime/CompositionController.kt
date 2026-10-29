@@ -173,13 +173,25 @@ class CompositionController(
         if (!ic.commitText(transformOutput(text), 1)) return false
         ic.finishComposingText(); reset(); return true
     }
-    /** Horizontal movement keeps the raw composing range; returning false uses ordinary editor keys. */
+    /** Keep composition at either endpoint; leaving the displayed span finalizes it in place. */
+    private fun finishOutsideComposition(position: Int): Boolean {
+        if (composingStart < 0 || position in composingStart..(composingStart + composingText.length)) return false
+        // Text is already in the editor. commitText(raw) would replace/reinsert it and move the
+        // caret; finishComposingText only removes its composing state at the current position.
+        if (connection()?.finishComposingText() != true) return false
+        reset()
+        return true
+    }
+
+    /** Horizontal movement preserves composition only within its inclusive displayed boundaries. */
     fun moveCaret(delta: Int): Boolean {
         if (raw.isEmpty() || !inEditor || composingStart < 0) return false
         val ic = connection() ?: return false
         val position = editorCaret() ?: return false
         val target = (position + delta).coerceAtLeast(0)
         if (!ic.setSelection(target, target)) return false
+        val actual = editorCaret() ?: target
+        if (finishOutsideComposition(actual)) return true
         caret = when {
             target < composingStart -> target - composingStart
             target > composingStart + composingText.length -> raw.length + target - composingStart - composingText.length
@@ -195,6 +207,7 @@ class CompositionController(
         // Ignore queued callbacks describing an earlier programmatic selection.
         val actual = editorCaret()
         if (actual != null && (start != actual || end != actual)) return
+        if (start == end && actual != null && finishOutsideComposition(actual)) return
         if (start == end && composingEnd >= 0 && composingStart >= 0) {
             caret = when {
                 start < composingStart -> start - composingStart
