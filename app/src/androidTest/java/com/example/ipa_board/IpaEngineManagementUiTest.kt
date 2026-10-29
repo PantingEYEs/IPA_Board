@@ -12,6 +12,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.example.ipa_board.ipa.IpaReading
 import com.example.ipa_board.ipa.IpaLookupResult
 import com.example.ipa_board.ipa.UnsupportedIpaDictionary
+import com.example.ipa_board.ipa.IpaResourceManager
 import com.example.ipa_board.ipa.IpaFailure
 import com.example.ipa_board.ipa.IpaPackageSnapshot
 import com.example.ipa_board.ipa.IpaRemoteRelease
@@ -31,10 +32,12 @@ import java.util.concurrent.atomic.AtomicInteger
 /** UI contracts use owned fixtures; no real dictionary, private input or repository request is inspected. */
 class IpaEngineManagementUiTest {
     private lateinit var fixture: Fixture
+    private var oldPreToggle: Boolean? = null
     private var oldIpaToggle: Boolean? = null
 
     @Before fun setUp() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
+        oldPreToggle = com.example.ipa_board.ime.EngineSettings.preferences(context).all[IpaResourceManager.KEY_ALLOW_PRERELEASE] as? Boolean
         oldIpaToggle = com.example.ipa_board.ime.EngineSettings.preferences(context).all[
             com.example.ipa_board.ime.EngineFeature.IPA_CONVERSION.key] as? Boolean
         fixture = Fixture(File(context.cacheDir, "ipa-ui-contract-${UUID.randomUUID()}"))
@@ -48,6 +51,7 @@ class IpaEngineManagementUiTest {
         fixture.directory.deleteRecursively()
         val prefs = com.example.ipa_board.ime.EngineSettings.preferences(InstrumentationRegistry.getInstrumentation().targetContext)
         val key = com.example.ipa_board.ime.EngineFeature.IPA_CONVERSION.key
+        prefs.edit().apply { oldPreToggle?.let { putBoolean(IpaResourceManager.KEY_ALLOW_PRERELEASE, it) } ?: remove(IpaResourceManager.KEY_ALLOW_PRERELEASE) }.commit()
         prefs.edit().apply { oldIpaToggle?.let { putBoolean(key, it) } ?: remove(key) }.commit()
     }
 
@@ -339,6 +343,27 @@ class IpaEngineManagementUiTest {
                 activity.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
                     .hideSoftInputFromWindow(input.windowToken, 0)
             }
+        }
+    }
+
+    @Test fun prereleaseSwitchDefaultsOffPersistsAndDoesNotUpdateOrRollbackResources() {
+        val prefs = com.example.ipa_board.ime.EngineSettings.preferences(InstrumentationRegistry.getInstrumentation().targetContext)
+        prefs.edit().remove(IpaResourceManager.KEY_ALLOW_PRERELEASE).commit()
+        ActivityScenario.launch(IpaEngineManagementActivity::class.java).use { scenario ->
+            awaitStatus(scenario, R.string.ipa_management_ready)
+            val before = fixture.current
+            scenario.onActivity {
+                val toggle = it.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.ipa_management_allow_prerelease)
+                assertFalse(toggle.isChecked); toggle.performClick(); assertTrue(toggle.isChecked)
+            }
+            scenario.recreate(); awaitStatus(scenario, R.string.ipa_management_ready)
+            scenario.onActivity {
+                val toggle = it.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.ipa_management_allow_prerelease)
+                assertTrue(toggle.isChecked); toggle.performClick(); assertFalse(toggle.isChecked)
+            }
+            assertEquals(before, fixture.current)
+            assertFalse(prefs.getBoolean(IpaResourceManager.KEY_ALLOW_PRERELEASE, true))
+            assertEquals(0, fixture.engineUpdates.get()); assertEquals(0, fixture.dictionaryUpdates.get())
         }
     }
 

@@ -125,6 +125,12 @@ python3 tools/regression.py run --suite candidate-timing --serial DEVICE_SERIAL 
 
 规则完整匹配、非递归、按表顺序重复追加、刷新不累积及完整输入优先级另有确定性 JVM 测试。#33 尚未提供用户导出入口，当前验证的是 `replacementText` 版本化类别的无损读写合同，不将其表述为用户配置文件导出已完成。
 
+## IPA Release 更新专项
+
+先完成主机检查，再运行 `python3 tools/regression.py run --suite ipa-release-update --serial DEVICE_SERIAL --no-build`。此入口同样备份／恢复软件与私有数据。常规更新事务测试以离线 GitHub Release API／附件响应代替公网，覆盖正式／预发布筛选、分页、版本比较、来源／大小／哈希校验和失败保持原资源。
+
+`IpaReleaseRuntimeTest` 使用 AndroidTest 专属的正式版 `v0.0.4` DEX／SO 与捕获清单，在应用自有临时资源目录中执行真实资源管理事务、`:ipa_check` 隔离验证和原生查询，继续使用旧内置词典。这些固定测试资源不进入生产 APK，也不替换内置默认引擎；来源和哈希见 `app/src/androidTest/assets/ipa/v004/README.md`。测试不依赖公网可用性，不能把其成功当作手机联网下载成功的证据。
+
 ## IPA 词汇反查专项
 
 主机检查后，运行 `python3 tools/regression.py run --suite ipa-reverse --serial DEVICE_SERIAL --no-build`。套件包括真实内置词典反查、IPA Engine 资源页界面与既有资源更新合同；同样完整备份／恢复软件和私有数据。界面测试注入本地资源与读取器，不依赖公网；真实词典测试仅复制 APK 内的词典到测试自有缓存，查询固定公开示例词条，不加载原生引擎，也不读取用户查询记录。
@@ -661,3 +667,14 @@ Shift / Caps Lock 指示由 `KeyboardWindowTest`（ui/full）验证真实控制�
 - API 35／ARM64 独立临时模拟器通过保护入口运行 `replacement-text --verify-roundtrip --keep-going`，报告 `a7f9a55b-28b0-4a17-bd67-14f4c4fae971`：4 类 36/36 通过，0 失败／跳过，`success=true`、`restored=true`、`roundtrip_verified=true`。
 - 新增 4 项控制器用例覆盖左右端点保留／越界结束、光标位置和文本不变、旧候选失效、外部光标与过期回调，以及半角假名转全角后按显示长度判断、不重复转换。新增真实 IME 用例验证 `待输入[wenben*]` 左移至起点仍待输入，再左移得到 `待输*入wenben` 并结束预输入，后续普通退格得到 `待*入wenben`。已有边界退格 `你好*[shijie]` → `你*[shijie]`、分段候选与替代文字合同同时通过。
 - 原 APK 与私有数据恢复往返及最终恢复校验通过，备份已删除，最终待恢复列表为空；临时模拟器关闭并清理。未执行完整设备回归、其他 API／ABI、第三方宿主实机或签名 release 验证。宿主拒绝必要接口的既有回退仍保留，不承诺强制改变宿主自身的 composing 行为。
+
+
+## IPA Engine Release 资源更新与预发布开关（0.0.4-dev）
+
+基于 `f749c18` 的未提交变更，直接在 `0.0.4-dev` 开发。远程发现改用 GitHub Releases 与顶层 `client.json`，独立下载 DEX／SO 或词典；不依赖 AAR、旧分支 `board-update.json`。管理页新增默认关闭的 Allow Pre-release updates，关闭排除预发布，开启时两类版本共同参与 SemVer 比较；关闭及后续更新都不自动降级已安装组件。
+
+- 主机 239 项 JVM（新增 SemVer 数字预发布排序、正式版优先与不降级合同）、61 项工具测试、57 个设备类登记、93 项生产引擎资源及模型校验通过。debug／AndroidTest 编译、Lint 通过，保留 289 条警告与原有基线；未构建 release。
+- 独立 API 35／ARM64 临时模拟器经保护入口运行 `ipa-release-update --verify-roundtrip --keep-going`，报告 `73599af8-9c0c-4670-9b82-47b7f4d12927`：5 类 20/20 通过，0 失败／跳过，`success=true`、`restored=true`、`roundtrip_verified=true`。
+- 离线更新事务覆盖默认屏蔽、主动允许预发布、空渠道、安装较新预发布后关闭不回退、旧正式版不下载覆盖、跨 100 项分页找到正式版、非列表首项的最新版本、非法路径／外部 URL／超大资源拒绝、网络／哈希／运行验证失败保留原资源，以及独立更新、DEX 只读和词典旧文件处理。UI 覆盖开关默认值、重建后保存、切换不触发安装或回退，继续复用反查与键盘遮挡合同。
+- 使用公开正式版 `v0.0.4` 的真实 DEX／SO，经资源管理器升级内置引擎后通过隔离进程验证；实际 `həˈloʊ` 查询包含 `hello`，活动版本为 `v0.0.4`，旧词典路径保持，未请求 AAR、词典下载或旧清单。该用例使用离线附件传输，不依赖公网。测试夹具限 AndroidTest，生产内置包及资源锁不变。
+- 原 APK／私有数据恢复往返和最终恢复校验均成功，备份删除，最终待恢复列表为空；临时模拟器关闭并清理。正式发布的清单和小型资源已从 GitHub 实际下载用于核对；未执行 Android 公网下载链路、完整设备回归、其他 API／ABI、实体设备或签名 release 验证。GitHub HTTPS 附件重定向的主机白名单及次数限制已实现，公网连接／限流失败仍保留原资源。

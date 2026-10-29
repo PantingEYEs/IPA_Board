@@ -105,7 +105,7 @@ Engine Management 的功能开关以 `EngineFeature` 为准，当前共 14 项�
 
 普通引擎条目在展开类目时读取固定官方 GitHub Releases/Hugging Face 模型元数据，显示当前版本及最新来源版本/模型修订，不提供 Rime/Mozc/LatinIME/E5 的下载或替换。内置/尚未集成条目明确显示无独立发行版或未集成。连接、读取均设 5 秒超时，响应限制 1 MiB，并在后台解析；成功缓存 5 分钟，失败缓存 30 秒。关闭页面时丢弃回调，限时 HTTPS 请求自行在后台结束，避免中断套接字拖慢主线程重建。
 
-IPA 资源管理页采用独立的 `board-update.json` 检查与引擎/词典下载路径；清单地址、格式及失败回退见 [IPA 更新接口](ipa-updates.md)。它不会自动跟随 GitHub 的最新 tag 或 Release。
+IPA 资源管理页通过 GitHub Releases 及顶层 `client.json` 检查、独立下载引擎／词典；默认屏蔽预发布，可在资源页开启 Allow Pre-release updates，关闭不回退已安装版本。版本筛选、清单格式及失败回退见 [IPA 更新接口](ipa-updates.md)。
 
 
 ### 拼音纠错的归属与选型

@@ -42,7 +42,8 @@
         "com.example.ipa_board.IpaEngineRuntimeTest",
         "com.example.ipa_board.CandidateTimingTest",
         "com.example.ipa_board.RimeBatchTest",
-        "com.example.ipa_board.IpaReverseLookupTest"
+        "com.example.ipa_board.IpaReverseLookupTest",
+        "com.example.ipa_board.IpaReleaseRuntimeTest"
       ]
     },
     "ui": {
@@ -145,7 +146,8 @@
         "com.example.ipa_board.RimeBatchTest",
         "com.example.ipa_board.SegmentedCompositionTest",
         "com.example.ipa_board.IpaReverseLookupTest",
-        "com.example.ipa_board.ReplacementTextTest"
+        "com.example.ipa_board.ReplacementTextTest",
+        "com.example.ipa_board.IpaReleaseRuntimeTest"
       ]
     },
     "ipa": {
@@ -310,6 +312,15 @@
         "com.example.ipa_board.CompositionControllerTest",
         "com.example.ipa_board.SegmentedCompositionTest",
         "com.example.ipa_board.ImeEndToEndTest"
+      ]
+    },
+    "ipa-release-update": {
+      "classes": [
+        "com.example.ipa_board.IpaResourceManagerTest",
+        "com.example.ipa_board.IpaReleaseRuntimeTest",
+        "com.example.ipa_board.IpaEngineManagementUiTest",
+        "com.example.ipa_board.IpaEngineRuntimeTest",
+        "com.example.ipa_board.IpaReverseLookupTest"
       ]
     }
   }

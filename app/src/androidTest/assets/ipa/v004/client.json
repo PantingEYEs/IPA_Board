@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "manifestType": "ipa-engine.release",
+  "releaseVersion": "v0.0.4",
+  "engineVersion": "v0.0.4",
+  "dictionaryVersion": "v0.0.1-dev-lexicon",
+  "tag": "v0.0.4",
+  "prerelease": false,
+  "abi": "arm64-v8a",
+  "minSdk": 26,
+  "entryPoint": "com.ipaengine.graph.GraphEngine",
+  "dictionaryFormat": 2,
+  "dictionaryIndexBits": 24,
+  "dictionaryKeys": 1024289,
+  "assets": {
+    "enginePackage": {
+      "name": "ipa-engine-v0.0.4-engine-arm64-v8a.zip",
+      "bytes": 231493,
+      "sha256": "213b8050da2d1b25a4decf4e74054acae319764a196940fad28c6693be097fb4",
+      "url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/ipa-engine-v0.0.4-engine-arm64-v8a.zip"
+    },
+    "dex": {
+      "name": "classes.dex",
+      "bytes": 14784,
+      "sha256": "18209ce4bad03039a32b6772e7d62fb6f10ac7c3d9c47a1c7bc06fcfc7026064",
+      "url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/classes.dex"
+    },
+    "native": {
+      "name": "libipa_graph_android.so",
+      "bytes": 445344,
+      "sha256": "1aaa80b2df0c1d5211397daa736658a0cf7ec24636df80d06e6a98b675d00d4c",
+      "url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/libipa_graph_android.so"
+    },
+    "dictionary": {
+      "name": "lexicon.ipad",
+      "bytes": 28986769,
+      "sha256": "382123e8cd1895400d3cc70f928ebf17010842120e01ffb37144a00a696d2bd9",
+      "url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/lexicon.ipad"
+    },
+    "dictionaryManifest": {
+      "name": "lexicon.manifest.json",
+      "bytes": 16538,
+      "sha256": "7f293754a9df1039b2946afd7810a5e6d664cd73556f52141b94db33f511ef71",
+      "url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/lexicon.manifest.json"
+    },
+    "clientPackage": {
+      "name": "ipa-engine-v0.0.4-client.1.zip",
+      "bytes": 17569686,
+      "sha256": "7d78ed6045c086fbdcd77ab5570d7b83f64b71b661b755f9d1dbdee7d57e8c19",
+      "url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/ipa-engine-v0.0.4-client.1.zip"
+    }
+  },
+  "documentationUrl": "https://github.com/PantingEYEs/IPA_Engine/blob/137d00a4db8b2e0ce139eecbf0ccbbc266a86be8/README.md",
+  "provenance": {
+    "publicCommit": "137d00a4db8b2e0ce139eecbf0ccbbc266a86be8",
+    "runtimeSourceSha256": "2623c55bd14c7bbac1548c43762dd71c3f9135616ee6d41f30e91d1d7de0bee3",
+    "sourceSha256": "b2fce43c1d0fb7eb69074b9d58be2b6067aed1ebee2a9e6839e515b7a3d3e69c"
+  }
+}

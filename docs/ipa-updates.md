@@ -4,32 +4,26 @@
 
 内置包来自 IPA_Engine 的 `v0.0.1-dev` ARM64 AAR，源发布提交为 `53eed9518f932934a28aceb4e03a453d545f80b8`。内置词典是 `IPADWG01` v2 的压缩图与词条二进制，包含 1,024,289 个 IPA 编码，支持五个地区；只提供词条转换，不提供下一词预测。数据来源声明保存在打包的 lexicon.manifest.json 与 licenses/IPA-Engine-THIRD_PARTY_NOTICES.json。这些是内置基线，不表示上游最新版；活动版本以客户端资源页为准。
 
-## 开发侧提供的文件
+## Release 获取与更新渠道
 
-客户端读取 `PantingEYEs/IPA_Engine` 的 `codex/ipa-engine-v0.0.1-dev` 分支。直接读取分支上的 `board-update.json`，随后从清单指定的 artifactCommit 下载文件，避免版本检查与下载时资源混用，也不依赖有公共限流的 GitHub REST API。
+客户端从 `PantingEYEs/IPA_Engine` 的 GitHub Releases API 分页读取已发布版本，不再从固定分支的 `board-update.json` 发现更新。IPA Engine 管理页新增 **Allow Pre-release updates**，默认关闭；关闭时排除所有 Pre-release，开启时正式版与预发布版共同参与语义版本比较，始终排除 Draft。若渠道没有可用发布，明确显示无可用版本；网络／限流／清单错误不会被当作“已是最新版”。
 
-**发布位置是固定合同。** 只创建新 tag、GitHub Release，或将文件提交到其他分支，不会被当前客户端发现；缺失根目录清单、字段不符或产物不可获取会使检查/更新失败。上游发布新版后，必须同时在上述分支更新清单并正确固定产物提交。修改客户端跟踪分支需修改代码并发布应用，不能由引擎版本号自动切换。
+开关独立持久化，不改变引擎启用状态或已安装资源。关闭开关不会回退已安装的预发布引擎；更新动作也不安装相同或更旧的组件版本。引擎与词典版本分别比较，词典版本未变化时不会重新下载。当前正式发布为引擎 `v0.0.4`，其词典仍为 `v0.0.1-dev-lexicon`。开关切换后清空旧的远程版本显示，需要再次 Check updates。
 
-`board-update.json` 为 UTF-8 JSON，格式示例见 [内置 client.json](../app/src/main/assets/engines/ipa/bundled/client.json)。必需字段：
+更新排序使用 SemVer（允许 `v` 前缀），不依赖列表首项、发布日期或字符串字典顺序。发布列表支持分页；超过客户端查询上限会报告错误，不能把不完整列表当成最终结果。无法识别的组件版本不尝试盲目替换已安装资源。
 
-| 字段 | 内容 |
-| --- | --- |
-| artifactCommit | 产物已发布提交的 40 位小写 SHA；只在远程 board-update.json 必需 |
-| schemaVersion / entryPoint | `1` / `com.ipaengine.graph.GraphEngine` |
-| engineVersion / dictionaryVersion | 分别显示的版本字符串，长度 1–100；词典版本独立变更 |
-| abi / minSdk | abi 必须为 `arm64-v8a`；minSdk 是引擎最低 API，当前解析器接受 26–36，内置为 26。IPA Board 自身最低适配 API 仍为 35 |
-| dictionaryFormat / dictionaryKeys | 当前为 `2` / IPA 编码数，1–2,000,000 |
-| dexPath / nativePath / dictionaryPath | 同仓库内相对路径；不允许外部 URL、绝对路径或 `..` |
-| dexBytes / nativeBytes / dictionaryBytes | 实际文件长度，上限分别为 4 MB、8 MB、40 MB |
-| dexSha256 / nativeSha256 / dictionarySha256 | 对应文件的 64 位小写 SHA-256 |
+## 开发侧提供的 Release 清单与附件
 
-> IPA Board 的 `minSdk` 改为 26，以便通过安装流程从而收集运行故障，但本项目最低适配 API 版本仍然是 35。
+每个发布的顶层 `client.json` 使用 `manifestType=ipa-engine.release`、`schemaVersion=1`，记录 `releaseVersion`、`tag`、`prerelease`、独立 `engineVersion`／`dictionaryVersion`，以及 `abi`、`minSdk`、`entryPoint`、`dictionaryFormat`、`dictionaryIndexBits` 和 `dictionaryKeys`。发布 tag／状态必须与 GitHub API 记录一致。
 
-引擎文件为 `classes.dex` 与 `libipa_graph_android.so`，调用合同保持 GraphEngine 的构造、configure、acceptsInput、getSegmentPattern、queryDetailed、close 及现有公开字段。候选需符合应用已有文本合同，开发调试包返回畸形值时被丢弃。
+`assets.dex`、`assets.native`、`assets.dictionary` 每项提供精确的 `name`、`url`、`bytes` 和 `sha256`。客户端核对这些描述与同一 Release 的实际附件，再下载对应的独立文件；当前不依赖 AAR、历史完整客户端 ZIP 或 `board-update.json`。开发侧提供的引擎专用 ZIP 可供其他安装方式使用，本客户端直接获取裸 DEX／SO，以继续保持引擎、词典独立更新。
 
-**单独发布新词典**：在开发侧编译与验证 `.ipad`，放入新的不可覆盖目录；更新 dictionaryVersion、dictionaryPath、dictionaryBytes、dictionarySha256、dictionaryKeys。保持引擎字段原样。新词典必须兼容用户已安装的旧引擎，客户端会用该旧引擎实际打开验证，不要求用户先更新引擎。
+- 下载入口必须属于同仓库、同 tag 的 Release Assets，不拼接分支路径、不接受清单中的任意外部 URL。允许 GitHub 附件服务的 HTTPS 重定向，但限定其官方主机与重定向次数，不携带认证令牌。
+- DEX、SO、词典的上限分别为 4 MB、8 MB、40 MB；要求 SHA-256、实际大小和清单一致。当前支持 ARM64、GraphEngine 既有入口、IPADWG01 v2／24 位词典。最低引擎 API 声明允许 26–36，IPA Board 自身最低适配 API 仍为 35。
+- 引擎代码和配套 SO 必须同批发布；单独更新词典时仍使用已安装引擎做隔离验证。版本标签与组件内容应保持不可覆盖，修订使用新版本。
+- 来源与许可声明应随资源提供。`assets.dictionaryManifest` 和 Release 其他说明保留开发侧数据声明；本次没有扩充客户端词典编译或模型训练功能。
 
-可用主机工具 `tools/package_ipa_client.py` 从 AAR 准备 DEX、JNI、词典和元数据；`--dictionary` 接受已经编译的替换二进制。工具不编译词条源数据。产物目录不得覆盖旧版本；新词典的许可与来源声明由开发侧随产物保留。完整目录先提交并发布；随后将 client.json 的内容复制为仓库根目录的 board-update.json，增加 artifactCommit 指向刚才的产物提交，再发布更新清单。清单与产物分两次提交，避免在提交内声明自身 SHA 的循环依赖。
+内置旧包仍沿用本地 `client.json` 的历史字段作为首次离线部署格式；已有安装无需迁移或清数据。`tools/package_ipa_client.py` 是历史 AAR 提取工具，不再代表远程发现合同。旧分支和历史 Release 的 `board-update.json` 可保留服务旧客户端，新客户端不读取它。
 
 ## 切换与失败行为
 

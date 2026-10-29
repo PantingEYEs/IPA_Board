@@ -106,6 +106,15 @@
                 android:textSize="@dimen/management_body_size"
                 android:textColor="@color/management_text" />
 
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/ipa_management_allow_prerelease"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:minHeight="48dp" android:text="@string/ipa_management_allow_prerelease"
+                android:textSize="@dimen/management_body_size" android:textColor="@color/management_text" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="@string/ipa_management_prerelease_help" android:paddingBottom="8dp"
+                android:textSize="@dimen/management_caption_size" android:textColor="@color/management_text_secondary" />
+
             <Button
                 android:id="@+id/ipa_management_check"
                 style="@style/ManagementButton"

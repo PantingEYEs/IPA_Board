@@ -22,6 +22,7 @@ import com.example.ipa_board.ipa.IpaLookupResult
 import android.content.SharedPreferences
 import com.example.ipa_board.ime.EngineSettings
 import java.util.concurrent.Executors
+import androidx.core.content.edit
 
 /** App-owned controls for the development IPA package; resource work never runs on the UI thread. */
 class IpaEngineManagementActivity : Activity() {
@@ -34,6 +35,7 @@ class IpaEngineManagementActivity : Activity() {
         if (key == IpaResourceManager.KEY_GENERATION) runOnUiThread { if (!destroyed) lookupPanel.invalidate() }
     }
     private lateinit var backend: IpaManagementBackend
+    private lateinit var prereleaseSwitch: androidx.appcompat.widget.SwitchCompat
     private lateinit var buttons: List<Button>
     private lateinit var status: TextView
     private lateinit var progress: ProgressBar
@@ -71,6 +73,14 @@ class IpaEngineManagementActivity : Activity() {
         findViewById<View>(R.id.ipa_management_abi_notice).visibility =
             if (Build.SUPPORTED_ABIS.any { it == "arm64-v8a" }) View.GONE else View.VISIBLE
 
+        prereleaseSwitch = findViewById(R.id.ipa_management_allow_prerelease)
+        prereleaseSwitch.thumbTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
+        prereleaseSwitch.trackTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.DKGRAY)
+        prereleaseSwitch.isChecked = EngineSettings.preferences(this).getBoolean(IpaResourceManager.KEY_ALLOW_PRERELEASE, false)
+        prereleaseSwitch.setOnCheckedChangeListener { _, checked ->
+            EngineSettings.preferences(this).edit { putBoolean(IpaResourceManager.KEY_ALLOW_PRERELEASE, checked) }
+            remoteVersions.setText(R.string.ipa_management_remote_unchecked)
+        }
         check.setOnClickListener {
             runOperation(R.string.ipa_management_checking, R.string.ipa_management_checked) {
                 Outcome(remote = backend.checkRemote())
@@ -78,12 +88,16 @@ class IpaEngineManagementActivity : Activity() {
         }
         engine.setOnClickListener {
             runOperation(R.string.ipa_management_updating_engine, R.string.ipa_management_engine_updated) {
-                Outcome(local = backend.updateEngine())
+                val before = backend.snapshot()
+                val next = backend.updateEngine()
+                Outcome(local = next, unchanged = next == before)
             }
         }
         dictionary.setOnClickListener {
             runOperation(R.string.ipa_management_updating_dictionary, R.string.ipa_management_dictionary_updated) { report ->
-                Outcome(local = backend.updateDictionary(report))
+                val before = backend.snapshot()
+                val next = backend.updateDictionary(report)
+                Outcome(local = next, unchanged = next == before)
             }
         }
         lookupPanel = IpaLookupPanel(this, backend::snapshot, lookupFactory ?: { resources, text ->
@@ -115,7 +129,7 @@ class IpaEngineManagementActivity : Activity() {
                 postToActiveView {
                     outcome.local?.let(::showLocal)
                     outcome.remote?.let(::showRemote)
-                    status.setText(successStatus)
+                    status.setText(if (outcome.unchanged) R.string.ipa_management_unchanged else successStatus)
                     setBusy(false)
                 }
             } catch (error: Exception) {
@@ -162,6 +176,7 @@ class IpaEngineManagementActivity : Activity() {
     private fun setBusy(value: Boolean) {
         busy = value
         buttons.forEach { it.isEnabled = !value }
+        prereleaseSwitch.isEnabled = !value
         progress.visibility = if (value) View.VISIBLE else View.GONE
     }
 
@@ -171,6 +186,7 @@ class IpaEngineManagementActivity : Activity() {
             IpaFailure.PACKAGE_INVALID, IpaFailure.VALIDATION -> R.string.ipa_management_failure_resources
             IpaFailure.INCOMPATIBLE_ENGINE, IpaFailure.UNSUPPORTED_ABI -> R.string.ipa_management_failure_unsupported
             IpaFailure.STORAGE -> R.string.ipa_management_failure_storage
+            IpaFailure.NO_RELEASE -> R.string.ipa_management_no_release
             IpaFailure.BUSY -> R.string.ipa_management_failure_busy
         }
         error is LinkageError -> R.string.ipa_management_failure_unsupported
@@ -186,7 +202,7 @@ class IpaEngineManagementActivity : Activity() {
         super.onDestroy()
     }
 
-    private data class Outcome(val local: IpaPackageSnapshot? = null, val remote: IpaRemoteRelease? = null)
+    private data class Outcome(val local: IpaPackageSnapshot? = null, val remote: IpaRemoteRelease? = null, val unchanged: Boolean = false)
 
     private class ResourceBackend(context: Context) : IpaManagementBackend {
         private val manager = IpaResourceManager(context)

@@ -10,7 +10,7 @@
 | [更新日志](../CHANGELOG.md) | 开发中及已发布版本的变更 |
 | [引擎接入与来源](engine-integration.md) | 已接入引擎、固定资源、开关、生命周期与限制 |
 | [IPA 必要接口](engine-specification.md) | 引擎接受的操作/信息、候选格式与安全边界 |
-| [IPA 资源更新](ipa-updates.md) | 固定发布位置、清单格式、引擎/预编译词典独立更新 |
+| [IPA 资源更新](ipa-updates.md) | Release 清单、正式／预发布渠道与引擎／预编译词典独立更新 |
 | [语义排序](context-ranking.md) | 默认关闭的 E5、上下文处理、重排规则与验证范围 |
 | [错误诊断](diagnostics.md) | 日志开关、固定事件、文件边界与剔除入口 |
 | [引擎仪表盘](engine-dashboard.md) | ◷ 绑定、只读状态及当前功能边界 |

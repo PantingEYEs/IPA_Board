@@ -1,0 +1,105 @@
+{
+  "tag_name": "v0.0.4",
+  "draft": false,
+  "prerelease": false,
+  "assets": [
+    {
+      "name": "ASSET_SHA256SUMS",
+      "size": 1107,
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/ASSET_SHA256SUMS",
+      "digest": "sha256:483841e30e5cd07249aafa853033a8a46087f32d30907b5c3b3d46fa54ca27d4"
+    },
+    {
+      "name": "build-report.json",
+      "size": 1802,
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/build-report.json",
+      "digest": "sha256:df34ea64a62c7b8c514f98aa9faa3d52e2520c6b0e43e99b4cd099057d48e313"
+    },
+    {
+      "name": "build.json",
+      "size": 517,
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/build.json",
+      "digest": "sha256:ab4f7e47ec89bf1421405f1f478280a02b96deb928f6022236fd2cec990e9f93"
+    },
+    {
+      "name": "classes.dex",
+      "size": 14784,
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/classes.dex",
+      "digest": "sha256:18209ce4bad03039a32b6772e7d62fb6f10ac7c3d9c47a1c7bc06fcfc7026064"
+    },
+    {
+      "name": "client.json",
+      "size": 2478,
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/client.json",
+      "digest": "sha256:7a35491358f34eb4fc652798905254ceb32f82797026ea4b695c334d81c7117b"
+    },
+    {
+      "name": "ipa-engine-v0.0.4-client.1.zip",
+      "size": 17569686,
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/ipa-engine-v0.0.4-client.1.zip",
+      "digest": "sha256:7d78ed6045c086fbdcd77ab5570d7b83f64b71b661b755f9d1dbdee7d57e8c19"
+    },
+    {
+      "name": "ipa-engine-v0.0.4-engine-arm64-v8a.zip",
+      "size": 231493,
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/ipa-engine-v0.0.4-engine-arm64-v8a.zip",
+      "digest": "sha256:213b8050da2d1b25a4decf4e74054acae319764a196940fad28c6693be097fb4"
+    },
+    {
+      "name": "lexicon.ipad",
+      "size": 28986769,
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/lexicon.ipad",
+      "digest": "sha256:382123e8cd1895400d3cc70f928ebf17010842120e01ffb37144a00a696d2bd9"
+    },
+    {
+      "name": "lexicon.manifest.json",
+      "size": 16538,
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/lexicon.manifest.json",
+      "digest": "sha256:7f293754a9df1039b2946afd7810a5e6d664cd73556f52141b94db33f511ef71"
+    },
+    {
+      "name": "libipa_graph_android.so",
+      "size": 445344,
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/libipa_graph_android.so",
+      "digest": "sha256:1aaa80b2df0c1d5211397daa736658a0cf7ec24636df80d06e6a98b675d00d4c"
+    },
+    {
+      "name": "release.json",
+      "size": 519,
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/release.json",
+      "digest": "sha256:eff60d2e6b6d2b19ccc9f979863f5c27597dddea65bb500b94b04a6bbe1add77"
+    },
+    {
+      "name": "RELEASE_ASSETS.md",
+      "size": 1676,
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/RELEASE_ASSETS.md",
+      "digest": "sha256:5391a048a51400c187138249a1f776cd8fa3a4139541669c31da2870aa1136de"
+    },
+    {
+      "name": "SHA256SUMS",
+      "size": 666,
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/SHA256SUMS",
+      "digest": "sha256:f3dd79d51ddc27ecdbb71d5d209158e005ff8e2cce4202f73b2b4490c99260d7"
+    },
+    {
+      "name": "THIRD_PARTY_NOTICES.json",
+      "size": 14526,
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/PantingEYEs/IPA_Engine/releases/download/v0.0.4/THIRD_PARTY_NOTICES.json",
+      "digest": "sha256:1eac74143135282b1b6e2109c29cfd3853bb6afce07e4ff4a0986cb500931707"
+    }
+  ]
+}

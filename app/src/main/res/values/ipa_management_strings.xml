@@ -49,4 +49,8 @@
     <string name="ipa_lookup_unsupported">Reverse lookup does not support this dictionary format. Forward input settings are unchanged.</string>
     <string name="ipa_lookup_invalid">The dictionary could not be read as a valid reverse lookup resource.</string>
     <string name="ipa_lookup_read_failed">Unable to read the installed dictionary. Retry or check local resources.</string>
+    <string name="ipa_management_allow_prerelease">Allow Pre-release updates</string>
+    <string name="ipa_management_prerelease_help">Off by default: only published stable releases are considered. Turning this off does not roll back installed resources.</string>
+    <string name="ipa_management_no_release">No published release is available for the selected update channel.</string>
+    <string name="ipa_management_unchanged">No newer component version is available. Installed resources were kept.</string>
 </resources>

@@ -6,6 +6,7 @@ import android.util.AtomicFile
 import com.example.ipa_board.diagnostics.*
 import com.example.ipa_board.ime.EngineSettings
 import org.json.JSONObject
+import org.json.JSONArray
 import java.io.*
 import java.net.HttpURLConnection
 import java.net.URL
@@ -19,7 +20,7 @@ import java.util.UUID
 data class IpaPackageSnapshot(val generation: String, val engineVersion: String, val dictionaryVersion: String,
     val codeFile: File, val nativeDirectory: File, val dictionaryFile: File)
 
-enum class IpaFailure { NETWORK, PACKAGE_INVALID, INCOMPATIBLE_ENGINE, UNSUPPORTED_ABI, STORAGE, VALIDATION, BUSY }
+enum class IpaFailure { NETWORK, PACKAGE_INVALID, INCOMPATIBLE_ENGINE, UNSUPPORTED_ABI, STORAGE, VALIDATION, BUSY, NO_RELEASE }
 class IpaResourceException(val reason: IpaFailure, cause: Throwable? = null) : IOException(reason.name, cause)
 
 data class IpaRemoteRelease(val engineVersion: String, val dictionaryVersion: String, val dictionaryKeys: Long,
@@ -74,13 +75,38 @@ class IpaResourceManager(context: Context,
     fun checkRemote(): IpaRemoteRelease {
         val stage = newStage()
         try {
+            val includePre = EngineSettings.preferences(app).getBoolean(KEY_ALLOW_PRERELEASE, false)
+            val candidates = mutableListOf<JSONObject>()
+            var complete = false
+            for (page in 1..20) {
+                val listing = File(stage, "releases.json")
+                fetch("${IpaReleaseManifest.API}?per_page=100&page=$page", listing, 4_000_000)
+                val rows = JSONArray(listing.readText())
+                for (i in 0 until rows.length()) {
+                    val row = rows.getJSONObject(i)
+                    if (!row.getBoolean("draft") && (includePre || !row.getBoolean("prerelease")) &&
+                        IpaReleaseVersion.parse(row.getString("tag_name")) != null) candidates += row
+                }
+                if (rows.length() < 100) { complete = true; break }
+            }
+            require(complete) { "Release listing exceeds supported bounds" }
+            val selected = candidates.maxByOrNull { IpaReleaseVersion.parse(it.getString("tag_name"))!! }
+                ?: fail(IpaFailure.NO_RELEASE)
+            val tag = selected.getString("tag_name")
+            val assets = selected.getJSONArray("assets")
+            val manifests = (0 until assets.length()).map { assets.getJSONObject(it) }.filter { it.getString("name") == "client.json" }
+            require(manifests.size == 1)
+            val descriptor = manifests.single()
+            val url = IpaReleaseManifest.assetUrl(tag, "client.json")
+            require(descriptor.getString("browser_download_url") == url && descriptor.getLong("size") in 1..1_048_576)
             val file = File(stage, "client.json")
-            fetch(MANIFEST_URL, file, 1_048_576)
-            val metadata = parseMetadata(file.readBytes())
-            val commit = metadata.getString("artifactCommit")
-            if (!commit.matches(Regex("[0-9a-f]{40}"))) fail(IpaFailure.PACKAGE_INVALID)
+            fetch(url, file, 1_048_576)
+            require(file.length() == descriptor.getLong("size"))
+            descriptor.optString("digest", "").takeIf { it.startsWith("sha256:") }?.let { verify(file, it.removePrefix("sha256:")) }
+            val metadata = IpaReleaseManifest.normalize(JSONObject(file.readText()), selected)
+            checkChannel(metadata)
             return IpaRemoteRelease(metadata.getString("engineVersion"), metadata.getString("dictionaryVersion"),
-                metadata.getLong("dictionaryKeys"), commit, metadata)
+                metadata.getLong("dictionaryKeys"), tag, metadata)
         } catch (e: IpaResourceException) { throw e }
         catch (e: Exception) { throw IpaResourceException(IpaFailure.PACKAGE_INVALID, e) }
         finally { stage.deleteRecursively() }
@@ -91,18 +117,21 @@ class IpaResourceManager(context: Context,
         val release = checkRemote()
         return locked {
             val old = snapshot() ?: fail(IpaFailure.STORAGE)
+            checkChannel(release.metadata)
+            if (!IpaReleaseVersion.newer(release.engineVersion, old.engineVersion)) return@locked old
             supported(release.metadata)
             val stage = newStage()
             try {
                 val m = release.metadata
-                fetch(remoteUrl(release.commit, m.getString("nativePath")), File(stage, LIBRARY), 8_000_000)
+                fetch(m.getString("nativeUrl"), File(stage, LIBRARY), 8_000_000)
                 verifyPackage(File(stage, LIBRARY), m, "native")
-                fetch(remoteUrl(release.commit, m.getString("dexPath")), File(stage, "classes.dex"), 4_000_000, readOnly = true)
+                fetch(m.getString("dexUrl"), File(stage, "classes.dex"), 4_000_000, readOnly = true)
                 verifyPackage(File(stage, "classes.dex"), m, "dex")
                 val engine = installEngine(stage, m)
                 val next = old.copy(generation = UUID.randomUUID().toString(), engineVersion = release.engineVersion,
                     codeFile = File(engine, "classes.dex"), nativeDirectory = engine)
                 validateRuntime(next)
+                checkChannel(release.metadata)
                 publish(next)
                 next
             } finally { stage.deleteRecursively() }
@@ -115,17 +144,20 @@ class IpaResourceManager(context: Context,
         val release = checkRemote()
         return locked {
             val old = snapshot() ?: fail(IpaFailure.STORAGE)
+            checkChannel(release.metadata)
+            if (!IpaReleaseVersion.newer(release.dictionaryVersion, old.dictionaryVersion)) return@locked old
             if (!Build.SUPPORTED_ABIS.contains("arm64-v8a")) fail(IpaFailure.UNSUPPORTED_ABI)
             val generation = UUID.randomUUID().toString()
             val directory = File(root, "dictionaries/$generation").apply { check(mkdirs()) }
             try {
                 progress("Downloading binary dictionary…")
                 val dictionary = File(directory, "lexicon.ipad")
-                fetch(remoteUrl(release.commit, release.metadata.getString("dictionaryPath")), dictionary, 40_000_000)
+                fetch(release.metadata.getString("dictionaryUrl"), dictionary, 40_000_000)
                 verifyPackage(dictionary, release.metadata, "dictionary")
                 val next = old.copy(generation = generation, dictionaryVersion = release.dictionaryVersion, dictionaryFile = dictionary)
                 progress("Validating dictionary with current engine…")
                 validateRuntime(next)
+                checkChannel(release.metadata)
                 publish(next)
                 // Old mmap users can finish. Unlinking preserves their mapped bytes; new requests use the new generation.
                 old.dictionaryFile.parentFile?.takeIf { it != directory }?.deleteRecursively()
@@ -134,6 +166,11 @@ class IpaResourceManager(context: Context,
                 if (snapshot()?.generation != generation) directory.deleteRecursively()
             }
         }
+    }
+
+    private fun checkChannel(metadata: JSONObject) {
+        if (metadata.optBoolean("_prerelease") && !EngineSettings.preferences(app).getBoolean(KEY_ALLOW_PRERELEASE, false))
+            fail(IpaFailure.NO_RELEASE)
     }
 
     private fun validateRuntime(next: IpaPackageSnapshot) {
@@ -202,7 +239,7 @@ class IpaResourceManager(context: Context,
         const val KEY_GENERATION = "ipa_resource_generation"
         private const val BUNDLED = "engines/ipa/bundled"
         private const val LIBRARY = "libipa_graph_android.so"
-        private const val MANIFEST_URL = "https://raw.githubusercontent.com/PantingEYEs/IPA_Engine/refs/heads/codex/ipa-engine-v0.0.1-dev/board-update.json"
+        const val KEY_ALLOW_PRERELEASE = "ipa_allow_prerelease_updates"
         private val operationLock = Any()
         private fun fail(reason: IpaFailure): Nothing = throw IpaResourceException(reason)
         internal fun remoteUrl(commit: String, path: String): String {
@@ -241,20 +278,38 @@ class IpaResourceManager(context: Context,
             }
         }
         private fun move(from: File, to: File) { Files.move(from.toPath(), to.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING) }
+        /** Follow GitHub's asset redirects explicitly; never forward credentials or permit HTTP. */
         private fun download(url: String, output: File, maximum: Long) {
-            val connection = URL(url).openConnection() as HttpURLConnection
-            connection.connectTimeout = 5_000; connection.readTimeout = 15_000; connection.instanceFollowRedirects = false
-            connection.setRequestProperty("User-Agent", "IPA-Board-Development-Updater")
-            try {
-                require(connection.responseCode == 200 && connection.contentLengthLong <= maximum)
-                connection.inputStream.use { input -> FileOutputStream(output).use { out ->
-                    val buffer = ByteArray(65_536); var bytes = 0L
-                    val deadline = android.os.SystemClock.elapsedRealtime() + 120_000L
-                    while (true) { val n = input.read(buffer); if (n < 0) break; bytes += n
-                        require(bytes <= maximum && android.os.SystemClock.elapsedRealtime() <= deadline); out.write(buffer, 0, n) }
-                    out.fd.sync()
-                } }
-            } finally { connection.disconnect() }
+            var target = URL(url)
+            repeat(6) {
+                require(target.protocol == "https" && target.port in listOf(-1, 443) && target.userInfo == null)
+                require(target.host in setOf("api.github.com", "github.com", "raw.githubusercontent.com",
+                    "release-assets.githubusercontent.com", "objects.githubusercontent.com"))
+                val connection = target.openConnection() as HttpURLConnection
+                connection.connectTimeout = 5_000; connection.readTimeout = 15_000; connection.instanceFollowRedirects = false
+                connection.setRequestProperty("User-Agent", "IPA-Board-Updater")
+                connection.setRequestProperty("Accept", "application/vnd.github+json")
+                try {
+                    val status = connection.responseCode
+                    if (status in listOf(301, 302, 303, 307, 308)) {
+                        target = URL(target, requireNotNull(connection.getHeaderField("Location")))
+                    } else {
+                        require(status == 200 && connection.contentLengthLong <= maximum)
+                        connection.inputStream.use { input -> FileOutputStream(output).use { out ->
+                            val buffer = ByteArray(65_536); var bytes = 0L
+                            val deadline = android.os.SystemClock.elapsedRealtime() + 120_000L
+                            while (true) {
+                                val n = input.read(buffer); if (n < 0) break; bytes += n
+                                require(bytes <= maximum && android.os.SystemClock.elapsedRealtime() <= deadline)
+                                out.write(buffer, 0, n)
+                            }
+                            out.fd.sync()
+                        } }
+                        return
+                    }
+                } finally { connection.disconnect() }
+            }
+            throw IOException("Too many release redirects")
         }
     }
 }
