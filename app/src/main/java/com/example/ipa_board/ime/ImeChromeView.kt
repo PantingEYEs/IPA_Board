@@ -3,7 +3,10 @@ package com.example.ipa_board.ime
 import android.R
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -21,6 +24,15 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     private val body = FrameLayout(context)
     private val overlay = LinearLayout(context).apply { orientation = VERTICAL }
     private val candidateRow = LinearLayout(context)
+    private var inlinePreeditEnabled = true
+    private var hasPreedit = false
+    private val preeditText = PreeditTextView(context).apply {
+        setOnClickListener { if (hasPreedit && !inlinePreeditEnabled) onLiteral() }
+    }
+    private val preeditScroll = HorizontalScrollView(context).apply {
+        isHorizontalScrollBarEnabled = false
+        addView(preeditText)
+    }
     private var candidateMinimumWidth = dp(48)
     private val expand = button("⋯", "Expand") { showPanel(if (panel == Panel.KEYBOARD) Panel.CANDIDATES else Panel.KEYBOARD) }.apply {
         minWidth = dp(57)
@@ -49,6 +61,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     var onCalculatorToggle: () -> Unit = {}
     var onRemoteKeyboardToggle: () -> Unit = {}
     var onWidthSwapToggle: (() -> Unit)? = null
+    var onPreeditModeToggle: (() -> Unit)? = null
     var onKeyBinding: ((MultifunctionBarBinding) -> Unit)? = null
 
     init {
@@ -64,6 +77,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
                 KeyAction.KAOMOJI -> toggle(Panel.KAOMOJI)
                 KeyAction.REMOTE_KEYBOARD -> onRemoteKeyboardToggle()
                 KeyAction.WIDTH_SWAP -> onWidthSwapToggle?.invoke()
+                KeyAction.PREEDIT_MODE -> onPreeditModeToggle?.invoke()
                 KeyAction.CALCULATOR -> onCalculatorToggle()
                 else -> Unit
             }
@@ -119,6 +133,13 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         multifunctionBar.setWidthSwapEnabled(enabled)
     }
 
+    fun setInlinePreeditEnabled(enabled: Boolean) {
+        if (inlinePreeditEnabled == enabled) return
+        inlinePreeditEnabled = enabled
+        multifunctionBar.setInlinePreeditEnabled(enabled)
+        updatePreeditVisibility()
+    }
+
     fun setBarBindings(bindings: Map<MultifunctionBarSlot, MultifunctionBarBinding>) = multifunctionBar.setBindings(bindings)
     fun setModifiers(shift: ShiftState, ctrl: Boolean) = multifunctionBar.setModifiers(shift, ctrl)
 
@@ -141,7 +162,11 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         }
     }
 
-    fun render(raw: String, items: List<Candidate>, message: String, generation: Long) {
+    fun render(raw: String, items: List<Candidate>, message: String, generation: Long,
+        preeditDisplay: String = raw, preeditCaret: Int = raw.length) {
+        hasPreedit = raw.isNotEmpty()
+        preeditText.setPreedit(preeditDisplay, preeditCaret)
+        updatePreeditVisibility()
         engineMessage = message
         if (panel == Panel.KEYBOARD) status.text = engineMessage
         if (candidates != items || revision != generation) {
@@ -152,6 +177,79 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
             if (panel == Panel.CANDIDATES) renderCandidates()
         }
         expand.isEnabled = if (panel == Panel.KEYBOARD) items.isNotEmpty() else true
+    }
+
+    private fun updatePreeditVisibility() {
+        preeditText.isEnabled = hasPreedit
+        preeditText.isClickable = hasPreedit
+        preeditText.isFocusable = hasPreedit
+        if (!inlinePreeditEnabled) {
+            // This row grows the chrome; the configured key area retains its full height.
+            // Keep its empty placeholder so starting/finishing input cannot resize the host.
+            if (preeditScroll.parent == null) addView(preeditScroll, indexOfChild(body),
+                LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+            preeditText.post {
+                if (hasPreedit && !inlinePreeditEnabled) preeditText.revealCaret()
+            }
+        } else if (preeditScroll.parent != null) {
+            removeView(preeditScroll)
+        }
+    }
+
+    /** Draw the caret without inserting a marker into text or accessibility output. */
+    private class PreeditTextView(context: Context) : androidx.appcompat.widget.AppCompatTextView(context) {
+        private var caret = 0
+        private val caretPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            strokeWidth = 2f * resources.displayMetrics.density
+        }
+
+        init {
+            tag = "ime_preedit_text"
+            setTextColor(Color.WHITE)
+            hint = "预编辑"
+            setHintTextColor(Color.LTGRAY)
+            textSize = 14f
+            gravity = Gravity.TOP or Gravity.START
+            setSingleLine(true)
+            includeFontPadding = false
+            val density = resources.displayMetrics.density
+            setPadding((8 * density).toInt(), (4 * density).toInt(),
+                (8 * density).toInt(), (4 * density).toInt())
+            minHeight = (28 * density).toInt()
+            isFocusable = true
+        }
+
+        fun setPreedit(value: String, cursor: Int) {
+            text = value
+            caret = cursor.coerceIn(0, value.length)
+            if (caret in 1 until value.length && Character.isSurrogatePair(value[caret - 1], value[caret])) caret--
+            contentDescription = if (value.isEmpty()) "预编辑" else "$value，点按原样确认"
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                stateDescription = if (value.isEmpty()) null else "光标在第 ${value.codePointCount(0, caret)} 个字符后"
+            }
+            invalidate()
+        }
+
+        fun revealCaret() {
+            val lines = layout ?: return
+            val position = caret.coerceIn(0, lines.text.length)
+            val line = lines.getLineForOffset(position)
+            val x = compoundPaddingLeft + lines.getPrimaryHorizontal(position).toInt()
+            requestRectangleOnScreen(android.graphics.Rect(x - paddingLeft,
+                extendedPaddingTop + lines.getLineTop(line), x + paddingRight,
+                extendedPaddingTop + lines.getLineBottom(line)), true)
+        }
+
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            if (text.isEmpty()) return
+            val lines = layout ?: return
+            val line = lines.getLineForOffset(caret)
+            val x = compoundPaddingLeft + lines.getPrimaryHorizontal(caret) - scrollX
+            caretPaint.color = currentTextColor
+            canvas.drawLine(x, (extendedPaddingTop + lines.getLineTop(line) - scrollY).toFloat(),
+                x, (extendedPaddingTop + lines.getLineBottom(line) - scrollY).toFloat(), caretPaint)
+        }
     }
 
     fun showPanel(next: Panel) {

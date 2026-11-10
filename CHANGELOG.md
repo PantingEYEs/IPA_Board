@@ -4,6 +4,8 @@
 
 Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划](docs/0.0.4-development-plan.md)。
 
+- 新增可自行绑定的 **预编辑模式**：支持按键、长按、滑动、Popup、Shift/Ctrl 快捷键及多功能栏，默认内联且保留已有绑定。非内联时原文与虚拟光标显示在键盘内，候选、字面确认及分段选词只提交已确认部分；预编辑行空态也保留高度。模式切换先原样确认当前文字，选择在重启后保留。提供 [#37](https://github.com/PantingEYEs/IPA_Board/issues/37) 的可选绕行入口，未宣称 Gemini／One UI 根因已修复，操作与取消边界见 [README](README.md)。
+
 - 修复 [#46](https://github.com/PantingEYEs/IPA_Board/issues/46)：Emoji 分类、颜文字过滤和 Keyboard Pages 页组菜单支持点击状态入口打开、再次点击关闭、随后正常重开。处理真实触摸先触发弹窗外部关闭的分发顺序，避免同一次点击立即重开；保留选择、排序、滚动、Back、功能切换及编辑器预输入状态。新增真实触摸专项，验证范围与当前分支基线见[测试记录](docs/testing.md#2026-11-10-当前分支基线与状态菜单开关46)。
 
 - Shortcut 替代文字（[Issue #39](https://github.com/PantingEYEs/IPA_Board/issues/39)）已通过 [PR #44](https://github.com/PantingEYEs/IPA_Board/pull/44) 合入 `0.0.4-dev`（2026-10-29，merge commit `293d537`）：Shortcut Management 底部新增 **Replacement Text**，可添加、编辑、删除及调整规则顺序，支持同一源文字绑定多个替代文字并保存重复项。例如原候选存在完整 `鞥` 时，按规则在所有原候选后追加 `嗯`，不改写或移除原词，不要求引擎学习。

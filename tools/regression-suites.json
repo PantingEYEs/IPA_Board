@@ -32,7 +32,8 @@
         "com.example.ipa_board.PopupConfigurationPersistenceTest",
         "com.example.ipa_board.PageEngineBindingContractTest",
         "com.example.ipa_board.SegmentedCompositionTest",
-        "com.example.ipa_board.ReplacementTextTest"
+        "com.example.ipa_board.ReplacementTextTest",
+        "com.example.ipa_board.PreeditModeCompositionTest"
       ]
     },
     "engines": {
@@ -68,7 +69,8 @@
         "com.example.ipa_board.MultifunctionBarTest",
         "com.example.ipa_board.PageEngineBindingUiTest",
         "com.example.ipa_board.ClipboardStartupSyncTest",
-        "com.example.ipa_board.ClipboardManagementTest"
+        "com.example.ipa_board.ClipboardManagementTest",
+        "com.example.ipa_board.PreeditModeBindingTest"
       ]
     },
     "e2e": {
@@ -82,7 +84,8 @@
         "com.example.ipa_board.MultifunctionBarImeTest",
         "com.example.ipa_board.CalculatorImeTest",
         "com.example.ipa_board.PageEngineBindingImeTest",
-        "com.example.ipa_board.StatusMenuToggleImeTest"
+        "com.example.ipa_board.StatusMenuToggleImeTest",
+        "com.example.ipa_board.PreeditModeImeTest"
       ]
     },
     "semantic": {
@@ -149,7 +152,10 @@
         "com.example.ipa_board.IpaReverseLookupTest",
         "com.example.ipa_board.ReplacementTextTest",
         "com.example.ipa_board.IpaReleaseRuntimeTest",
-        "com.example.ipa_board.StatusMenuToggleImeTest"
+        "com.example.ipa_board.StatusMenuToggleImeTest",
+        "com.example.ipa_board.PreeditModeCompositionTest",
+        "com.example.ipa_board.PreeditModeBindingTest",
+        "com.example.ipa_board.PreeditModeImeTest"
       ]
     },
     "ipa": {
@@ -328,6 +334,20 @@
     "status-menus": {
       "classes": [
         "com.example.ipa_board.StatusMenuToggleImeTest"
+      ]
+    },
+    "preedit-mode": {
+      "classes": [
+        "com.example.ipa_board.PreeditModeCompositionTest",
+        "com.example.ipa_board.PreeditModeBindingTest",
+        "com.example.ipa_board.PreeditModeImeTest",
+        "com.example.ipa_board.CompositionControllerTest",
+        "com.example.ipa_board.SegmentedCompositionTest"
+      ]
+    },
+    "preedit-mode-ime": {
+      "classes": [
+        "com.example.ipa_board.PreeditModeImeTest"
       ]
     }
   }

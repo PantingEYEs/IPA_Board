@@ -9,8 +9,10 @@ class CompositionController(
     private val query: (Long, String) -> Unit,
     private val changed: () -> Unit,
     private val contextAllowed: () -> Boolean = { true },
-    private val transformOutput: (String) -> String = { it }
+    private val transformOutput: (String) -> String = { it },
+    initialInlineEnabled: Boolean = true
 ) {
+    var inlineEnabled = initialInlineEnabled; private set
     var raw = ""; private set
     var revision = 0L; private set
     var candidates = emptyList<Candidate>(); private set
@@ -21,6 +23,37 @@ class CompositionController(
     private var active = true
     var caret = 0; private set
     private var composingStart = -1
+    private data class DeferredTarget(val selection: Pair<Int, Int>?, val before: String?,
+        val after: String?, val selected: String?)
+    private var deferredTarget: DeferredTarget? = null
+    private fun editorSelection(): Pair<Int, Int>? = connection()?.getExtractedText(ExtractedTextRequest(), 0)?.let {
+        if (it.startOffset >= 0 && it.selectionStart >= 0 && it.selectionEnd >= 0)
+            (it.startOffset + it.selectionStart) to (it.startOffset + it.selectionEnd) else null
+    }
+    private fun captureDeferredTarget(): DeferredTarget {
+        val ic = connection()
+        val allowed = contextAllowed()
+        return DeferredTarget(editorSelection(),
+            if (allowed) ic?.getTextBeforeCursor(256, 0)?.toString() else null,
+            if (allowed) ic?.getTextAfterCursor(256, 0)?.toString() else null,
+            if (allowed) ic?.getSelectedText(0)?.toString().orEmpty() else null)
+    }
+    /** A deferred commit may replace the original selection, never a newly selected target. */
+    private fun validateDeferredTarget(): Boolean {
+        if (inlineEnabled || raw.isEmpty()) return true
+        if (connection() == null) return false
+        val expected = deferredTarget ?: return false
+        val actual = captureDeferredTarget()
+        if ((expected.selection != null && actual.selection == null) ||
+            (expected.before != null && actual.before == null) ||
+            (expected.after != null && actual.after == null)) return false
+        if ((expected.selection != null && actual.selection != null && expected.selection != actual.selection) ||
+            expected.before != actual.before || expected.after != actual.after || expected.selected != actual.selected) {
+            reset()
+            return false
+        }
+        return true
+    }
     private fun editorCaret(): Int? = connection()?.getExtractedText(ExtractedTextRequest(), 0)?.let {
         if (it.selectionStart == it.selectionEnd) it.startOffset + it.selectionStart else null
     }
@@ -28,13 +61,30 @@ class CompositionController(
         transformOutput(raw.take(offset.coerceAtMost(raw.length))).length
 
     fun start() { active = true; reset() }
+    fun startInputView() { if (!active) start() }
+    /** Changing modes explicitly confirms pending text before applying the next mode. */
+    fun setInlineEnabled(enabled: Boolean): Boolean {
+        if (inlineEnabled == enabled) return true
+        if (raw.isNotEmpty()) {
+            if (inlineEnabled && inEditor) {
+                // The raw text is already present, even if the host has dropped its span.
+                if (connection()?.finishComposingText() != true) return false
+                reset()
+            } else if (!literal()) return false
+        }
+        inlineEnabled = enabled
+        revision++; candidates = emptyList(); request(); changed()
+        return true
+    }
     fun input(text: String) {
+        if (!validateDeferredTarget()) return
         if (raw.length + text.length > 64) {
             if (!literal()) return
             if (text.length > 64) { connection()?.commitText(transformOutput(text), 1); return }
         }
         if (raw.isEmpty()) {
-            connection()?.finishComposingText()
+            if (inlineEnabled) connection()?.finishComposingText()
+            else deferredTarget = captureDeferredTarget()
             composingStart = editorCaret() ?: -1
             caret = 0
         }
@@ -61,6 +111,8 @@ class CompositionController(
     }
     fun backspace(): Boolean {
         if (raw.isEmpty()) return false
+        if (!validateDeferredTarget()) return true
+        if (!inlineEnabled && caret == 0) return true
         if (caret <= 0 || caret > raw.length) {
             val ic = connection() ?: return false
             if (composingStart < 0) return false
@@ -81,12 +133,19 @@ class CompositionController(
         raw = raw.removeRange(caret - 1, caret)
         caret--
         refreshComposition()
-        if (raw.isEmpty()) { connection()?.finishComposingText(); inEditor = false }
+        if (raw.isEmpty()) {
+            if (inEditor) connection()?.finishComposingText()
+            inEditor = false; deferredTarget = null
+        }
         return true
     }
     private fun refreshComposition() {
         val ic = connection() ?: return reset()
         composingText = transformOutput(raw)
+        if (!inlineEnabled) {
+            revision++; candidates = emptyList(); request(); changed()
+            return
+        }
         inEditor = ic.setComposingText(composingText, 1)
         if (inEditor && composingStart < 0) composingStart = (editorCaret() ?: -1).let { if (it < 0) -1 else it - composingText.length }
         if (inEditor && composingStart >= 0) {
@@ -98,7 +157,7 @@ class CompositionController(
     }
     /** Repaint pending output while keeping native engine queries in their original encoding. */
     fun refreshOutput() {
-        if (active && raw.isNotEmpty()) refreshComposition()
+        if (active && raw.isNotEmpty() && validateDeferredTarget()) refreshComposition()
     }
     fun acceptResults(id: Long, result: List<Candidate>) {
         if (active && id == revision) {
@@ -111,7 +170,8 @@ class CompositionController(
     }
     fun select(candidate: Candidate, id: Long = revision, appendSpace: Boolean = false): Boolean {
         if (!active || id != revision || candidates.none { it == candidate }) return false
-        if (contextAllowed() && (readBeforeCursor() != beforeCursor || readAfterCursor() != afterCursor)) {
+        if (!validateDeferredTarget()) return false
+        if (contextAllowed() && readContext() != (beforeCursor to afterCursor)) {
             refreshContext(); return false
         }
         if (raw.isEmpty()) {
@@ -132,11 +192,19 @@ class CompositionController(
             return true
         }
         candidate.consumption?.let { consumption ->
-            if (!consumption.validFor(raw) || !inEditor || composingStart < 0) return false
+            if (!consumption.validFor(raw)) return false
             val ic = connection() ?: return false
             val suffix = raw.substring(consumption.end)
             val prefix = transformOutput(candidate.text)
             val pending = transformOutput(suffix)
+            if (!inlineEnabled) {
+                if (!ic.commitText(prefix, 1)) return false
+                raw = suffix; caret = suffix.length; composingText = pending
+                deferredTarget = captureDeferredTarget()
+                revision++; candidates = emptyList(); request(); changed()
+                return true
+            }
+            if (!inEditor || composingStart < 0) return false
             ic.beginBatchEdit()
             try {
                 if (!ic.setComposingRegion(composingStart, composingStart + composingText.length)) return false
@@ -157,6 +225,8 @@ class CompositionController(
         return commit(candidate.text + if (appendSpace && candidate.language.split('/').contains("EN")) " " else "")
     }
     fun replaceRaw(newRaw: String) {
+        if (!validateDeferredTarget()) return
+        if (!inlineEnabled && raw.isEmpty()) deferredTarget = captureDeferredTarget()
         raw = newRaw
         caret = raw.length
         refreshComposition()
@@ -169,6 +239,7 @@ class CompositionController(
         return true
     }
     private fun commit(text: String): Boolean {
+        if (!validateDeferredTarget()) return false
         val ic = connection() ?: return false
         if (!ic.commitText(transformOutput(text), 1)) return false
         ic.finishComposingText(); reset(); return true
@@ -185,6 +256,12 @@ class CompositionController(
 
     /** Horizontal movement preserves composition only within its inclusive displayed boundaries. */
     fun moveCaret(delta: Int): Boolean {
+        if (!inlineEnabled && raw.isNotEmpty()) {
+            if (!validateDeferredTarget()) return true
+            caret = (caret + delta).coerceIn(0, raw.length)
+            changed()
+            return true
+        }
         if (raw.isEmpty() || !inEditor || composingStart < 0) return false
         val ic = connection() ?: return false
         val position = editorCaret() ?: return false
@@ -203,6 +280,17 @@ class CompositionController(
     fun externalSelection(start: Int, end: Int, composingEnd: Int) {
         if (!active) return
         if (raw.isEmpty()) { refreshContext(); return }
+        if (!inlineEnabled) {
+            // A previous programmatic selection can be delivered after subsequent input.
+            val actual = editorSelection()
+            if (actual != null && actual != (start to end)) return
+            if (actual == null && deferredTarget?.selection?.let { it != (start to end) } == true) {
+                reset()
+                return
+            }
+            if (validateDeferredTarget()) refreshContext()
+            return
+        }
         if (!inEditor) return
         // Ignore queued callbacks describing an earlier programmatic selection.
         val actual = editorCaret()
@@ -232,6 +320,7 @@ class CompositionController(
     }
     fun refreshContext() {
         if (!active) return
+        if (!validateDeferredTarget()) return
         val context = readContext()
         if (beforeCursor == context.first && afterCursor == context.second) return
         revision++; candidates = emptyList(); request(); changed()
@@ -257,6 +346,7 @@ class CompositionController(
     private fun reset() {
         raw = ""; candidates = emptyList(); inEditor = false; composingText = ""
         caret = 0; composingStart = -1
+        deferredTarget = null
         revision++; request(); changed()
     }
 }

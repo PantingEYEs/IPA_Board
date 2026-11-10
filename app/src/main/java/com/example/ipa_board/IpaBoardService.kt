@@ -233,7 +233,8 @@ class IpaBoardService : InputMethodService() {
         composition = CompositionController({ currentInputConnection }, { id, raw ->
             engines.query(id, if (directOnly) "" else raw, if (directOnly) "" else composition.beforeCursor,
                 if (directOnly) "" else composition.afterCursor)
-        }, { refreshCandidates() }, contextAllowed = { !directOnly }, transformOutput = ::transformOutput)
+        }, { refreshCandidates() }, contextAllowed = { !directOnly }, transformOutput = ::transformOutput,
+            initialInlineEnabled = prefs.getBoolean(SettingsConstants.KEY_INLINE_PREEDIT_ENABLED, true))
         engines = EngineCoordinator(this) { id, candidates, state ->
             engineStatus = state
             composition.acceptResults(id, candidates)
@@ -256,6 +257,7 @@ class IpaBoardService : InputMethodService() {
             }
             view.onRemoteKeyboardToggle = { toggleRemoteKeyboard() }
             view.onWidthSwapToggle = { toggleWidthSwap() }
+            view.onPreeditModeToggle = { togglePreeditMode() }
             view.onCandidate = { candidate, generation -> if (composition.select(candidate, generation)) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
             view.onLiteral = { if (composition.literal()) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
             view.onPanel = { panel ->
@@ -290,6 +292,13 @@ class IpaBoardService : InputMethodService() {
         widthSwapEnabled = !widthSwapEnabled
         chrome?.setWidthSwapEnabled(widthSwapEnabled)
         composition.refreshOutput()
+    }
+    private fun togglePreeditMode() {
+        if (!composition.setInlineEnabled(!composition.inlineEnabled)) return
+        prefs.edit().putBoolean(SettingsConstants.KEY_INLINE_PREEDIT_ENABLED, composition.inlineEnabled).apply()
+        chrome?.setInlinePreeditEnabled(composition.inlineEnabled)
+        refreshCandidates()
+        Toast.makeText(this, if (composition.inlineEnabled) "预编辑：内联" else "预编辑：非内联", Toast.LENGTH_SHORT).show()
     }
     private fun toggleRemoteKeyboard() {
         val result = remoteKeyboardMode.toggle()
@@ -331,7 +340,10 @@ class IpaBoardService : InputMethodService() {
             CalculatorCandidates.merge(raw, calculatorEnabled(), originals, calculatorSession), rules)
 
         composition.updateCandidates(displayCandidates)
-        chrome?.render(raw, displayCandidates, baseStatus, composition.revision)
+        chrome?.setInlinePreeditEnabled(composition.inlineEnabled)
+        chrome?.render(raw, displayCandidates, baseStatus, composition.revision,
+            preeditDisplay = transformOutput(raw),
+            preeditCaret = transformOutput(raw.take(composition.caret.coerceIn(0, raw.length))).length)
         updateQuickPasteStatus()
     }
 
@@ -363,6 +375,7 @@ class IpaBoardService : InputMethodService() {
         view.setPointerColors(pathColor, axisColor, crosshairColor, appearance.usePointerDifferenceBlend)
         view.setRemoteKeyboardEnabled(remoteKeyboardMode.active)
         view.setWidthSwapEnabled(widthSwapEnabled)
+        view.setInlinePreeditEnabled(composition.inlineEnabled)
         view.keyboardHost.setBackgroundColor(Color.parseColor(appearance.backgroundColor))
         val layout = LayoutFileManager.activeLayout(this)
         val popupBgColor = try { Color.parseColor(appearance.popupBackgroundColor) } catch (_: Exception) { Color.WHITE }
@@ -430,6 +443,10 @@ class IpaBoardService : InputMethodService() {
                 toggleWidthSwap()
                 return
             }
+            KeyAction.PREEDIT_MODE -> {
+                togglePreeditMode()
+                return
+            }
             KeyAction.CALCULATOR -> {
                 toggleCalculator()
                 return
@@ -483,6 +500,7 @@ class IpaBoardService : InputMethodService() {
                 KeyAction.EMOJI -> { consumeModifiers(); chrome?.showPanel(ImeChromeView.Panel.EMOJI); return }
                 KeyAction.KAOMOJI -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.KAOMOJI) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.KAOMOJI); return }
                 KeyAction.WIDTH_SWAP -> { consumeModifiers(); toggleWidthSwap(); return }
+                KeyAction.PREEDIT_MODE -> { consumeModifiers(); togglePreeditMode(); return }
                 KeyAction.CALCULATOR -> {
                     consumeModifiers()
                     toggleCalculator()
@@ -948,6 +966,7 @@ class IpaBoardService : InputMethodService() {
             variation in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)
         if (directOnly) engines.suspendSemantic()
         composition.start()
+        composition.setInlineEnabled(prefs.getBoolean(SettingsConstants.KEY_INLINE_PREEDIT_ENABLED, true))
         chrome?.showPanel(ImeChromeView.Panel.KEYBOARD)
         refreshCandidates()
     }
@@ -956,7 +975,7 @@ class IpaBoardService : InputMethodService() {
         calculatorSession.reset()
         AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT_VIEW)
         clipboardObservation.setInputViewShown(true)
-        composition.start()
+        composition.startInputView()
         applySettings()
         syncClipboardOnInputViewStart()
     }
