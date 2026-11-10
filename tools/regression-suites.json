@@ -33,7 +33,8 @@
         "com.example.ipa_board.PageEngineBindingContractTest",
         "com.example.ipa_board.SegmentedCompositionTest",
         "com.example.ipa_board.ReplacementTextTest",
-        "com.example.ipa_board.PreeditModeCompositionTest"
+        "com.example.ipa_board.PreeditModeCompositionTest",
+        "com.example.ipa_board.InlineEditorCompositionTest"
       ]
     },
     "engines": {
@@ -155,7 +156,8 @@
         "com.example.ipa_board.StatusMenuToggleImeTest",
         "com.example.ipa_board.PreeditModeCompositionTest",
         "com.example.ipa_board.PreeditModeBindingTest",
-        "com.example.ipa_board.PreeditModeImeTest"
+        "com.example.ipa_board.PreeditModeImeTest",
+        "com.example.ipa_board.InlineEditorCompositionTest"
       ]
     },
     "ipa": {
@@ -355,6 +357,20 @@
         "com.example.ipa_board.PreeditModeBindingTest",
         "com.example.ipa_board.PreeditModeImeTest",
         "com.example.ipa_board.ImeChromeTest"
+      ]
+    },
+    "inline-editor-contract": {
+      "classes": [
+        "com.example.ipa_board.InlineEditorCompositionTest"
+      ]
+    },
+    "inline-editor": {
+      "classes": [
+        "com.example.ipa_board.InlineEditorCompositionTest",
+        "com.example.ipa_board.CompositionControllerTest",
+        "com.example.ipa_board.SegmentedCompositionTest",
+        "com.example.ipa_board.PreeditModeCompositionTest",
+        "com.example.ipa_board.PreeditModeImeTest"
       ]
     }
   }

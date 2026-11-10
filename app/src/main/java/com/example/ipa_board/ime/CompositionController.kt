@@ -148,7 +148,10 @@ class CompositionController(
         }
         inEditor = ic.setComposingText(composingText, 1)
         if (inEditor && composingStart < 0) composingStart = (editorCaret() ?: -1).let { if (it < 0) -1 else it - composingText.length }
-        if (inEditor && composingStart >= 0) {
+        // setComposingText(..., 1) already places the caret after the editor's inserted text.
+        // Only an interior caret needs a separate selection write; redundant writes can make
+        // hosts end their composition even though the user is still appending to it.
+        if (inEditor && composingStart >= 0 && caret != raw.length) {
             val position = composingStart + displayOffset(caret)
             ic.setSelection(position, position)
         }
