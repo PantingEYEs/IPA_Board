@@ -81,7 +81,8 @@
         "com.example.ipa_board.PopupActionsImeTest",
         "com.example.ipa_board.MultifunctionBarImeTest",
         "com.example.ipa_board.CalculatorImeTest",
-        "com.example.ipa_board.PageEngineBindingImeTest"
+        "com.example.ipa_board.PageEngineBindingImeTest",
+        "com.example.ipa_board.StatusMenuToggleImeTest"
       ]
     },
     "semantic": {
@@ -147,7 +148,8 @@
         "com.example.ipa_board.SegmentedCompositionTest",
         "com.example.ipa_board.IpaReverseLookupTest",
         "com.example.ipa_board.ReplacementTextTest",
-        "com.example.ipa_board.IpaReleaseRuntimeTest"
+        "com.example.ipa_board.IpaReleaseRuntimeTest",
+        "com.example.ipa_board.StatusMenuToggleImeTest"
       ]
     },
     "ipa": {
@@ -321,6 +323,11 @@
         "com.example.ipa_board.IpaEngineManagementUiTest",
         "com.example.ipa_board.IpaEngineRuntimeTest",
         "com.example.ipa_board.IpaReverseLookupTest"
+      ]
+    },
+    "status-menus": {
+      "classes": [
+        "com.example.ipa_board.StatusMenuToggleImeTest"
       ]
     }
   }

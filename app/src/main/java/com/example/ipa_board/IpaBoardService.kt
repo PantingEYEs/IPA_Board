@@ -4,6 +4,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.inputmethodservice.InputMethodService
@@ -12,6 +13,7 @@ import android.os.Looper
 import android.view.Gravity
 import android.text.InputType
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
@@ -582,7 +584,7 @@ class IpaBoardService : InputMethodService() {
 
     private fun showEmojiCategoryMenu(picker: EmojiPickerView) {
         val view = chrome ?: return
-        showSingleChoicePopup(view.statusContainer, picker.categories, picker.currentCategoryIndex) { index ->
+        showSingleChoicePopup(view.statusContainer, view.status, picker.categories, picker.currentCategoryIndex) { index ->
             picker.scrollToCategory(index)
         }
     }
@@ -594,17 +596,18 @@ class IpaBoardService : InputMethodService() {
                 // Keep panel open so user can input multiple kaomojis
             }
         }
-        val statusView = KaomojiStatusView(this, panelView) {
-            showKaomojiFilterPopup(panelView, view.statusContainer)
+        val statusView = KaomojiStatusView(this, panelView) { title ->
+            showKaomojiFilterPopup(panelView, view.statusContainer, title)
         }
         view.setStatusCustomView(statusView)
         view.onStatusClick = {
-            showKaomojiFilterPopup(panelView, view.statusContainer)
+            showKaomojiFilterPopup(panelView, view.statusContainer, statusView.tvTitle)
         }
         view.showContent("顔文字", panelView)
     }
 
-    private fun showKaomojiFilterPopup(panelView: KaomojiPanelView, anchorView: View) {
+    private fun showKaomojiFilterPopup(panelView: KaomojiPanelView, anchorView: View, toggleTarget: View) {
+        if (closeImeMenuIfShowing()) return
         val context = this
         val density = resources.displayMetrics.density
         fun dp(v: Int) = (v * density).toInt()
@@ -843,7 +846,7 @@ class IpaBoardService : InputMethodService() {
             exitTransition = android.transition.Slide(Gravity.TOP)
         }
 
-        showImeMenu(popup, anchorView)
+        showImeMenu(popup, anchorView, toggleTarget)
     }
 
 
@@ -927,7 +930,7 @@ class IpaBoardService : InputMethodService() {
             val state = PageGroupManager.state(this)
             val items = state.groups.mapIndexed { index, item -> "$index · ${item.name}" }
             val selectedIndex = state.groups.indexOfFirst { it.id == state.activeGroupId }
-            showSingleChoicePopup(view.statusContainer, items, selectedIndex) { index ->
+            showSingleChoicePopup(view.statusContainer, view.status, items, selectedIndex) { index ->
                 PageGroupManager.select(this@IpaBoardService, state.groups[index].id)
                 applySettings()
                 showPages()
@@ -1015,7 +1018,8 @@ class IpaBoardService : InputMethodService() {
         super.onDestroy()
     }
 
-    private fun showSingleChoicePopup(anchorView: View, items: List<String>, selectedIndex: Int, onItemSelected: (Int) -> Unit) {
+    private fun showSingleChoicePopup(anchorView: View, toggleTarget: View, items: List<String>, selectedIndex: Int, onItemSelected: (Int) -> Unit) {
+        if (closeImeMenuIfShowing()) return
         val context = this
         val density = resources.displayMetrics.density
         fun dp(v: Int) = (v * density).toInt()
@@ -1076,14 +1080,37 @@ class IpaBoardService : InputMethodService() {
             enterTransition = android.transition.Slide(Gravity.TOP)
             exitTransition = android.transition.Slide(Gravity.TOP)
         }
-        showImeMenu(popup, anchorView)
+        showImeMenu(popup, anchorView, toggleTarget)
     }
 
-    private fun showImeMenu(popup: PopupWindow, anchor: View) {
+    private fun closeImeMenuIfShowing(): Boolean {
+        val popup = menuPopup?.takeIf { it.isShowing } ?: return false
+        popup.dismiss()
+        return true
+    }
+
+    private fun showImeMenu(popup: PopupWindow, anchor: View, toggleTarget: View) {
         menuPopup?.dismiss()
         // A focusable IME popup becomes a new input target and restarts the editor session.
         // Keep input focus with the editor; the panel's Back handler dismisses this menu first.
         popup.inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
+        val visibleBounds = Rect()
+        val location = IntArray(2)
+        popup.setTouchInterceptor { _, event ->
+            // Android sends OUTSIDE before the underlying title receives this same tap.
+            // Leave the popup open until that title's click can perform a close-only toggle.
+            // Other outside targets (including Kaomoji's sort button) dismiss normally.
+            if (event.actionMasked != MotionEvent.ACTION_OUTSIDE || !toggleTarget.isShown ||
+                !toggleTarget.isEnabled || !toggleTarget.isClickable ||
+                !toggleTarget.getLocalVisibleRect(visibleBounds)) {
+                false
+            } else {
+                toggleTarget.getLocationOnScreen(location)
+                visibleBounds.offset(location[0], location[1])
+                event.rawX >= visibleBounds.left && event.rawX < visibleBounds.right &&
+                    event.rawY >= visibleBounds.top && event.rawY < visibleBounds.bottom
+            }
+        }
         popup.setOnDismissListener { if (menuPopup === popup) menuPopup = null }
         menuPopup = popup
         popup.showAsDropDown(anchor)
