@@ -35,7 +35,9 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     }
     private val preeditScroll = HorizontalScrollView(context).apply {
         isHorizontalScrollBarEnabled = false
-        addView(preeditText)
+        minimumWidth = 0
+        // Grow the scrollable child with its text even when the popup is already width-capped.
+        addView(preeditText, FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
     }
     private val preeditBackground = ColorDrawable(Color.BLACK)
     private val preeditPopup = PopupWindow(preeditScroll, LayoutParams.WRAP_CONTENT,
@@ -230,16 +232,16 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
             return
         }
         val frame = Rect().also(::getWindowVisibleDisplayFrame)
-        val margin = dp(8)
-        val maximumWidth = minOf(width, frame.width()) - margin * 2
+        val screen = IntArray(2).also(::getLocationOnScreen)
+        val left = maxOf(screen[0], frame.left)
+        val right = minOf(screen[0] + width, frame.right)
+        val maximumWidth = right - left
         if (maximumWidth <= 0) { dismissPreedit(); return }
         preeditScroll.measure(MeasureSpec.makeMeasureSpec(maximumWidth, MeasureSpec.AT_MOST),
             MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
         val popupWidth = preeditScroll.measuredWidth
         val popupHeight = preeditScroll.measuredHeight
-        val screen = IntArray(2).also(::getLocationOnScreen)
-        val x = (if (layoutDirection == LAYOUT_DIRECTION_RTL) screen[0] + width - popupWidth - margin
-            else screen[0] + margin).coerceIn(frame.left + margin, frame.right - popupWidth - margin)
+        val x = left
         val y = screen[1] - popupHeight
         if (y < frame.top) { dismissPreedit(); return }
         // A separate, non-focusable child window floats above the entire chrome. It never
@@ -290,16 +292,15 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         init {
             tag = "ime_preedit_text"
             setTextColor(Color.WHITE)
-            hint = "预编辑"
-            setHintTextColor(Color.LTGRAY)
-            textSize = 14f
+            textSize = 16f
+            minWidth = 0
+            minimumWidth = 0
             gravity = Gravity.TOP or Gravity.START
             setSingleLine(true)
             includeFontPadding = false
             val density = resources.displayMetrics.density
-            setPadding((8 * density).toInt(), (4 * density).toInt(),
-                (8 * density).toInt(), (4 * density).toInt())
-            minHeight = (28 * density).toInt()
+            setPadding((8 * density).toInt(), density.toInt(),
+                (8 * density).toInt(), density.toInt())
             isFocusable = true
         }
 

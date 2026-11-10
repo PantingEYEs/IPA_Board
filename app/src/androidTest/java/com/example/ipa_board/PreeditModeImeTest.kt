@@ -114,6 +114,13 @@ class PreeditModeImeTest {
         editor(scenario, "im$SENTENCE", 2)
         typeDeferred("a")
         val short = bubble("a")
+        key(1, 5)
+        val twoLetters = bubble("aa")
+        assertTrue("Even a one-letter preedit must grow with its next letter, without a minimum-width placeholder",
+            twoLetters.bounds.width() > short.bounds.width())
+        key(2, 7)
+        assertEquals("Deleting back to one letter must shrink the popup again",
+            short.bounds.width(), bubble("a").bounds.width())
         key(3, 1)
         val longText = "a$LONG_TEXT"
         preview(longText)
@@ -297,18 +304,27 @@ class PreeditModeImeTest {
 
     private fun bubble(text: String, caret: Int = text.length): Bubble {
         var result: Bubble? = null
-        awaitOwned("Preedit must touch the entire keyboard's top edge in its own window with its caret visible") {
+        var geometry = "No owned popup layout"
+        awaitOwned("Preedit must touch the keyboard's top-left edge with its single line and caret fully visible",
+            failureDetail = { geometry }) {
             val chrome = shownChrome() ?: return@awaitOwned false
             val root = previewRoots().singleOrNull() ?: return@awaitOwned false
             val label = root.findViewWithTag<TextView>("ime_preedit_text") ?: return@awaitOwned false
             val layout = label.layout ?: return@awaitOwned false
             val chromeBounds = bounds(chrome)
             val popup = bounds(root)
+            val labelBounds = bounds(label)
+            val lineTop = labelBounds.top + label.extendedPaddingTop + layout.getLineTop(0) - label.scrollY
+            val lineBottom = labelBounds.top + label.extendedPaddingTop + layout.getLineBottom(0) - label.scrollY
+            val caretX = labelBounds.left + label.compoundPaddingLeft + layout.getPrimaryHorizontal(caret) - label.scrollX
+            geometry = "chrome=$chromeBounds popup=$popup label=$labelBounds line=$lineTop..$lineBottom " +
+                "caret=$caretX scroll=${label.scrollX},${label.scrollY} lines=${layout.lineCount} " +
+                "textMatches=${label.text.toString() == text}"
             if (label.text.toString() != text || popup.width() <= 0 || popup.height() <= 0 ||
                 root === chrome.rootView || views(root).any { it is ImeChromeView } ||
                 popup.bottom != chromeBounds.top || popup.top < 0 || popup.width() > chromeBounds.width() ||
-                popup.left < chromeBounds.left || popup.right > chromeBounds.right) return@awaitOwned false
-            val caretX = bounds(label).left + label.compoundPaddingLeft + layout.getPrimaryHorizontal(caret) - label.scrollX
+                popup.left != chromeBounds.left || popup.right > chromeBounds.right || layout.lineCount != 1) return@awaitOwned false
+            if (lineTop < popup.top || lineBottom > popup.bottom) return@awaitOwned false
             if (caretX < popup.left || caretX > popup.right) return@awaitOwned false
             result = Bubble(popup, caretX)
             true
@@ -391,13 +407,14 @@ class PreeditModeImeTest {
         })
     }
 
-    private fun awaitOwned(message: String, condition: () -> Boolean) {
+    private fun awaitOwned(message: String, failureDetail: () -> String = { "" }, condition: () -> Boolean) {
         val deadline = SystemClock.uptimeMillis() + 5_000L
         do {
             if (main(condition)) return
             SystemClock.sleep(40L)
         } while (SystemClock.uptimeMillis() < deadline)
-        assertTrue(message, main(condition))
+        val matched = main(condition)
+        assertTrue("$message ${failureDetail()}", matched)
     }
 
     private fun <T> main(block: () -> T): T {
