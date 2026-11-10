@@ -349,6 +349,13 @@
       "classes": [
         "com.example.ipa_board.PreeditModeImeTest"
       ]
+    },
+    "preedit-popup": {
+      "classes": [
+        "com.example.ipa_board.PreeditModeBindingTest",
+        "com.example.ipa_board.PreeditModeImeTest",
+        "com.example.ipa_board.ImeChromeTest"
+      ]
     }
   }
 }

@@ -977,6 +977,7 @@ class IpaBoardService : InputMethodService() {
         clipboardObservation.setInputViewShown(true)
         composition.startInputView()
         applySettings()
+        chrome?.setInputViewActive(true)
         syncClipboardOnInputViewStart()
     }
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
@@ -985,6 +986,10 @@ class IpaBoardService : InputMethodService() {
         composition.externalSelection(newSelStart, newSelEnd, candidatesEnd)
     }
     override fun onEvaluateFullscreenMode() = false
+    override fun onWindowHidden() {
+        chrome?.setInputViewActive(false)
+        super.onWindowHidden()
+    }
     private fun updatePanelBack(open: Boolean) {
         if (open == panelBackRegistered) return
         if (open) window.onBackInvokedDispatcher.registerOnBackInvokedCallback(
@@ -1009,6 +1014,7 @@ class IpaBoardService : InputMethodService() {
         return super.onKeyUp(keyCode, event)
     }
     override fun onFinishInputView(finishingInput: Boolean) {
+        chrome?.setInputViewActive(false)
         calculatorSession.reset()
         menuPopup?.dismiss()
         closeDashboardObservation()
@@ -1019,11 +1025,13 @@ class IpaBoardService : InputMethodService() {
         super.onFinishInputView(finishingInput)
     }
     override fun onFinishInput() {
+        chrome?.setInputViewActive(false)
         calculatorSession.reset()
         AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT)
         composition.finish(); engines.suspendSemantic(); inputController.reset(); super.onFinishInput()
     }
     override fun onDestroy() {
+        chrome?.setInputViewActive(false)
         calculatorSession.reset()
         menuPopup?.dismiss()
         closeDashboardObservation()

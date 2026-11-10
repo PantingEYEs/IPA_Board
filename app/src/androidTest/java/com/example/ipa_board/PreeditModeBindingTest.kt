@@ -8,6 +8,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.inspector.WindowInspector
 import android.view.inputmethod.BaseInputConnection
 import android.widget.LinearLayout
 import android.widget.Spinner
@@ -127,53 +128,37 @@ class PreeditModeBindingTest {
         }
     }
 
-    @Test fun nonInlinePreeditKeepsHeightAndTextStableAndOnlyConfirmsWhenNonempty() {
+    @Test fun detachedPreeditNeverAddsAWindowOrChangesTheKeyboardHeight() {
         instrumentation.runOnMainSync {
+            val existingWindows = WindowInspector.getGlobalWindowViews().toSet()
             val chrome = ImeChromeView(target)
             chrome.setKeyboardHeight(240)
             chrome.render("", emptyList(), "Ready", 1)
             measure(chrome)
             val inlineHeight = chrome.height
-            assertNull(chrome.findViewWithTag<TextView>("ime_preedit_text"))
+            fun unchanged() {
+                measure(chrome)
+                assertFalse(chrome.isAttachedToWindow)
+                assertEquals("The floating preedit must never reserve IME layout height", inlineHeight, chrome.height)
+                assertEquals(240, chrome.keyboardHost.height)
+                assertNull("Preedit must live outside the chrome view hierarchy",
+                    chrome.findViewWithTag<TextView>("ime_preedit_text"))
+                assertTrue("A detached chrome cannot create a preedit popup",
+                    (WindowInspector.getGlobalWindowViews().toSet() - existingWindows)
+                        .none { it.findViewWithTag<TextView>("ime_preedit_text") != null })
+            }
+            unchanged()
             chrome.setInlinePreeditEnabled(false)
-            measure(chrome)
-            val detachedHeight = chrome.height
-            assertTrue(detachedHeight > inlineHeight)
-            assertEquals(240, chrome.keyboardHost.height)
-            var confirmations = 0
-            chrome.onLiteral = { confirmations++ }
-            val preedit = chrome.findViewWithTag<TextView>("ime_preedit_text")!!
-            assertEquals("预编辑", preedit.hint.toString())
-            assertFalse(preedit.isEnabled)
-            preedit.performClick()
-            assertEquals(0, confirmations)
-
-            val candidate = Candidate("零", "synthetic")
-            chrome.render("a😀b", listOf(candidate), "Ready", 2, preeditDisplay = "ａ😀b", preeditCaret = 3)
-            measure(chrome)
-            assertEquals(detachedHeight, chrome.height)
-            assertEquals(240, chrome.keyboardHost.height)
-            assertEquals("ａ😀b", preedit.text.toString())
-            assertEquals("光标在第 2 个字符后", preedit.stateDescription)
-            assertEquals("ａ😀b，点按原样确认", preedit.contentDescription)
-            assertTrue(preedit.isEnabled)
-            preedit.performClick()
-            assertEquals(1, confirmations)
-            chrome.render("a😀b", listOf(candidate), "Ready", 2, preeditDisplay = "ａ😀b", preeditCaret = 2)
-            assertEquals("A caret must not divide the surrogate pair", "光标在第 1 个字符后", preedit.stateDescription)
-            assertEquals("ａ😀b", preedit.text.toString())
-
+            unchanged()
+            chrome.render("a😀b", listOf(Candidate("零", "synthetic")), "Ready", 2,
+                preeditDisplay = "ａ😀b", preeditCaret = 3)
+            unchanged()
             chrome.render("", emptyList(), "Ready", 3)
-            measure(chrome)
-            assertEquals(detachedHeight, chrome.height)
-            assertEquals("", preedit.text.toString())
-            assertFalse(preedit.isClickable)
-            preedit.performClick()
-            assertEquals(1, confirmations)
+            unchanged()
+            chrome.render("a😀b", emptyList(), "Ready", 4)
+            unchanged()
             chrome.setInlinePreeditEnabled(true)
-            measure(chrome)
-            assertEquals(inlineHeight, chrome.height)
-            assertNull(chrome.findViewWithTag<TextView>("ime_preedit_text"))
+            unchanged()
         }
     }
 

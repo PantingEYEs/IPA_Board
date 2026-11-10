@@ -5,11 +5,13 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.*
 import com.example.ipa_board.MultifunctionBarView
 import com.example.ipa_board.MultifunctionBarSlot
@@ -25,13 +27,32 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
     private val overlay = LinearLayout(context).apply { orientation = VERTICAL }
     private val candidateRow = LinearLayout(context)
     private var inlinePreeditEnabled = true
+    private var inputViewActive = false
     private var hasPreedit = false
     private val preeditText = PreeditTextView(context).apply {
-        setOnClickListener { if (hasPreedit && !inlinePreeditEnabled) onLiteral() }
+        setOnClickListener { confirmPreedit() }
     }
     private val preeditScroll = HorizontalScrollView(context).apply {
         isHorizontalScrollBarEnabled = false
         addView(preeditText)
+    }
+    private val preeditPopup = PopupWindow(preeditScroll, LayoutParams.WRAP_CONTENT,
+        LayoutParams.WRAP_CONTENT, false).apply {
+        inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
+        isOutsideTouchable = false
+        isClippingEnabled = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) setIsLaidOutInScreen(true)
+        animationStyle = 0
+        elevation = dp(3).toFloat()
+        setBackgroundDrawable(GradientDrawable().apply {
+            setColor(Color.rgb(40, 40, 40))
+            cornerRadius = dp(6).toFloat()
+            setStroke(dp(1), Color.rgb(110, 110, 110))
+        })
+    }
+    private val preeditBounds = Rect()
+    private val revealPreeditCaret = Runnable {
+        if (canShowPreedit() && preeditPopup.isShowing) preeditText.revealCaret()
     }
     private var candidateMinimumWidth = dp(48)
     private val expand = button("⋯", "Expand") { showPanel(if (panel == Panel.KEYBOARD) Panel.CANDIDATES else Panel.KEYBOARD) }.apply {
@@ -105,6 +126,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
         super.onLayout(changed, left, top, right, bottom)
+        updatePreeditVisibility()
         // Use the actual key geometry so custom layouts, page switches and rotation all follow.
         val keyWidth = (0 until keyboardHost.childCount).flatMap { rowIndex ->
             val row = keyboardHost.getChildAt(rowIndex) as? ViewGroup
@@ -138,6 +160,22 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         inlinePreeditEnabled = enabled
         multifunctionBar.setInlinePreeditEnabled(enabled)
         updatePreeditVisibility()
+    }
+
+    /** InputMethodService can retain this view after hiding its window. */
+    fun setInputViewActive(active: Boolean) {
+        inputViewActive = active
+        updatePreeditVisibility()
+    }
+
+    override fun onDetachedFromWindow() {
+        dismissPreedit()
+        super.onDetachedFromWindow()
+    }
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        if (visibility == VISIBLE) updatePreeditVisibility() else dismissPreedit()
     }
 
     fun setBarBindings(bindings: Map<MultifunctionBarSlot, MultifunctionBarBinding>) = multifunctionBar.setBindings(bindings)
@@ -183,17 +221,59 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         preeditText.isEnabled = hasPreedit
         preeditText.isClickable = hasPreedit
         preeditText.isFocusable = hasPreedit
-        if (!inlinePreeditEnabled) {
-            // This row grows the chrome; the configured key area retains its full height.
-            // Keep its empty placeholder so starting/finishing input cannot resize the host.
-            if (preeditScroll.parent == null) addView(preeditScroll, indexOfChild(body),
-                LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-            preeditText.post {
-                if (hasPreedit && !inlinePreeditEnabled) preeditText.revealCaret()
-            }
-        } else if (preeditScroll.parent != null) {
-            removeView(preeditScroll)
+        if (!canShowPreedit()) {
+            dismissPreedit()
+            return
         }
+        val frame = Rect().also(::getWindowVisibleDisplayFrame)
+        val margin = dp(8)
+        val maximumWidth = minOf(width, frame.width()) - margin * 2
+        if (maximumWidth <= 0) { dismissPreedit(); return }
+        preeditScroll.measure(MeasureSpec.makeMeasureSpec(maximumWidth, MeasureSpec.AT_MOST),
+            MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
+        val popupWidth = preeditScroll.measuredWidth
+        val popupHeight = preeditScroll.measuredHeight
+        val screen = IntArray(2).also(::getLocationOnScreen)
+        val x = (if (layoutDirection == LAYOUT_DIRECTION_RTL) screen[0] + width - popupWidth - margin
+            else screen[0] + margin).coerceIn(frame.left + margin, frame.right - popupWidth - margin)
+        val y = screen[1] - popupHeight - dp(4)
+        if (y < frame.top) { dismissPreedit(); return }
+        // A separate, non-focusable child window floats above the entire chrome. It never
+        // participates in IME measurement, insets or ancestor scrolling (unlike a dropdown).
+        val location = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) intArrayOf(x, y) else {
+            val inWindow = IntArray(2).also(::getLocationInWindow)
+            intArrayOf(x - screen[0] + inWindow[0], y - screen[1] + inWindow[1])
+        }
+        val bounds = Rect(location[0], location[1], location[0] + popupWidth, location[1] + popupHeight)
+        try {
+            if (!preeditPopup.isShowing) {
+                preeditPopup.width = popupWidth
+                preeditPopup.height = popupHeight
+                preeditPopup.showAtLocation(this, Gravity.TOP or Gravity.LEFT, location[0], location[1])
+            } else if (preeditBounds != bounds) {
+                preeditPopup.update(location[0], location[1], popupWidth, popupHeight)
+            }
+        } catch (_: WindowManager.BadTokenException) {
+            // The IME token may expire during a host/window transition. Do not retry stale UI.
+            dismissPreedit()
+            return
+        }
+        preeditBounds.set(bounds)
+        preeditText.removeCallbacks(revealPreeditCaret)
+        preeditText.post(revealPreeditCaret)
+    }
+
+    private fun canShowPreedit() = inputViewActive && !inlinePreeditEnabled && hasPreedit &&
+        isAttachedToWindow && windowToken != null && windowVisibility == VISIBLE && isShown && width > 0 && height > 0
+
+    private fun confirmPreedit() {
+        if (canShowPreedit() && preeditPopup.isShowing) onLiteral()
+    }
+
+    private fun dismissPreedit() {
+        preeditText.removeCallbacks(revealPreeditCaret)
+        preeditPopup.dismiss()
+        preeditBounds.setEmpty()
     }
 
     /** Draw the caret without inserting a marker into text or accessibility output. */
@@ -220,7 +300,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         }
 
         fun setPreedit(value: String, cursor: Int) {
-            text = value
+            if (text.toString() != value) text = value
             caret = cursor.coerceIn(0, value.length)
             if (caret in 1 until value.length && Character.isSurrogatePair(value[caret - 1], value[caret])) caret--
             contentDescription = if (value.isEmpty()) "预编辑" else "$value，点按原样确认"
@@ -228,6 +308,11 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
                 stateDescription = if (value.isEmpty()) null else "光标在第 ${value.codePointCount(0, caret)} 个字符后"
             }
             invalidate()
+        }
+
+        override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+            super.onLayout(changed, left, top, right, bottom)
+            revealCaret()
         }
 
         fun revealCaret() {
@@ -244,8 +329,9 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
             super.onDraw(canvas)
             if (text.isEmpty()) return
             val lines = layout ?: return
-            val line = lines.getLineForOffset(caret)
-            val x = compoundPaddingLeft + lines.getPrimaryHorizontal(caret) - scrollX
+            val position = caret.coerceIn(0, lines.text.length)
+            val line = lines.getLineForOffset(position)
+            val x = compoundPaddingLeft + lines.getPrimaryHorizontal(position) - scrollX
             caretPaint.color = currentTextColor
             canvas.drawLine(x, (extendedPaddingTop + lines.getLineTop(line) - scrollY).toFloat(),
                 x, (extendedPaddingTop + lines.getLineBottom(line) - scrollY).toFloat(), caretPaint)
