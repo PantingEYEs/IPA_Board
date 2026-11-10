@@ -37,13 +37,7 @@ class KeyboardConfigurationTest {
     @Test fun remoteKeyboardHasNoEntryInBundledOrDefaultLayouts() {
         val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
-        val directory = "initialization/keyboards"
-        val bundled = context.assets.list(directory).orEmpty().filter { it.endsWith(".json") }.map { name ->
-            context.assets.open("$directory/$name").bufferedReader().use {
-                val document = JSONObject(it.readText())
-                KeyboardLayout.fromJson((document.optJSONObject("layout") ?: document).toString())
-            }
-        }
+        val bundled = bundledKeyboardLayouts(context)
         for (layout in bundled + SettingsConstants.DEFAULT_LAYOUT + com.example.ipa_board.ime.BuiltinLayouts.mixed) {
             for (key in layout.rows.flatMap { it.slots }) {
                 assertNotEquals(KeyAction.REMOTE_KEYBOARD, key.action)
@@ -65,13 +59,7 @@ class KeyboardConfigurationTest {
             .getJSONArray("slots").getJSONObject(0).getString("action"))
         assertEquals(layout, KeyboardLayout.fromJson(exported))
         val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
-        val directory = "initialization/keyboards"
-        val bundled = context.assets.list(directory).orEmpty().filter { it.endsWith(".json") }.map { name ->
-            context.assets.open("$directory/$name").bufferedReader().use {
-                val document = JSONObject(it.readText())
-                KeyboardLayout.fromJson((document.optJSONObject("layout") ?: document).toString())
-            }
-        }
+        val bundled = bundledKeyboardLayouts(context)
         // Maintainer-provided presets may include Dashboard (for example QWERTY's hold binding).
         // Validate their actual configuration instead of prescribing which functions they contain.
         for (initial in bundled) assertEquals(initial, KeyboardLayout.fromJson(initial.toJson()))

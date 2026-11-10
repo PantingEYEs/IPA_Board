@@ -177,11 +177,16 @@ class ShortcutDefaultsTest {
 
     @Test fun layoutInitializationSeedsShortcutsBeforeGroupMetadataAndPreservesExistingLayouts() {
         isolated { context ->
+            val bundled = bundledPageGroupSources(context)
             LayoutFileManager.initDefaultLayout(context)
             assertCtrlDefaults(context.raw)
             assertTrue(context.raw.getBoolean("default_layout_created", false))
             assertTrue(context.raw.contains(SettingsConstants.KEY_PAGE_GROUP_STATE))
             assertTrue(LayoutFileManager.listLayoutFiles(context).isNotEmpty())
+            val groups = PageGroupManager.state(context)
+            assertEquals(bundled.map { it.name }, groups.groups.map { it.name })
+            assertEquals(bundled.sumOf { folder -> folder.files.count { !it.name.equals("group_config.json", true) } },
+                groups.groups.sumOf { it.pages.size })
             val before = snapshotFiles(context)
             val preferences = context.raw.all
             LayoutFileManager.initDefaultLayout(context)

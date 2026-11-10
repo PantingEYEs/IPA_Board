@@ -1,0 +1,23 @@
+{
+  "format": "ipa-board-page-group",
+  "schemaVersion": 1,
+  "name": "IPA",
+  "appearance": {
+    "backgroundColor": "#000000",
+    "symbolColor": "#FFFFFF",
+    "popupBackgroundColor": "#FFFFFF",
+    "popupSymbolColor": "#000000",
+    "pointerPathColor": "#FFFFFF",
+    "pointerAxisColor": "#FFFFFF",
+    "pointerCrosshairColor": "#FF0000",
+    "heightDp": 150,
+    "fontSizeSp": 10,
+    "showGrid": false,
+    "showPointerLocation": true,
+    "usePointerDifferenceBlend": true
+  },
+  "pages": [
+    "IPA.json"
+  ],
+  "activePage": "IPA.json"
+}

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_page_group">Import group</string>
+    <string name="export_page_group">Export group</string>
+    <string name="group_transfer_hint">Import: choose a group folder. Export: choose a destination for a new group folder.</string>
+    <string name="group_import_confirm">Import “%1$s” with %2$d keyboard pages? A new independent group will be created. Conflicting names will be renamed automatically.</string>
+    <string name="group_transfer_working">Working with keyboard group files…</string>
+    <string name="group_transfer_cancelled">Group transfer cancelled</string>
+    <string name="group_transfer_picker_failed">Could not open the folder picker. Please try again.</string>
+    <string name="group_transfer_interrupted">Group transfer was interrupted. Check your groups or destination folder before trying again.</string>
+    <string name="group_import_invalid">Could not read this group folder. Check the page files and optional group_config.json.</string>
+    <string name="group_import_saved">Keyboard group imported</string>
+    <string name="group_import_failed">Could not import the group. Existing groups and pages were preserved.</string>
+    <string name="group_import_restore_failed">Import failed and recovery could not be completed. Check your groups and pages before trying again.</string>
+    <string name="group_export_source_failed">Could not export this group. Check that all its page files are available and valid.</string>
+    <string name="group_export_saved">Keyboard group exported to a new folder</string>
+    <string name="group_export_failed">Could not export the group. The incomplete export was removed.</string>
+    <string name="group_export_partial">Export did not complete. Some files may remain in the destination folder; check them before trying again.</string>
+</resources>

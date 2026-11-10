@@ -2,15 +2,21 @@ package com.example.ipa_board
 
 import android.content.Context
 import android.util.AtomicFile
+import android.util.JsonReader
+import android.util.JsonToken
 import com.example.ipa_board.SettingsConstants.DEFAULT_LAYOUT
 import com.example.ipa_board.diagnostics.*
 import org.json.JSONArray
 import org.json.JSONObject
+import org.json.JSONTokener
 import java.io.InputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
+import java.io.StringReader
 import java.util.Locale
+import java.nio.ByteBuffer
+import java.nio.charset.CodingErrorAction
 
 object LayoutFileManager {
 
@@ -18,13 +24,13 @@ object LayoutFileManager {
     private const val MAX_FILENAME_BYTES = 240
     private val invalidFilenameCharacters = Regex("[\\p{Cc}<>:\"/\\\\|?*]")
 
-    private fun getLayoutsDir(context: Context): File {
+    internal fun getLayoutsDir(context: Context): File {
         val dir = File(context.filesDir, "layouts")
         if (!dir.isDirectory && !dir.mkdirs()) throw IOException("Cannot create layouts directory")
         return dir
     }
 
-    private fun layoutFile(context: Context, filename: String): File {
+    internal fun layoutFile(context: Context, filename: String): File {
         require(filename.isNotBlank() && filename != "." && filename != ".." &&
             '/' !in filename && '\\' !in filename && filename.none { it.isISOControl() }) {
             "Invalid layout filename"
@@ -80,7 +86,7 @@ object LayoutFileManager {
         return filename
     }
 
-    fun createBlankLayout(context: Context, name: String): String {
+    @Synchronized fun createBlankLayout(context: Context, name: String): String {
         val layoutName = name.trim()
         require(layoutName.isNotEmpty()) { "Enter a layout name" }
         val group = PageGroupManager.active(context)
@@ -90,7 +96,7 @@ object LayoutFileManager {
         return filename
     }
 
-    fun renameLayout(context: Context, filename: String, name: String): String {
+    @Synchronized fun renameLayout(context: Context, filename: String, name: String): String {
         val trimmed = name.trim()
         require(trimmed.isNotEmpty() && trimmed.length <= 80) { "Enter a name of 1–80 characters" }
         PageGroupManager.initialize(context)
@@ -122,8 +128,86 @@ object LayoutFileManager {
         return newFilename
     }
 
-    /** Shared by manual import and bundled initialization, including appearance and activation. */
-    fun importLayout(context: Context, input: InputStream, sourceFilename: String? = null): String {
+    internal data class ParsedPage(val layout: KeyboardLayout, val bytes: ByteArray, val appearance: JSONObject?)
+
+    /** Validate a page without writing files, changing a group or applying legacy appearance. */
+    internal fun parsePage(bytes: ByteArray, strictJson: Boolean = false): ParsedPage {
+        require(bytes.size <= 1024 * 1024) { "Configuration must not exceed 1 MB" }
+        val text = Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
+            .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString()
+        if (strictJson) requireJsonStructure(text) else requireJsonDepth(text)
+        val tokener = JSONTokener(text)
+        val config = tokener.nextValue() as? JSONObject ?: throw IllegalArgumentException("Invalid page configuration")
+        require(tokener.nextClean() == '\u0000') { "Invalid page configuration" }
+        if (config.has("version")) require(config.getInt("version") in 1..4) { "Unsupported configuration version" }
+        val page = if (config.has("layout")) config.getJSONObject("layout") else config
+        val layout = KeyboardLayout.fromJson(page.toString())
+        val normalized = if (config.has("layout")) jsonBytes(page) else bytes.copyOf()
+        require(normalized.size <= 1024 * 1024) { "Configuration must not exceed 1 MB" }
+        return ParsedPage(layout, normalized, config.optJSONObject("appearance"))
+    }
+
+    internal fun requireJsonDepth(text: String) {
+        var quoted = false
+        var escaped = false
+        var depth = 0
+        text.forEach { char ->
+            if (quoted) {
+                if (escaped) escaped = false else if (char == '\\') escaped = true else if (char == '"') quoted = false
+            } else when (char) {
+                '"' -> quoted = true
+                '{', '[' -> { depth++; require(depth <= 64) { "Configuration is too deeply nested" } }
+                '}', ']' -> depth--
+            }
+        }
+    }
+
+    /** Bounded structural preflight before JSONObject recursively builds a folder document. */
+    internal fun requireJsonStructure(text: String) {
+        JsonReader(StringReader(text)).use { reader ->
+            reader.isLenient = false
+            require(reader.peek() == JsonToken.BEGIN_OBJECT) { "Invalid JSON object" }
+            val scopes = mutableListOf<MutableSet<String>?>()
+            while (true) {
+                when (reader.peek()) {
+                    JsonToken.BEGIN_OBJECT -> {
+                        require(scopes.size < 64) { "Configuration is too deeply nested" }
+                        reader.beginObject(); scopes.add(mutableSetOf())
+                    }
+                    JsonToken.BEGIN_ARRAY -> {
+                        require(scopes.size < 64) { "Configuration is too deeply nested" }
+                        reader.beginArray(); scopes.add(null)
+                    }
+                    JsonToken.END_OBJECT -> { reader.endObject(); scopes.removeAt(scopes.lastIndex) }
+                    JsonToken.END_ARRAY -> { reader.endArray(); scopes.removeAt(scopes.lastIndex) }
+                    JsonToken.NAME -> require(requireNotNull(scopes.last()).add(reader.nextName())) { "Duplicate JSON field" }
+                    JsonToken.STRING, JsonToken.NUMBER -> reader.nextString()
+                    JsonToken.BOOLEAN -> reader.nextBoolean()
+                    JsonToken.NULL -> reader.nextNull()
+                    JsonToken.END_DOCUMENT -> { require(scopes.isEmpty()); return }
+                    else -> throw IllegalArgumentException("Invalid JSON document")
+                }
+            }
+        }
+    }
+
+    // JSONObject retains escaped isolated surrogates; encoding them directly as UTF-8 would lose them.
+    internal fun jsonText(value: JSONObject): String = buildString {
+        val source = value.toString()
+        var index = 0
+        while (index < source.length) {
+            val char = source[index++]
+            if (char.isHighSurrogate() && index < source.length && source[index].isLowSurrogate()) {
+                append(char).append(source[index++])
+            } else if (char.isSurrogate()) {
+                append("\\u").append(char.code.toString(16).padStart(4, '0'))
+            } else append(char)
+        }
+    }
+    internal fun jsonBytes(value: JSONObject): ByteArray = jsonText(value).toByteArray(Charsets.UTF_8)
+
+    /** A single legacy page import may still apply its appearance to the current group. */
+    @Synchronized fun importLayout(context: Context, input: InputStream, sourceFilename: String? = null): String {
         val output = ByteArrayOutputStream()
         val buffer = ByteArray(8192)
         while (true) {
@@ -132,10 +216,9 @@ object LayoutFileManager {
             require(output.size() + count <= 1024 * 1024) { "Configuration must not exceed 1 MB" }
             output.write(buffer, 0, count)
         }
-        val config = JSONObject(output.toString("UTF-8"))
-        val layout = KeyboardLayout.fromJson((config.optJSONObject("layout") ?: config).toString())
-        if (config.has("version")) require(config.getInt("version") in 1..4) { "Unsupported configuration version" }
-        val appearance = config.optJSONObject("appearance")
+        val parsed = parsePage(output.toByteArray())
+        val layout = parsed.layout
+        val appearance = parsed.appearance
         val bg = appearance?.getString("backgroundColor")
         val symbol = appearance?.getString("symbolColor")
         val height = appearance?.getInt("heightDp")
@@ -160,22 +243,27 @@ object LayoutFileManager {
     @Synchronized
     fun initDefaultLayout(context: Context) {
         com.example.ipa_board.shortcuts.ShortcutDefaults.initialize(context)
-        PageGroupManager.initialize(context)
         val settings = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
-        // Retain the old initialization marker so upgrades do not reseed existing installations.
-        if (settings.getBoolean("default_layout_created", false)) return
-        if (listLayoutFiles(context).isEmpty()) {
-            val assetDir = "initialization/keyboards"
-            val filenames = context.assets.list(assetDir).orEmpty()
-                .filter { it.endsWith(".json", ignoreCase = true) }.sorted()
-            filenames.forEach { filename ->
-                context.assets.open("$assetDir/$filename").use { importLayout(context, it, filename) }
-            }
+        if (PageGroupTransfer.hasInitializationEvidence(context)) {
+            PageGroupManager.initialize(context)
+            settings.edit().putBoolean("default_layout_created", true).apply()
+            return
         }
-        settings.edit().putBoolean("default_layout_created", true).apply()
+        val assetDir = "initialization/keyboards"
+        val plans = context.assets.list(assetDir).orEmpty().mapNotNull { folder ->
+            val entries = context.assets.list("$assetDir/$folder").orEmpty()
+            if (entries.isEmpty()) null else PageGroupTransfer.readFolder(PageGroupTransfer.SourceFolder(folder,
+                entries.filter { it.endsWith(".json", ignoreCase = true) }.map { filename ->
+                    PageGroupTransfer.SourceFile(filename) { context.assets.open("$assetDir/$folder/$filename") }
+                }))
+        }
+        when (PageGroupTransfer.initializeGroups(context, plans).status) {
+            PageGroupTransfer.Status.IMPORTED, PageGroupTransfer.Status.SKIPPED -> Unit
+            else -> throw IOException("Unable to initialize page groups")
+        }
     }
 
-    fun saveLayout(context: Context, filename: String, layout: KeyboardLayout) {
+    @Synchronized fun saveLayout(context: Context, filename: String, layout: KeyboardLayout) {
         val file = layoutFile(context, filename)
         val atomicFile = android.util.AtomicFile(file)
         val output = atomicFile.startWrite()
@@ -243,7 +331,7 @@ object LayoutFileManager {
         }
     }
 
-    fun saveLayoutOrder(context: Context, orderedFilenames: List<String>) {
+    @Synchronized fun saveLayoutOrder(context: Context, orderedFilenames: List<String>) {
         val prefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
         val jsonArr = JSONArray()
         orderedFilenames.forEach { jsonArr.put(it) }
@@ -255,7 +343,7 @@ object LayoutFileManager {
 
     fun switchPage(context: Context, forward: Boolean): String = PageGroupManager.switchPage(context, forward)
 
-    fun deleteLayout(context: Context, filename: String): Boolean {
+    @Synchronized fun deleteLayout(context: Context, filename: String): Boolean {
         return try {
             val file = layoutFile(context, filename)
             PageGroupManager.initialize(context)

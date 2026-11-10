@@ -4,6 +4,8 @@
 
 Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划](docs/0.0.4-development-plan.md)。
 
+- 新增 [#36](https://github.com/PantingEYEs/IPA_Board/issues/36) 页组文件夹导入／导出：Group Settings 可保存整组页面、外观、顺序和选中页，导入前确认并在重名时创建独立副本。初始化复用相同格式和导入逻辑，预设更新为维护者提供的 Default、IPA、Uncommon 三组共 15 页；升级不覆盖已有配置，已删除的预设不补回。详见[文件夹格式](docs/page-group-transfer.md)。
+
 - 新增 **Shortcut Management → Import configuration**：读取版本化 Shortcut 导出文件并显示类别与数量，确认后整份替换文件包含的 Shift／Ctrl 映射、多功能栏绑定和替代文字规则，缺少类别及其他设置保持不变。严格校验版本、功能标识、数据结构和长度；取消不导入，保存失败尝试恢复原值并区分恢复失败。保留完整文本、规则顺序与重复内容，不执行绑定；详见[导入与导出说明](docs/shortcut-export.md)。
 
 - 内置 [Shortcut 初始化文件](app/src/main/assets/initialization/shortcuts/default.json)，仅设置 Ctrl+Z／Y／X／C／V／A 对应撤销、重做、剪切、复制、粘贴和全选。新安装通过同一导入逻辑应用一次，已有配置及主动删除的默认项不会被重新补回；新增可绑定的撤销与重做动作，宿主不支持时分别回退为 Ctrl+Z／Ctrl+Y，不生成应用内撤销历史。

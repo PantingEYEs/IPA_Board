@@ -40,7 +40,7 @@ Shift 第一次点击启用临时大写（`Shift •`），再次点击锁定大
 
 布局导出为 `version: 4`，只包含 `layout`，不包含页组外观、剪贴板或应用全部设置。旧版带 `appearance` 的配置仍可导入，外观应用到当前组。配置文件上限 1 MB。
 
-首次安装的预置内容来自 [键盘配置](app/src/main/assets/initialization/keyboards)、[颜文字配置](app/src/main/assets/initialization/kaomoji) 和 [Shortcut 配置](app/src/main/assets/initialization/shortcuts/default.json)。Shortcut 默认文件仅包含 Ctrl+Z 撤销、Ctrl+Y 重做、Ctrl+X 剪切、Ctrl+C 复制、Ctrl+V 粘贴和 Ctrl+A 全选，初始化复用导入功能载入一次。本版新增 [IPA 键盘页](app/src/main/assets/initialization/keyboards/IPA.json)，并刷新其他键盘与颜文字配置。更新应用不会重新初始化或覆盖已有用户配置，因此已有安装不会自动新增 IPA 页或默认 Shortcut；可下载所需 JSON 后通过对应导入入口使用。IPA 预置仅绑定 IPA 引擎，其余功能关闭，可在 Choose Engines 中调整。当前不提供增删行列的布局编辑器。
+首次安装的预置内容来自 [键盘页组配置](app/src/main/assets/initialization/keyboards)、[颜文字配置](app/src/main/assets/initialization/kaomoji) 和 [Shortcut 配置](app/src/main/assets/initialization/shortcuts/default.json)。键盘预设包含 Default、IPA、Uncommon 三组共 15 页，保留各组外观、页面顺序和选中页；Group Settings 支持[整组文件夹导入／导出](docs/page-group-transfer.md)，重名时创建独立副本。Shortcut 默认文件仅包含 Ctrl+Z 撤销、Ctrl+Y 重做、Ctrl+X 剪切、Ctrl+C 复制、Ctrl+V 粘贴和 Ctrl+A 全选，初始化复用导入功能载入一次。更新应用不会重新初始化或覆盖已有用户配置，删除的默认项不会补回；已有安装可通过对应导入入口添加所需预设。当前不提供增删行列的布局编辑器。
 
 ## 输入与候选
 

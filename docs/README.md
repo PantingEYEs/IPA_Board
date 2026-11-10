@@ -17,6 +17,7 @@
 | [Emoji 目录与浏览](emoji-catalog.md) | Unicode 目录、连续分区、分类导航与更新 |
 | [Shortcut 替代文字](shortcut-replacements.md) | 候选完整匹配、追加规则、选择行为与导出衔接 |
 | [Shortcut 配置导入与导出](shortcut-export.md) | 四类配置、版本化 JSON、导入确认与取消／失败行为 |
+| [键盘页组文件夹](page-group-transfer.md) | 整组导入／导出、重名副本、元数据及默认初始化 |
 | [浮窗多功能操作](popup-multifunctional-actions.md) | 按键双模式、图形编辑、撤回与运行时手势 |
 
 ## 开发与验证
