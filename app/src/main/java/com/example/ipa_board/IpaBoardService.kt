@@ -239,7 +239,7 @@ class IpaBoardService : InputMethodService() {
             engineStatus = state
             composition.acceptResults(id, candidates)
             refreshCandidates()
-        }
+        }.apply { onCompositionPolicyChanged = composition::invalidateCandidatesAndRequery }
         // Capture copies even before the first input view opens. Android still controls access
         // (normally the current/default IME); this cannot retrieve overwritten system history.
         clipboardObservation.start(prefs.getBoolean(SettingsConstants.KEY_CLIPBOARD_SYNC_ON_START, true))

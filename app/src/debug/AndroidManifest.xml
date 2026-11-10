@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
         <activity android:name=".ImeTestEditorActivity" android:exported="false" />
+        <service android:name=".ime.SchemaFailureTestService"
+            android:exported="false" android:process=":test_schema_failure" />
     </application>
 </manifest>

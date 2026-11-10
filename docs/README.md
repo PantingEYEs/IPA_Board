@@ -9,6 +9,7 @@
 | [项目说明](../README.md) | 安装要求、当前功能、管理入口与构建方式 |
 | [更新日志](../CHANGELOG.md) | 开发中及已发布版本的变更 |
 | [引擎接入与来源](engine-integration.md) | 已接入引擎、固定资源、开关、生命周期与限制 |
+| [地球拼音](terra-pinyin.md) | 方案选择、声调键、预编辑切换及独立部署 |
 | [IPA 必要接口](engine-specification.md) | 引擎接受的操作/信息、候选格式与安全边界 |
 | [IPA 资源更新](ipa-updates.md) | Release 清单、正式／预发布渠道与引擎／预编译词典独立更新 |
 | [语义排序](context-ranking.md) | 默认关闭的 E5、上下文处理、重排规则与验证范围 |

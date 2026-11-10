@@ -4,6 +4,10 @@
 
 Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划](docs/0.0.4-development-plan.md)。
 
+- 新增 [#45](https://github.com/PantingEYEs/IPA_Board/issues/45) 地球拼音：Engine Management 的中文转换项可选择朙月／地球拼音并保存，已有默认仍为朙月。地球支持 `- / < \` 四声、可省略声调及单引号分音；`; , .` 替代调号单独启用，默认关闭。切换时保留预编辑原文与光标，拒绝旧查询和旧候选点击。地球与注音共用带调词典，独立于朙月资源与会话；单方案故障不自动切回朙月，不阻断其他方案。操作与边界见[地球拼音说明](docs/terra-pinyin.md)。
+
+- #45 验证：245 项 JVM、61 项工具测试、编译、Lint、95 项资源哈希及 E5 重组校验通过。API 35／x86_64 模拟器专项首轮 75/76 通过；修正旧替代文字用例的初始化前提后，仅复验该类 4/4 通过，76 项不同用例均已验证。两轮软件与私有数据恢复校验成功并删除备份；维护者确认预览版实测功能正常。未重复全量设备测试，其他 API／ABI 的自动回归与签名 release 未验证，详见[测试记录](docs/testing.md#2026-11-10-地球拼音45)。
+
 - 新增 [#36](https://github.com/PantingEYEs/IPA_Board/issues/36) 页组文件夹导入／导出：Group Settings 可保存整组页面、外观、顺序和选中页，导入前确认并在重名时创建独立副本。初始化复用相同格式和导入逻辑，预设更新为维护者提供的 Default、IPA、Uncommon 三组共 15 页；升级不覆盖已有配置，已删除的预设不补回。详见[文件夹格式](docs/page-group-transfer.md)。
 
 - 新增 **Shortcut Management → Import configuration**：读取版本化 Shortcut 导出文件并显示类别与数量，确认后整份替换文件包含的 Shift／Ctrl 映射、多功能栏绑定和替代文字规则，缺少类别及其他设置保持不变。严格校验版本、功能标识、数据结构和长度；取消不导入，保存失败尝试恢复原值并区分恢复失败。保留完整文本、规则顺序与重复内容，不执行绑定；详见[导入与导出说明](docs/shortcut-export.md)。

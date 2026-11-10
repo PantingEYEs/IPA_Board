@@ -54,18 +54,30 @@ abstract class EngineService : Service() {
                     else engine?.let {
                         runtimeReporter.update(EngineRuntimeState.BUSY)
                         AppDiagnostics.atStage(component, DiagnosticStage.QUERY) {
-                        it.configure(policy)
-                        val before = data.getString("beforeCursor").orEmpty().takeLast(256)
-                        val after = data.getString("afterCursor").orEmpty().take(256)
-                        if (policy.enabled(EngineFeature.SEGMENTATION))
-                            MixedCompositionCandidates.query(it, raw, before, after, supportsPrediction)
-                        else if (raw.length <= 64 && it.acceptsInput(raw))
-                            it.query(raw, before, after)
-                        else emptyList()
-                    } } ?: emptyList()
+                            try {
+                                it.configure(policy)
+                                val before = data.getString("beforeCursor").orEmpty().takeLast(256)
+                                val after = data.getString("afterCursor").orEmpty().take(256)
+                                if (policy.enabled(EngineFeature.SEGMENTATION))
+                                    MixedCompositionCandidates.query(it, raw, before, after, supportsPrediction)
+                                else if ((raw.isEmpty() && supportsPrediction) ||
+                                    (raw.length <= 64 && it.acceptsInput(raw)))
+                                    it.query(raw, before, after)
+                                else emptyList()
+                            } catch (error: RimeSchemaUnavailableException) {
+                                // Handle this before atStage wraps exceptions. Only this request's
+                                // schema is unavailable; the process-wide circuit breaker stays clear.
+                                result.putString("error", error.issue.code)
+                                runtimeReporter.update(EngineRuntimeState.UNAVAILABLE)
+                                emptyList()
+                            }
+                        }
+                    } ?: emptyList()
                 }
                 timing?.mark("queryEnd")
-                if (engine != null && failure == null) runtimeReporter.update(EngineRuntimeState.READY)
+                if (engine != null && failure == null && !result.containsKey("error")) {
+                    runtimeReporter.update(EngineRuntimeState.READY)
+                }
                 timing?.mark("serializeStart")
                 result.putStringArrayList("text", ArrayList(candidates.map { it.text }))
                 result.putStringArrayList("language", ArrayList(candidates.map { it.language }))

@@ -110,9 +110,9 @@ IPA 资源管理页通过 GitHub Releases 及顶层 `client.json` 检查、独�
 
 ### 拼音纠错的归属与选型
 
-`luna_pinyin.schema.yaml` 的 `speller/algebra` 引用 `pinyin:/spelling_correction` 和 `pinyin:/key_correction`；规则定义在 `pinyin.yaml`，与简拼一起参与 Rime 的拼音解码。它们不是独立库、服务或模型。规则可通过修改方案并重新部署调整，“固化在 Rime 中”不表示 Rime 无法配置它们。当前应用未实现规则切换及重新部署。
+朙月拼音的 `luna_pinyin.schema.yaml` 中，`speller/algebra` 引用 `pinyin:/spelling_correction` 和 `pinyin:/key_correction`；规则定义在 `pinyin.yaml`，与简拼一起参与 Rime 的拼音解码。地球拼音使用自己的 `terra_pinyin.schema.yaml` 拼写规则，不继承朙月拼音规则。这些规则不是独立库、服务或模型，可通过修改方案并重新部署调整；“固化在 Rime 中”不表示 Rime 无法配置它们。当前应用支持[选择拼音方案](terra-pinyin.md)，未提供各项纠错规则的独立开关或编辑入口。
 
-Engine Management 删除重复的拼音纠错条目及 `Pinyin Correction Engines` 类目，在中文 Rime 条目中说明内置能力；保留现有纠错规则与输入行为。
+Engine Management 删除重复的拼音纠错条目及 `Pinyin Correction Engines` 类目，在中文 Rime 条目中说明纠错由所选方案定义；朙月拼音继续保留既有规则。
 
 开源方案中，[ibus-libpinyin](https://github.com/libpinyin/ibus-libpinyin/wiki/ibus-libpinyin-features) 提供常见拼音错拼、模糊音和分段支持；[libime](https://github.com/fcitx/libime/blob/master/src/libime/pinyin/pinyincorrectionprofile.h) 提供独立的纠错配置模块，但属于完整拼音引擎的一部分，并不是开箱即用、可替换任意引擎的纠错服务。[KNPTC](https://arxiv.org/abs/1805.00741) 等研究探索神经拼音纠错，但论文不能直接等同于成熟的 Android 离线可接入引擎。
 
@@ -121,7 +121,7 @@ Engine Management 删除重复的拼音纠错条目及 `Pinyin Correction Engine
 
 ### 注音转换
 
-中文进程按原始输入字符选择 `luna_pinyin` 或 `bopomofo` session。`ZhuyinInput` 把 Unicode 基础注音符号和五声映射到官方大千式按键；输入框和预输入区仍显示原始符号。轻声可使用前置点，编码时转成 Rime 的音节后置键。不是先将注音转换成无调拼音：注音方案使用带声调的 Terra Pinyin 字典，保留声调筛选，允许省略声调及声母简写。
+中文进程按原始输入字符选择注音的 `bopomofo` session，或设置中所选拼音方案的 session；各会话按需创建。`ZhuyinInput` 把 Unicode 基础注音符号和五声映射到官方大千式按键；输入框和预输入区仍显示原始符号。轻声可使用前置点，编码时转成 Rime 的音节后置键。不是先将注音转换成无调拼音：注音方案使用带声调的 Terra Pinyin 共享字典，保留声调筛选，允许省略声调及声母简写，不依赖朙月拼音资源或会话。地球拼音的设置、资源独立性及故障边界见[地球拼音说明](terra-pinyin.md)。
 
 方案与拼写规则来自 [rime-bopomofo revision 6085c9a38a4a728047862b33d67eee18aa86f3b9](https://github.com/rime/rime-bopomofo/tree/6085c9a38a4a728047862b33d67eee18aa86f3b9)，字典来自 [rime-terra-pinyin revision 723e51bc266cf9464530c1ddedb856aa18e3da34](https://github.com/rime/rime-terra-pinyin/tree/723e51bc266cf9464530c1ddedb856aa18e3da34)。官方文件不改写，通过 `bopomofo.custom.yaml` 禁用学习与补全，并使用共享 OpenCC 设置控制简体候选。查询 session 保留原有 `_auto_commit` 设置；批量枚举不会选词或提交，应用仍只在用户点击候选后上屏。桥接检查原生保留的注音编码与原始映射一致，防止忽略非法前置声调后误替换整个输入。许可证与 CC-CEDICT 原始归属随资源保存。
 

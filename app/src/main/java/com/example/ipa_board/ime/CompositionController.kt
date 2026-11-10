@@ -162,6 +162,15 @@ class CompositionController(
     fun refreshOutput() {
         if (active && raw.isNotEmpty() && validateDeferredTarget()) refreshComposition()
     }
+    /** A changed interpretation invalidates even equal-looking old candidates, without editor writes. */
+    internal fun invalidateCandidatesAndRequery(): Boolean {
+        if (!active) return false
+        revision++
+        candidates = emptyList()
+        request()
+        changed()
+        return true
+    }
     fun acceptResults(id: Long, result: List<Candidate>) {
         if (active && id == revision) {
             candidates = result.filter { if (raw.isEmpty()) it.kind == CandidateKind.PREDICTION else it.kind != CandidateKind.PREDICTION }
