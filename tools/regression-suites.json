@@ -72,7 +72,10 @@
         "com.example.ipa_board.ClipboardStartupSyncTest",
         "com.example.ipa_board.ClipboardManagementTest",
         "com.example.ipa_board.PreeditModeBindingTest",
-        "com.example.ipa_board.ShortcutExportTest"
+        "com.example.ipa_board.ShortcutExportTest",
+        "com.example.ipa_board.ShortcutImportTest",
+        "com.example.ipa_board.ShortcutImportUiTest",
+        "com.example.ipa_board.ShortcutDefaultsTest"
       ]
     },
     "e2e": {
@@ -159,7 +162,10 @@
         "com.example.ipa_board.PreeditModeBindingTest",
         "com.example.ipa_board.PreeditModeImeTest",
         "com.example.ipa_board.InlineEditorCompositionTest",
-        "com.example.ipa_board.ShortcutExportTest"
+        "com.example.ipa_board.ShortcutExportTest",
+        "com.example.ipa_board.ShortcutImportTest",
+        "com.example.ipa_board.ShortcutImportUiTest",
+        "com.example.ipa_board.ShortcutDefaultsTest"
       ]
     },
     "ipa": {
@@ -381,6 +387,18 @@
         "com.example.ipa_board.MultifunctionBarTest",
         "com.example.ipa_board.ReplacementTextTest",
         "com.example.ipa_board.PreeditModeBindingTest"
+      ]
+    },
+    "shortcut-import": {
+      "classes": [
+        "com.example.ipa_board.ShortcutDefaultsTest",
+        "com.example.ipa_board.ShortcutImportTest",
+        "com.example.ipa_board.ShortcutImportUiTest",
+        "com.example.ipa_board.ShortcutExportTest",
+        "com.example.ipa_board.MultifunctionBarTest",
+        "com.example.ipa_board.ReplacementTextTest",
+        "com.example.ipa_board.PreeditModeBindingTest",
+        "com.example.ipa_board.KeyboardInputControllerTest"
       ]
     }
   }

@@ -4,6 +4,24 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class KeyboardMappingTest {
+    @Test fun undoAndRedoCanBeBoundToTapOrHoldWithoutLosingIndependentMappings() {
+        val original = KeyboardLayout("History bindings", listOf(RowLayout(1f, listOf(
+            KeySlot(2f, "ɑ", longPressText = "β", swipeLeftText = "‹")))))
+        for ((wire, label) in listOf("undo" to "撤销", "redo" to "重做")) {
+            val action = KeyAction.fromWireValue(wire)
+            val tap = original.withKeyMapping(0, 0, "", action).rows.single().slots.single()
+            assertEquals(label, tap.displayText(shiftEnabled = true))
+            assertEquals(LongPressItem(text = "β"), tap.defaultLongPressItem)
+            assertEquals(LongPressItem(text = "‹"), tap.effectiveSwipeLeftItem)
+            val hold = original.withKeyMapping(0, 0, "ɑ", KeyAction.TEXT, longPressAction = action,
+                longPressText = "").rows.single().slots.single()
+            assertEquals("ɑ", hold.displayText())
+            assertEquals(LongPressItem(action = action), hold.defaultLongPressItem)
+            assertEquals("ɑ", original.rows.single().slots.single().text)
+            assertFalse(action.repeatsWhileHeld)
+        }
+    }
+
     @Test fun preeditModeCanReplaceOneGestureWithoutLosingOtherMappings() {
         val original = KeyboardLayout("Preedit binding", listOf(RowLayout(1f, listOf(
             KeySlot(2f, "ɑ😀", swipeLeftText = "‹", swipeRightAction = KeyAction.ENTER),

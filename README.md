@@ -40,7 +40,7 @@ Shift 第一次点击启用临时大写（`Shift •`），再次点击锁定大
 
 布局导出为 `version: 4`，只包含 `layout`，不包含页组外观、剪贴板或应用全部设置。旧版带 `appearance` 的配置仍可导入，外观应用到当前组。配置文件上限 1 MB。
 
-首次安装的预置内容来自 [键盘配置](app/src/main/assets/initialization/keyboards) 和 [颜文字配置](app/src/main/assets/initialization/kaomoji)，本版新增 [IPA 键盘页](app/src/main/assets/initialization/keyboards/IPA.json)，并刷新其他键盘与颜文字配置。更新应用不会重新初始化或覆盖已有用户配置，因此已有安装不会自动新增 IPA 页；可下载所需 JSON 后通过布局导入使用。IPA 预置仅绑定 IPA 引擎，其余功能关闭，可在 Choose Engines 中调整。当前不提供增删行列的布局编辑器。
+首次安装的预置内容来自 [键盘配置](app/src/main/assets/initialization/keyboards)、[颜文字配置](app/src/main/assets/initialization/kaomoji) 和 [Shortcut 配置](app/src/main/assets/initialization/shortcuts/default.json)。Shortcut 默认文件仅包含 Ctrl+Z 撤销、Ctrl+Y 重做、Ctrl+X 剪切、Ctrl+C 复制、Ctrl+V 粘贴和 Ctrl+A 全选，初始化复用导入功能载入一次。本版新增 [IPA 键盘页](app/src/main/assets/initialization/keyboards/IPA.json)，并刷新其他键盘与颜文字配置。更新应用不会重新初始化或覆盖已有用户配置，因此已有安装不会自动新增 IPA 页或默认 Shortcut；可下载所需 JSON 后通过对应导入入口使用。IPA 预置仅绑定 IPA 引擎，其余功能关闭，可在 Choose Engines 中调整。当前不提供增删行列的布局编辑器。
 
 ## 输入与候选
 
@@ -69,7 +69,7 @@ Shift 第一次点击启用临时大写（`Shift •`），再次点击锁定大
 
 在 **Shortcut Management** 点击多功能栏预览中的入口，可分别替换六个位置的功能或文本，保存后立即更新预览和输入法；取消不修改配置。预览与输入法共用布局，status 区及候选栏保持专用。支持全部现有功能，Continuous Delete 按住重复删除；文本可选择输入行为，长标签省略显示但不截断实际输入。此处仅配置单个绑定，不提供长按、滑动或 Popup 编辑。
 
-同页 **Export configuration** 可将已保存的 Shift／Ctrl 快捷键、多功能栏绑定和替代文字规则导出为一个版本化 JSON 文件，完整保留文字、输入行为及规则顺序和重复项。取消或失败不修改当前配置；本阶段仅提供导出。操作和格式见 [Shortcut 配置导出](docs/shortcut-export.md)。
+同页 **Export configuration** 可将已保存的 Shift／Ctrl 快捷键、多功能栏绑定和替代文字规则导出为一个版本化 JSON 文件，完整保留文字、输入行为及规则顺序和重复项。**Import configuration** 读取并校验文件，显示类别和数量，确认后整份替换文件包含的类别；缺少的类别及其他设置保留。取消不会导入，不支持或损坏的文件会明确拒绝。操作和格式见 [Shortcut 配置导入与导出](docs/shortcut-export.md)。
 
 **预编辑模式** 可绑定到任意按键的短按、长按、滑动、Popup、Shift/Ctrl 快捷键或多功能栏。默认内联；切为非内联后，原文和光标显示在紧贴键盘左侧和整体上沿的紧凑直角浮窗内，背景与文字跟随当前键盘配色，无描边、阴影或额外间隔，不增加键盘高度；文字采用 16sp，压缩上下留白且不预留固定最小宽度；短文本按内容扩宽，达到可用宽度后横向滚动跟随光标。选词、按 Enter 或点击浮窗才写入输入框。再次按绑定入口切回内联，所选模式在重启后保留，不覆盖已有布局绑定。
 

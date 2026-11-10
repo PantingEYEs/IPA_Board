@@ -54,6 +54,117 @@ class KeyboardInputControllerTest {
         }
     }
 
+    @Test fun undoAndRedoUseTheEditorsOwnActionsForDirectAndConfiguredCtrlKeys() = withRecordingConnection { controller, connection ->
+        controller.ctrlShortcuts = mapOf("z" to KeyAction.UNDO, "y" to KeyAction.REDO)
+        for ((action, letter, contextAction) in listOf(Triple(KeyAction.UNDO, "Z", R.id.undo), Triple(KeyAction.REDO, "Y", R.id.redo))) {
+            connection.contextActions.clear()
+            assertTrue(controller.handle(key(action), connection, null))
+            assertEquals(listOf(contextAction), connection.contextActions)
+            assertTrue(connection.events.isEmpty())
+            controller.handle(key(KeyAction.SHIFT), connection, null)
+            controller.handle(key(KeyAction.CTRL), connection, null)
+            assertTrue(controller.handle(text(letter), connection, null))
+            assertEquals(listOf(contextAction, contextAction), connection.contextActions)
+            assertTrue(connection.events.isEmpty())
+            assertTrue(connection.committed.isEmpty())
+            assertFalse(controller.ctrlEnabled)
+            assertEquals(ShiftState.OFF, controller.shiftState)
+        }
+    }
+
+    @Test fun historyFallbackSendsOneExactCtrlPairWithoutLettingShiftChangeTheCommand() = withRecordingConnection { controller, connection ->
+        connection.acceptContextActions = false
+        controller.ctrlShortcuts = mapOf("z" to KeyAction.UNDO, "y" to KeyAction.REDO)
+        controller.shiftShortcuts = controller.ctrlShortcuts
+        for ((action, letter, code) in listOf(Triple(KeyAction.UNDO, "z", KeyEvent.KEYCODE_Z), Triple(KeyAction.REDO, "y", KeyEvent.KEYCODE_Y))) {
+            val contextAction = if (action == KeyAction.UNDO) R.id.undo else R.id.redo
+            for (path in listOf("direct", "ctrl", "shift", "execute")) {
+                controller.reset()
+                connection.contextActions.clear()
+                connection.events.clear()
+                controller.handle(key(KeyAction.SHIFT), connection, null)
+                val handled = when (path) {
+                    "direct" -> {
+                        controller.handle(key(KeyAction.CTRL), connection, null)
+                        controller.handle(key(action), connection, null)
+                    }
+                    "ctrl" -> {
+                        controller.handle(key(KeyAction.CTRL), connection, null)
+                        controller.handle(text(letter), connection, null)
+                    }
+                    "shift" -> controller.handle(text(letter), connection, null)
+                    else -> controller.executeAction(action, connection, null,
+                        KeyEvent.META_CTRL_ON or KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON)
+                }
+                assertTrue("$action $path", handled)
+                assertEquals(listOf(contextAction), connection.contextActions)
+                assertKeyPair(connection.events, code, KeyEvent.META_CTRL_ON)
+                assertFalse(controller.ctrlEnabled)
+                assertEquals(if (path == "ctrl" || path == "shift") ShiftState.OFF else ShiftState.SINGLE, controller.shiftState)
+            }
+        }
+        assertTrue(connection.committed.isEmpty())
+        assertTrue(connection.codePointDeletions.isEmpty())
+        assertTrue(connection.surroundingDeletions.isEmpty())
+    }
+
+    @Test fun rejectedAndDisconnectedHistoryActionsConsumeCtrlWithoutRepeatingOrCommittingText() = withRecordingConnection { controller, connection ->
+        connection.acceptContextActions = false
+        connection.acceptEvents = false
+        controller.ctrlShortcuts = mapOf("z" to KeyAction.UNDO, "y" to KeyAction.REDO)
+        for ((action, letter, code) in listOf(Triple(KeyAction.UNDO, "z", KeyEvent.KEYCODE_Z), Triple(KeyAction.REDO, "y", KeyEvent.KEYCODE_Y))) {
+            val contextAction = if (action == KeyAction.UNDO) R.id.undo else R.id.redo
+            for (slot in listOf(key(action), text(letter))) {
+                controller.reset()
+                connection.events.clear()
+                connection.contextActions.clear()
+                controller.handle(key(KeyAction.SHIFT), connection, null)
+                controller.handle(key(KeyAction.CTRL), connection, null)
+                assertFalse(controller.handle(slot, connection, null))
+                assertEquals(listOf(contextAction), connection.contextActions)
+                assertKeyPair(connection.events, code, KeyEvent.META_CTRL_ON)
+                assertFalse(controller.ctrlEnabled)
+                assertEquals(ShiftState.SINGLE, controller.shiftState)
+                connection.events.clear()
+                connection.contextActions.clear()
+                controller.handle(key(KeyAction.CTRL), null, null)
+                assertFalse(controller.handle(slot, null, null))
+                assertFalse(controller.ctrlEnabled)
+                assertEquals(ShiftState.SINGLE, controller.shiftState)
+                assertTrue(connection.events.isEmpty())
+                assertTrue(connection.contextActions.isEmpty())
+            }
+        }
+        assertTrue(connection.committed.isEmpty())
+    }
+
+    @Test fun undoAndRedoRestoreATestOwnedEditorsNativeHistory() {
+        instrumentation.runOnMainSync {
+            val editor = EditText(instrumentation.targetContext).apply {
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                setText("前後")
+                setSelection(1)
+            }
+            val info = EditorInfo()
+            val connection = requireNotNull(editor.onCreateInputConnection(info))
+            val controller = KeyboardInputController().apply {
+                ctrlShortcuts = mapOf("z" to KeyAction.UNDO, "y" to KeyAction.REDO)
+            }
+            assertTrue(connection.commitText("合成文本", 1))
+            assertEquals("前合成文本後", editor.text.toString())
+            controller.handle(key(KeyAction.CTRL), connection, info)
+            assertTrue(controller.handle(text("z"), connection, info))
+            assertEquals("前後", editor.text.toString())
+            controller.handle(key(KeyAction.CTRL), connection, info)
+            assertTrue(controller.handle(text("y"), connection, info))
+            assertEquals("前合成文本後", editor.text.toString())
+            assertTrue(controller.handle(key(KeyAction.UNDO), connection, info))
+            assertEquals("前後", editor.text.toString())
+            assertTrue(controller.handle(key(KeyAction.REDO), connection, info))
+            assertEquals("前合成文本後", editor.text.toString())
+        }
+    }
+
     @Test fun singleShiftCapitalizesOneKeyAndTurnsOff() = withRecordingConnection { controller, connection ->
         val previousLocale = Locale.getDefault()
         try {

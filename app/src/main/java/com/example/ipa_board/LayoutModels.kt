@@ -309,6 +309,8 @@ enum class KeyAction(val wireValue: String, val title: String, val keyLabel: Str
     PAGES("pages", "Keyboard Pages", "⊞", "Open the keyboard page picker panel to switch active layouts."),
     PREV_PAGE("prev_page", "Previous Keyboard Page", "⊞‹", "Switch to the previous keyboard page."),
     NEXT_PAGE("next_page", "Next Keyboard Page", "⊞›", "Switch to the next keyboard page."),
+    UNDO("undo", "Undo", "撤销", "Undo the last edit in the current input field. Support depends on the receiving app."),
+    REDO("redo", "Redo", "重做", "Redo the last undone edit in the current input field. Support depends on the receiving app."),
     SELECT_ALL("select_all", "Select All", "全选", "Select all text in current input field."),
     COPY("copy", "Copy", "复制", "Copy current selected text."),
     CUT("cut", "Cut", "剪切", "Cut current selected text."),

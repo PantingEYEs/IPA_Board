@@ -159,6 +159,7 @@ object LayoutFileManager {
 
     @Synchronized
     fun initDefaultLayout(context: Context) {
+        com.example.ipa_board.shortcuts.ShortcutDefaults.initialize(context)
         PageGroupManager.initialize(context)
         val settings = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
         // Retain the old initialization marker so upgrades do not reseed existing installations.

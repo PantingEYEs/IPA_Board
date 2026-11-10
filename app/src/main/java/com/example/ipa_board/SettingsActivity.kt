@@ -22,6 +22,7 @@ class SettingsActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.example.ipa_board.shortcuts.ShortcutDefaults.initialize(this)
         setContentView(R.layout.activity_settings)
 
         val entrySymbols = mapOf(
