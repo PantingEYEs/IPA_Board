@@ -91,4 +91,11 @@
     <string name="choose_engines">Choose Engines</string>
     <string name="clear_engine_binding">Clear Binding</string>
     <string name="page_engines_storage_failed">Unable to save or apply page engine settings</string>
+    <string name="shortcut_export">Export configuration</string>
+    <string name="shortcut_export_help">Save shortcuts, toolbar bindings and replacement rules to a file.</string>
+    <string name="shortcut_export_saved">Shortcut configuration exported.</string>
+    <string name="shortcut_export_cancelled">Export cancelled.</string>
+    <string name="shortcut_export_failed">Could not finish saving the file. Your configuration has not changed; please try again.</string>
+    <string name="shortcut_export_read_failed">Could not read the saved Shortcut configuration. Nothing was changed.</string>
+    <string name="shortcut_export_destination_failed">Could not open the file chooser. Your configuration has not changed.</string>
 </resources>

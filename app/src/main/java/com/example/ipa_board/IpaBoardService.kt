@@ -4,6 +4,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.inputmethodservice.InputMethodService
@@ -12,6 +13,7 @@ import android.os.Looper
 import android.view.Gravity
 import android.text.InputType
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
@@ -231,7 +233,8 @@ class IpaBoardService : InputMethodService() {
         composition = CompositionController({ currentInputConnection }, { id, raw ->
             engines.query(id, if (directOnly) "" else raw, if (directOnly) "" else composition.beforeCursor,
                 if (directOnly) "" else composition.afterCursor)
-        }, { refreshCandidates() }, contextAllowed = { !directOnly }, transformOutput = ::transformOutput)
+        }, { refreshCandidates() }, contextAllowed = { !directOnly }, transformOutput = ::transformOutput,
+            initialInlineEnabled = prefs.getBoolean(SettingsConstants.KEY_INLINE_PREEDIT_ENABLED, true))
         engines = EngineCoordinator(this) { id, candidates, state ->
             engineStatus = state
             composition.acceptResults(id, candidates)
@@ -254,6 +257,7 @@ class IpaBoardService : InputMethodService() {
             }
             view.onRemoteKeyboardToggle = { toggleRemoteKeyboard() }
             view.onWidthSwapToggle = { toggleWidthSwap() }
+            view.onPreeditModeToggle = { togglePreeditMode() }
             view.onCandidate = { candidate, generation -> if (composition.select(candidate, generation)) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
             view.onLiteral = { if (composition.literal()) view.showPanel(ImeChromeView.Panel.KEYBOARD) }
             view.onPanel = { panel ->
@@ -288,6 +292,13 @@ class IpaBoardService : InputMethodService() {
         widthSwapEnabled = !widthSwapEnabled
         chrome?.setWidthSwapEnabled(widthSwapEnabled)
         composition.refreshOutput()
+    }
+    private fun togglePreeditMode() {
+        if (!composition.setInlineEnabled(!composition.inlineEnabled)) return
+        prefs.edit().putBoolean(SettingsConstants.KEY_INLINE_PREEDIT_ENABLED, composition.inlineEnabled).apply()
+        chrome?.setInlinePreeditEnabled(composition.inlineEnabled)
+        refreshCandidates()
+        Toast.makeText(this, if (composition.inlineEnabled) "预编辑：内联" else "预编辑：非内联", Toast.LENGTH_SHORT).show()
     }
     private fun toggleRemoteKeyboard() {
         val result = remoteKeyboardMode.toggle()
@@ -329,7 +340,10 @@ class IpaBoardService : InputMethodService() {
             CalculatorCandidates.merge(raw, calculatorEnabled(), originals, calculatorSession), rules)
 
         composition.updateCandidates(displayCandidates)
-        chrome?.render(raw, displayCandidates, baseStatus, composition.revision)
+        chrome?.setInlinePreeditEnabled(composition.inlineEnabled)
+        chrome?.render(raw, displayCandidates, baseStatus, composition.revision,
+            preeditDisplay = transformOutput(raw),
+            preeditCaret = transformOutput(raw.take(composition.caret.coerceIn(0, raw.length))).length)
         updateQuickPasteStatus()
     }
 
@@ -361,7 +375,8 @@ class IpaBoardService : InputMethodService() {
         view.setPointerColors(pathColor, axisColor, crosshairColor, appearance.usePointerDifferenceBlend)
         view.setRemoteKeyboardEnabled(remoteKeyboardMode.active)
         view.setWidthSwapEnabled(widthSwapEnabled)
-        view.keyboardHost.setBackgroundColor(Color.parseColor(appearance.backgroundColor))
+        view.setInlinePreeditEnabled(composition.inlineEnabled)
+        view.setKeyboardColors(Color.parseColor(appearance.backgroundColor), Color.parseColor(appearance.symbolColor))
         val layout = LayoutFileManager.activeLayout(this)
         val popupBgColor = try { Color.parseColor(appearance.popupBackgroundColor) } catch (_: Exception) { Color.WHITE }
         val popupSymbolColor = try { Color.parseColor(appearance.popupSymbolColor) } catch (_: Exception) { Color.BLACK }
@@ -428,6 +443,10 @@ class IpaBoardService : InputMethodService() {
                 toggleWidthSwap()
                 return
             }
+            KeyAction.PREEDIT_MODE -> {
+                togglePreeditMode()
+                return
+            }
             KeyAction.CALCULATOR -> {
                 toggleCalculator()
                 return
@@ -481,6 +500,7 @@ class IpaBoardService : InputMethodService() {
                 KeyAction.EMOJI -> { consumeModifiers(); chrome?.showPanel(ImeChromeView.Panel.EMOJI); return }
                 KeyAction.KAOMOJI -> { consumeModifiers(); chrome?.showPanel(if (chrome?.panel == ImeChromeView.Panel.KAOMOJI) ImeChromeView.Panel.KEYBOARD else ImeChromeView.Panel.KAOMOJI); return }
                 KeyAction.WIDTH_SWAP -> { consumeModifiers(); toggleWidthSwap(); return }
+                KeyAction.PREEDIT_MODE -> { consumeModifiers(); togglePreeditMode(); return }
                 KeyAction.CALCULATOR -> {
                     consumeModifiers()
                     toggleCalculator()
@@ -582,7 +602,7 @@ class IpaBoardService : InputMethodService() {
 
     private fun showEmojiCategoryMenu(picker: EmojiPickerView) {
         val view = chrome ?: return
-        showSingleChoicePopup(view.statusContainer, picker.categories, picker.currentCategoryIndex) { index ->
+        showSingleChoicePopup(view.statusContainer, view.status, picker.categories, picker.currentCategoryIndex) { index ->
             picker.scrollToCategory(index)
         }
     }
@@ -594,17 +614,18 @@ class IpaBoardService : InputMethodService() {
                 // Keep panel open so user can input multiple kaomojis
             }
         }
-        val statusView = KaomojiStatusView(this, panelView) {
-            showKaomojiFilterPopup(panelView, view.statusContainer)
+        val statusView = KaomojiStatusView(this, panelView) { title ->
+            showKaomojiFilterPopup(panelView, view.statusContainer, title)
         }
         view.setStatusCustomView(statusView)
         view.onStatusClick = {
-            showKaomojiFilterPopup(panelView, view.statusContainer)
+            showKaomojiFilterPopup(panelView, view.statusContainer, statusView.tvTitle)
         }
         view.showContent("顔文字", panelView)
     }
 
-    private fun showKaomojiFilterPopup(panelView: KaomojiPanelView, anchorView: View) {
+    private fun showKaomojiFilterPopup(panelView: KaomojiPanelView, anchorView: View, toggleTarget: View) {
+        if (closeImeMenuIfShowing()) return
         val context = this
         val density = resources.displayMetrics.density
         fun dp(v: Int) = (v * density).toInt()
@@ -843,7 +864,7 @@ class IpaBoardService : InputMethodService() {
             exitTransition = android.transition.Slide(Gravity.TOP)
         }
 
-        showImeMenu(popup, anchorView)
+        showImeMenu(popup, anchorView, toggleTarget)
     }
 
 
@@ -927,7 +948,7 @@ class IpaBoardService : InputMethodService() {
             val state = PageGroupManager.state(this)
             val items = state.groups.mapIndexed { index, item -> "$index · ${item.name}" }
             val selectedIndex = state.groups.indexOfFirst { it.id == state.activeGroupId }
-            showSingleChoicePopup(view.statusContainer, items, selectedIndex) { index ->
+            showSingleChoicePopup(view.statusContainer, view.status, items, selectedIndex) { index ->
                 PageGroupManager.select(this@IpaBoardService, state.groups[index].id)
                 applySettings()
                 showPages()
@@ -945,6 +966,7 @@ class IpaBoardService : InputMethodService() {
             variation in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)
         if (directOnly) engines.suspendSemantic()
         composition.start()
+        composition.setInlineEnabled(prefs.getBoolean(SettingsConstants.KEY_INLINE_PREEDIT_ENABLED, true))
         chrome?.showPanel(ImeChromeView.Panel.KEYBOARD)
         refreshCandidates()
     }
@@ -953,8 +975,9 @@ class IpaBoardService : InputMethodService() {
         calculatorSession.reset()
         AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT_VIEW)
         clipboardObservation.setInputViewShown(true)
-        composition.start()
+        composition.startInputView()
         applySettings()
+        chrome?.setInputViewActive(true)
         syncClipboardOnInputViewStart()
     }
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
@@ -963,6 +986,10 @@ class IpaBoardService : InputMethodService() {
         composition.externalSelection(newSelStart, newSelEnd, candidatesEnd)
     }
     override fun onEvaluateFullscreenMode() = false
+    override fun onWindowHidden() {
+        chrome?.setInputViewActive(false)
+        super.onWindowHidden()
+    }
     private fun updatePanelBack(open: Boolean) {
         if (open == panelBackRegistered) return
         if (open) window.onBackInvokedDispatcher.registerOnBackInvokedCallback(
@@ -987,6 +1014,7 @@ class IpaBoardService : InputMethodService() {
         return super.onKeyUp(keyCode, event)
     }
     override fun onFinishInputView(finishingInput: Boolean) {
+        chrome?.setInputViewActive(false)
         calculatorSession.reset()
         menuPopup?.dismiss()
         closeDashboardObservation()
@@ -997,11 +1025,13 @@ class IpaBoardService : InputMethodService() {
         super.onFinishInputView(finishingInput)
     }
     override fun onFinishInput() {
+        chrome?.setInputViewActive(false)
         calculatorSession.reset()
         AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.FINISH_INPUT)
         composition.finish(); engines.suspendSemantic(); inputController.reset(); super.onFinishInput()
     }
     override fun onDestroy() {
+        chrome?.setInputViewActive(false)
         calculatorSession.reset()
         menuPopup?.dismiss()
         closeDashboardObservation()
@@ -1015,7 +1045,8 @@ class IpaBoardService : InputMethodService() {
         super.onDestroy()
     }
 
-    private fun showSingleChoicePopup(anchorView: View, items: List<String>, selectedIndex: Int, onItemSelected: (Int) -> Unit) {
+    private fun showSingleChoicePopup(anchorView: View, toggleTarget: View, items: List<String>, selectedIndex: Int, onItemSelected: (Int) -> Unit) {
+        if (closeImeMenuIfShowing()) return
         val context = this
         val density = resources.displayMetrics.density
         fun dp(v: Int) = (v * density).toInt()
@@ -1076,14 +1107,37 @@ class IpaBoardService : InputMethodService() {
             enterTransition = android.transition.Slide(Gravity.TOP)
             exitTransition = android.transition.Slide(Gravity.TOP)
         }
-        showImeMenu(popup, anchorView)
+        showImeMenu(popup, anchorView, toggleTarget)
     }
 
-    private fun showImeMenu(popup: PopupWindow, anchor: View) {
+    private fun closeImeMenuIfShowing(): Boolean {
+        val popup = menuPopup?.takeIf { it.isShowing } ?: return false
+        popup.dismiss()
+        return true
+    }
+
+    private fun showImeMenu(popup: PopupWindow, anchor: View, toggleTarget: View) {
         menuPopup?.dismiss()
         // A focusable IME popup becomes a new input target and restarts the editor session.
         // Keep input focus with the editor; the panel's Back handler dismisses this menu first.
         popup.inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
+        val visibleBounds = Rect()
+        val location = IntArray(2)
+        popup.setTouchInterceptor { _, event ->
+            // Android sends OUTSIDE before the underlying title receives this same tap.
+            // Leave the popup open until that title's click can perform a close-only toggle.
+            // Other outside targets (including Kaomoji's sort button) dismiss normally.
+            if (event.actionMasked != MotionEvent.ACTION_OUTSIDE || !toggleTarget.isShown ||
+                !toggleTarget.isEnabled || !toggleTarget.isClickable ||
+                !toggleTarget.getLocalVisibleRect(visibleBounds)) {
+                false
+            } else {
+                toggleTarget.getLocationOnScreen(location)
+                visibleBounds.offset(location[0], location[1])
+                event.rawX >= visibleBounds.left && event.rawX < visibleBounds.right &&
+                    event.rawY >= visibleBounds.top && event.rawY < visibleBounds.bottom
+            }
+        }
         popup.setOnDismissListener { if (menuPopup === popup) menuPopup = null }
         menuPopup = popup
         popup.showAsDropDown(anchor)

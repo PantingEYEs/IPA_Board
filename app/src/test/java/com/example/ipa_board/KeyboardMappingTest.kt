@@ -4,6 +4,28 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class KeyboardMappingTest {
+    @Test fun preeditModeCanReplaceOneGestureWithoutLosingOtherMappings() {
+        val original = KeyboardLayout("Preedit binding", listOf(RowLayout(1f, listOf(
+            KeySlot(2f, "ɑ😀", swipeLeftText = "‹", swipeRightAction = KeyAction.ENTER),
+            KeySlot(1f, "β")))))
+        val hold = original.withKeyMapping(0, 0, "ɑ😀", KeyAction.TEXT,
+            longPressAction = KeyAction.PREEDIT_MODE)
+        val key = hold.rows.single().slots.first()
+        assertEquals("ɑ😀", key.text)
+        assertEquals(LongPressItem(action = KeyAction.PREEDIT_MODE), key.defaultLongPressItem)
+        assertEquals(LongPressItem(text = "‹"), key.effectiveSwipeLeftItem)
+        assertEquals(LongPressItem(action = KeyAction.ENTER), key.effectiveSwipeRightItem)
+        assertEquals(original.rows.single().slots[1], hold.rows.single().slots[1])
+        assertFalse(original.rows.single().slots.first().hasLongPress)
+        assertFalse(KeyAction.PREEDIT_MODE.repeatsWhileHeld)
+
+        val tap = hold.withKeyMapping(0, 0, "", KeyAction.PREEDIT_MODE)
+        assertEquals(KeyAction.PREEDIT_MODE, tap.rows.single().slots.first().action)
+        assertEquals(key.defaultLongPressItem, tap.rows.single().slots.first().defaultLongPressItem)
+        assertEquals(KeyAction.TEXT, tap.cleared().rows.single().slots.first().action)
+        assertFalse(tap.cleared().rows.single().slots.first().hasLongPress)
+    }
+
     @Test fun repeatingTapBindingsDeriveAHoldWithoutOverwritingIndependentMappings() {
         for (action in listOf(KeyAction.REPEAT_BACKSPACE, KeyAction.REPEAT_LEFT, KeyAction.REPEAT_RIGHT,
             KeyAction.REPEAT_UP, KeyAction.REPEAT_DOWN)) {

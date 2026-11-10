@@ -202,14 +202,14 @@ class KaomojiPanelView(
 class KaomojiStatusView(
     context: Context,
     private val panelView: KaomojiPanelView,
-    private val onTitleClick: () -> Unit
+    private val onTitleClick: (View) -> Unit
 ) : LinearLayout(context) {
 
     val tvTitle = TextView(context).apply {
         setTextColor(Color.LTGRAY)
         textSize = 10f
         gravity = Gravity.CENTER_VERTICAL
-        setOnClickListener { onTitleClick() }
+        setOnClickListener { onTitleClick(it) }
     }
 
     private val btnSort = TextView(context).apply {

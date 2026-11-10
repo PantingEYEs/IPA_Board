@@ -33,6 +33,7 @@ class MultifunctionBarView(context: Context) : LinearLayout(context) {
     private var calculatorEnabled = false
     private var remoteKeyboardEnabled = false
     private var widthSwapEnabled = false
+    private var inlinePreeditEnabled = true
     private var shiftState = ShiftState.OFF
     private var ctrlEnabled = false
     private val buttons = MultifunctionBarSlot.entries.associateWith { slot ->
@@ -87,6 +88,11 @@ class MultifunctionBarView(context: Context) : LinearLayout(context) {
     fun setCalculatorEnabled(value: Boolean) { calculatorEnabled = value; render() }
     fun setRemoteKeyboardEnabled(value: Boolean) { remoteKeyboardEnabled = value; render() }
     fun setWidthSwapEnabled(value: Boolean) { widthSwapEnabled = value; render() }
+    fun setInlinePreeditEnabled(value: Boolean) {
+        if (inlinePreeditEnabled == value) return
+        inlinePreeditEnabled = value
+        render()
+    }
     fun setModifiers(shift: ShiftState, ctrl: Boolean) { shiftState = shift; ctrlEnabled = ctrl; render() }
 
     private fun render() {
@@ -96,6 +102,7 @@ class MultifunctionBarView(context: Context) : LinearLayout(context) {
             val active = !editing && when (action) {
                 KeyAction.REMOTE_KEYBOARD -> remoteKeyboardEnabled
                 KeyAction.WIDTH_SWAP -> widthSwapEnabled
+                KeyAction.PREEDIT_MODE -> !inlinePreeditEnabled
                 KeyAction.CALCULATOR -> calculatorEnabled
                 KeyAction.SHIFT -> shiftState != ShiftState.OFF
                 KeyAction.CTRL -> ctrlEnabled
@@ -105,6 +112,7 @@ class MultifunctionBarView(context: Context) : LinearLayout(context) {
                 action == KeyAction.SHIFT && !editing && shiftState == ShiftState.CAPS_LOCK -> context.getString(R.string.caps_lock_label) + " •"
                 action in setOf(KeyAction.SHIFT, KeyAction.CTRL) && active -> action.keyLabel + " •"
                 action == KeyAction.TEXT -> binding.asKeySlot().displayText(!editing && shiftState != ShiftState.OFF).ifEmpty { "∅" }
+                action == KeyAction.PREEDIT_MODE && !editing -> if (inlinePreeditEnabled) "内联" else "非内联"
                 else -> action.keyLabel
             }
             button.setTypeface(null, if (!editing && action == KeyAction.SHIFT && shiftState == ShiftState.CAPS_LOCK) Typeface.BOLD else Typeface.NORMAL)
@@ -113,6 +121,7 @@ class MultifunctionBarView(context: Context) : LinearLayout(context) {
             button.stateDescription = if (editing) null else when (action) {
                 KeyAction.REMOTE_KEYBOARD -> context.getString(if (active) R.string.remote_keyboard_on else R.string.remote_keyboard_off)
                 KeyAction.WIDTH_SWAP -> if (active) "开启" else "关闭"
+                KeyAction.PREEDIT_MODE -> if (inlinePreeditEnabled) "内联" else "非内联"
                 KeyAction.CALCULATOR, KeyAction.CTRL -> if (active) "On" else "Off"
                 KeyAction.SHIFT -> context.getString(when (shiftState) {
                     ShiftState.OFF -> R.string.shift_state_off

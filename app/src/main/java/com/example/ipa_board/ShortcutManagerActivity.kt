@@ -1,7 +1,8 @@
 package com.example.ipa_board
 
-import android.app.Activity
 import android.app.AlertDialog
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.text.InputFilter
 import android.view.View
@@ -17,9 +18,20 @@ import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
+import com.example.ipa_board.shortcuts.ShortcutExport
+import java.io.OutputStream
 
-class ShortcutManagerActivity : Activity() {
+class ShortcutManagerActivity : ComponentActivity() {
     private lateinit var barPreview: MultifunctionBarView
+    private lateinit var exportButton: Button
+    private lateinit var exportStatus: TextView
+    private var exportPending = false
+    internal enum class ExportOutcome { SAVED, CANCELLED, FAILED, IGNORED }
+    private val exportLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        completeShortcutExport(it.resultCode, it.data?.data)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,6 +48,11 @@ class ShortcutManagerActivity : Activity() {
         root.requestApplyInsets()
 
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener { finish() }
+        exportButton = findViewById(R.id.btn_export_shortcuts)
+        exportStatus = findViewById(R.id.shortcut_export_status)
+        exportPending = savedInstanceState?.getBoolean("shortcut_export_pending", false) ?: false
+        exportButton.isEnabled = !exportPending
+        exportButton.setOnClickListener { launchShortcutExport() }
 
         barPreview = MultifunctionBarView(this).apply {
             editing = true
@@ -58,6 +75,67 @@ class ShortcutManagerActivity : Activity() {
     override fun onResume() {
         super.onResume()
         refreshBarPreview()
+    }
+
+    /** Validate before opening a destination; export only saved settings, never editor drafts. */
+    internal fun launchShortcutExport(launch: (Intent) -> Unit = { exportLauncher.launch(it) }) {
+        if (exportPending) return
+        try {
+            ShortcutExport.capture(this)
+        } catch (_: Exception) {
+            showExportStatus(R.string.shortcut_export_read_failed)
+            return
+        }
+        exportPending = true
+        exportButton.isEnabled = false
+        exportStatus.visibility = View.GONE
+        try {
+            launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "application/json"
+                putExtra(Intent.EXTRA_TITLE, "ipa_board_shortcuts.json")
+            })
+        } catch (_: Exception) {
+            exportPending = false
+            exportButton.isEnabled = true
+            showExportStatus(R.string.shortcut_export_destination_failed)
+        }
+    }
+
+    /** The same completion path serves the picker and test-owned in-memory destinations. */
+    internal fun completeShortcutExport(resultCode: Int, uri: Uri?,
+        openOutput: (Uri) -> OutputStream? = { contentResolver.openOutputStream(it, "wt") }): ExportOutcome {
+        if (!exportPending) return ExportOutcome.IGNORED
+        exportPending = false
+        exportButton.isEnabled = true
+        if (resultCode != RESULT_OK) {
+            showExportStatus(R.string.shortcut_export_cancelled)
+            return ExportOutcome.CANCELLED
+        }
+        return try {
+            requireNotNull(uri)
+            // Read at destination confirmation so recreation needs no configuration in its Bundle.
+            val bytes = ShortcutExport.capture(this).toByteArray(Charsets.UTF_8)
+            requireNotNull(openOutput(uri)).use { output ->
+                output.write(bytes)
+                output.flush()
+            }
+            showExportStatus(R.string.shortcut_export_saved)
+            ExportOutcome.SAVED
+        } catch (_: Exception) {
+            showExportStatus(R.string.shortcut_export_failed)
+            ExportOutcome.FAILED
+        }
+    }
+
+    private fun showExportStatus(message: Int) {
+        exportStatus.setText(message)
+        exportStatus.visibility = View.VISIBLE
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("shortcut_export_pending", exportPending)
+        super.onSaveInstanceState(outState)
     }
 
     private fun refreshBarPreview() {
