@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.view.Gravity
@@ -36,6 +37,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         isHorizontalScrollBarEnabled = false
         addView(preeditText)
     }
+    private val preeditBackground = ColorDrawable(Color.BLACK)
     private val preeditPopup = PopupWindow(preeditScroll, LayoutParams.WRAP_CONTENT,
         LayoutParams.WRAP_CONTENT, false).apply {
         inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
@@ -43,12 +45,8 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         isClippingEnabled = false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) setIsLaidOutInScreen(true)
         animationStyle = 0
-        elevation = dp(3).toFloat()
-        setBackgroundDrawable(GradientDrawable().apply {
-            setColor(Color.rgb(40, 40, 40))
-            cornerRadius = dp(6).toFloat()
-            setStroke(dp(1), Color.rgb(110, 110, 110))
-        })
+        elevation = 0f
+        setBackgroundDrawable(preeditBackground)
     }
     private val preeditBounds = Rect()
     private val revealPreeditCaret = Runnable {
@@ -122,6 +120,12 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
 
     fun setKeyboardHeight(px: Int) {
         body.layoutParams = LayoutParams(-1, px)
+    }
+
+    fun setKeyboardColors(backgroundColor: Int, symbolColor: Int) {
+        keyboardHost.setBackgroundColor(backgroundColor)
+        preeditBackground.color = backgroundColor
+        preeditText.setTextColor(symbolColor)
     }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
@@ -236,7 +240,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         val screen = IntArray(2).also(::getLocationOnScreen)
         val x = (if (layoutDirection == LAYOUT_DIRECTION_RTL) screen[0] + width - popupWidth - margin
             else screen[0] + margin).coerceIn(frame.left + margin, frame.right - popupWidth - margin)
-        val y = screen[1] - popupHeight - dp(4)
+        val y = screen[1] - popupHeight
         if (y < frame.top) { dismissPreedit(); return }
         // A separate, non-focusable child window floats above the entire chrome. It never
         // participates in IME measurement, insets or ancestor scrolling (unlike a dropdown).

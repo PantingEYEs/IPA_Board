@@ -376,7 +376,7 @@ class IpaBoardService : InputMethodService() {
         view.setRemoteKeyboardEnabled(remoteKeyboardMode.active)
         view.setWidthSwapEnabled(widthSwapEnabled)
         view.setInlinePreeditEnabled(composition.inlineEnabled)
-        view.keyboardHost.setBackgroundColor(Color.parseColor(appearance.backgroundColor))
+        view.setKeyboardColors(Color.parseColor(appearance.backgroundColor), Color.parseColor(appearance.symbolColor))
         val layout = LayoutFileManager.activeLayout(this)
         val popupBgColor = try { Color.parseColor(appearance.popupBackgroundColor) } catch (_: Exception) { Color.WHITE }
         val popupSymbolColor = try { Color.parseColor(appearance.popupSymbolColor) } catch (_: Exception) { Color.BLACK }

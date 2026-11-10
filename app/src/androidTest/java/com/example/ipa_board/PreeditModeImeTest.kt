@@ -53,6 +53,18 @@ class PreeditModeImeTest {
 
         typeDeferred("ling")
         bubble("ling")
+        assertBubbleAppearance()
+        main {
+            val group = PageGroupManager.active(context)
+            PageGroupManager.setAppearance(context, group.id, group.appearance.copy(
+                backgroundColor = "#46324F", symbolColor = "#ABE3D0"))
+        }
+        awaitOwned("An already visible preedit must follow a keyboard palette change") {
+            val label = previewRoots().singleOrNull()?.findViewWithTag<TextView>("ime_preedit_text")
+            label?.currentTextColor == Color.parseColor(PageGroupManager.active(context).appearance.symbolColor)
+        }
+        bubble("ling")
+        assertBubbleAppearance()
         publishOwnedBubblePreview()
         editor(scenario, SENTENCE, 0)
         unchangedGeometry(scenario, geometry)
@@ -285,7 +297,7 @@ class PreeditModeImeTest {
 
     private fun bubble(text: String, caret: Int = text.length): Bubble {
         var result: Bubble? = null
-        awaitOwned("Preedit must be in its own window above the entire keyboard with its caret visible") {
+        awaitOwned("Preedit must touch the entire keyboard's top edge in its own window with its caret visible") {
             val chrome = shownChrome() ?: return@awaitOwned false
             val root = previewRoots().singleOrNull() ?: return@awaitOwned false
             val label = root.findViewWithTag<TextView>("ime_preedit_text") ?: return@awaitOwned false
@@ -294,7 +306,7 @@ class PreeditModeImeTest {
             val popup = bounds(root)
             if (label.text.toString() != text || popup.width() <= 0 || popup.height() <= 0 ||
                 root === chrome.rootView || views(root).any { it is ImeChromeView } ||
-                popup.bottom > chromeBounds.top || popup.top < 0 || popup.width() > chromeBounds.width() ||
+                popup.bottom != chromeBounds.top || popup.top < 0 || popup.width() > chromeBounds.width() ||
                 popup.left < chromeBounds.left || popup.right > chromeBounds.right) return@awaitOwned false
             val caretX = bounds(label).left + label.compoundPaddingLeft + layout.getPrimaryHorizontal(caret) - label.scrollX
             if (caretX < popup.left || caretX > popup.right) return@awaitOwned false
@@ -302,6 +314,41 @@ class PreeditModeImeTest {
             true
         }
         return requireNotNull(result)
+    }
+
+    private fun assertBubbleAppearance() = main {
+        val chrome = requireNotNull(shownChrome())
+        val popup = previewRoots().single()
+        val label = popup.findViewWithTag<TextView>("ime_preedit_text")
+        val appearance = PageGroupManager.active(context).appearance
+        val background = Color.parseColor(appearance.backgroundColor)
+        val foreground = Color.parseColor(appearance.symbolColor)
+        val keyboardPixel = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        try {
+            requireNotNull(chrome.keyboardHost.background).draw(Canvas(keyboardPixel))
+            assertEquals("The real key area's drawn background must use the configured palette",
+                background, keyboardPixel.getPixel(0, 0))
+        } finally { keyboardPixel.recycle() }
+        assertEquals("Floating preedit text must follow the current key symbol color", foreground, label.currentTextColor)
+        assertTrue("A flat preedit must not cast an elevated window or child shadow", views(popup).all { it.elevation == 0f })
+
+        val bitmap = Bitmap.createBitmap(popup.width, popup.height, Bitmap.Config.ARGB_8888)
+        try {
+            popup.draw(Canvas(bitmap))
+            // Check the actual complete perimeter: filled corners rule out rounding/transparency,
+            // and matching every edge pixel rules out an independently colored outline.
+            for (x in 0 until bitmap.width) {
+                assertEquals("The preedit top edge must share the keyboard background at x=$x", background, bitmap.getPixel(x, 0))
+                assertEquals("The preedit bottom edge must share the keyboard background at x=$x", background, bitmap.getPixel(x, bitmap.height - 1))
+            }
+            for (y in 0 until bitmap.height) {
+                assertEquals("The preedit left edge must be square and unoutlined at y=$y", background, bitmap.getPixel(0, y))
+                assertEquals("The preedit right edge must be square and unoutlined at y=$y", background, bitmap.getPixel(bitmap.width - 1, y))
+            }
+            val pixels = IntArray(bitmap.width * bitmap.height)
+            bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+            assertTrue("The rendered preedit must visibly use the configured foreground", foreground in pixels)
+        } finally { bitmap.recycle() }
     }
 
     private fun publishOwnedBubblePreview() {
@@ -427,7 +474,8 @@ class PreeditModeImeTest {
                 RowLayout(1f, listOf(KeySlot(1f, LONG_TEXT, textBehavior = TextBehavior.AUTO)))))
             page = LayoutFileManager.createLayout(context, layout.name, layout)
             PageGroupManager.addPages(context, group, listOf(page))
-            PageGroupManager.setAppearance(context, group, GroupAppearance(heightDp = 200))
+            PageGroupManager.setAppearance(context, group,
+                GroupAppearance(backgroundColor = "#213647", symbolColor = "#F4D98C", heightDp = 200))
             PageGroupManager.select(context, group)
             PageGroupManager.selectPage(context, page)
             shell("ime enable $ime")
