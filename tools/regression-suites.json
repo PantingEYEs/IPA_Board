@@ -71,7 +71,8 @@
         "com.example.ipa_board.PageEngineBindingUiTest",
         "com.example.ipa_board.ClipboardStartupSyncTest",
         "com.example.ipa_board.ClipboardManagementTest",
-        "com.example.ipa_board.PreeditModeBindingTest"
+        "com.example.ipa_board.PreeditModeBindingTest",
+        "com.example.ipa_board.ShortcutExportTest"
       ]
     },
     "e2e": {
@@ -157,7 +158,8 @@
         "com.example.ipa_board.PreeditModeCompositionTest",
         "com.example.ipa_board.PreeditModeBindingTest",
         "com.example.ipa_board.PreeditModeImeTest",
-        "com.example.ipa_board.InlineEditorCompositionTest"
+        "com.example.ipa_board.InlineEditorCompositionTest",
+        "com.example.ipa_board.ShortcutExportTest"
       ]
     },
     "ipa": {
@@ -371,6 +373,14 @@
         "com.example.ipa_board.SegmentedCompositionTest",
         "com.example.ipa_board.PreeditModeCompositionTest",
         "com.example.ipa_board.PreeditModeImeTest"
+      ]
+    },
+    "shortcut-export": {
+      "classes": [
+        "com.example.ipa_board.ShortcutExportTest",
+        "com.example.ipa_board.MultifunctionBarTest",
+        "com.example.ipa_board.ReplacementTextTest",
+        "com.example.ipa_board.PreeditModeBindingTest"
       ]
     }
   }

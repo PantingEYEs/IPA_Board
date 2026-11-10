@@ -4,7 +4,9 @@
 
 Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划](docs/0.0.4-development-plan.md)。
 
-- 内联预编辑在尾部输入时不再重复设置编辑器光标，避免对显式光标设置敏感的宿主提前结束预编辑；中部移动、插入和退格仍保留必要定位。受控编辑器验证覆盖完整拼音、选词和变长字符转换。[#17](https://github.com/PantingEYEs/IPA_Board/issues/17) 的 Notion 实际兼容性仍待复测，不将此改动认定为已确认修复该问题。
+- 新增 [#33](https://github.com/PantingEYEs/IPA_Board/issues/33) Shortcut 配置导出：同页选择 **Export configuration**，将已保存的 Shift／Ctrl 映射、六个多功能栏绑定和替代文字规则保存为一个版本化 JSON 文件，完整保留文字、输入行为、规则顺序及重复项。明确区分成功、取消和失败，导出不改变配置或执行绑定；本阶段不含导入。见 [格式说明](docs/shortcut-export.md)。
+
+- 内联预编辑在尾部输入时不再重复设置编辑器光标，避免对显式光标设置敏感的宿主提前结束预编辑；中部移动、插入和退格仍保留必要定位。受控编辑器验证覆盖完整拼音、选词和变长字符转换。维护者复测 [#17](https://github.com/PantingEYEs/IPA_Board/issues/17) 的 Notion 问题仍可复现，按其决定暂缓继续修复，保留非内联绕行。
 
 - 新增可自行绑定的 **预编辑模式**：支持按键、长按、滑动、Popup、Shift/Ctrl 快捷键及多功能栏，默认内联且保留已有绑定。非内联时原文与虚拟光标显示在紧贴键盘左侧和上沿、跟随键盘配色的紧凑直角浮窗内，无描边、阴影或间隔，不增加键盘高度；长文本横向滚动，清空或收起键盘时浮窗消失。候选、字面确认及分段选词只提交已确认部分。模式切换先原样确认当前文字，选择在重启后保留。提供 [#37](https://github.com/PantingEYEs/IPA_Board/issues/37) 的可选绕行入口，未宣称 Gemini／One UI 根因已修复，操作与取消边界见 [README](README.md)。
 

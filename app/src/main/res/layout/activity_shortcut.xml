@@ -68,6 +68,29 @@
             android:orientation="vertical"
             android:padding="16dp">
 
+            <Button style="@style/ManagementButton"
+                android:id="@+id/btn_export_shortcuts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/shortcut_export"
+                android:textSize="@dimen/management_caption_size" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/shortcut_export_help"
+                android:textColor="@color/management_text_secondary"
+                android:textSize="@dimen/management_caption_size"
+                android:paddingVertical="8dp" />
+            <TextView
+                android:id="@+id/shortcut_export_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/management_text"
+                android:textSize="@dimen/management_caption_size"
+                android:accessibilityLiveRegion="polite"
+                android:visibility="gone"
+                android:paddingBottom="12dp" />
+
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
