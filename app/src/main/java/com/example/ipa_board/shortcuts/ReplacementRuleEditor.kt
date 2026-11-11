@@ -22,7 +22,7 @@ internal class ReplacementRuleEditor(private val activity: Activity, private val
         if (!ReplacementSettings.save(activity, rules)) Toast.makeText(activity, R.string.replacement_save_failed, Toast.LENGTH_SHORT).show()
         refresh()
     }
-    private fun refresh() {
+    internal fun refresh() {
         parent.removeAllViews()
         val rules = try { ReplacementSettings.load(activity) } catch (_: Exception) {
             parent.addView(label(activity.getString(R.string.replacement_read_failed))); return

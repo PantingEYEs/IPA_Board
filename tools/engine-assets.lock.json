@@ -77,8 +77,9 @@
     },
     {
       "path": "app/src/main/assets/engines/rime/default.custom.yaml",
-      "sha256": "98e4d156e0000c930cd0f7a54a8aaeebaba7862be84c162bac94e7d0ad95aaa9",
-      "bytes": 48
+      "sha256": "816f3b0cafe473bbfb6fafad97c2bbbc388a65fdb79e142506bf2ee2a4efbc3a",
+      "bytes": 98,
+      "source": "IPA Board registered Rime schemas"
     },
     {
       "path": "app/src/main/assets/engines/rime/default.yaml",
@@ -492,8 +493,9 @@
     },
     {
       "path": "app/src/main/assets/licenses/rime-bopomofo-source.txt",
-      "sha256": "dbcba436dee5ade7b0e51ec85f7dbc9f0ffac0931526306df278c6c4c4c6f23f",
-      "source": "Rime Bopomofo license/source notice"
+      "sha256": "1f905f31599c6aa5e93435ec61cde4ee2baa48d0b5c4313fa95951501c3edd0d",
+      "source": "Rime Bopomofo and Terra Pinyin license/source notice",
+      "bytes": 1685
     },
     {
       "path": "app/src/main/assets/engines/ipa/bundled/classes.dex",
@@ -524,6 +526,18 @@
       "path": "app/src/main/assets/licenses/IPA-Engine-THIRD_PARTY_NOTICES.json",
       "sha256": "d5594d4c8bea56c16abad4c6c99d31b357fd6d8efcad962638931221d0e34c52",
       "bytes": 14089
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/terra_pinyin.schema.yaml",
+      "sha256": "d3b5628abfabac615589e8cc7bf6bf2bf63c60d499136592495a21d992b5cc6d",
+      "bytes": 5056,
+      "source": "rime-terra-pinyin @ 723e51bc266cf9464530c1ddedb856aa18e3da34"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/terra_pinyin.custom.yaml",
+      "sha256": "b78a530546848f415d8e0182a1a0b623758fe2f67e16f7ad2666dd79d2e2d3b3",
+      "bytes": 218,
+      "source": "IPA Board custom patch: learning/completion disabled"
     }
   ]
 }

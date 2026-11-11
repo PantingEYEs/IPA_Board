@@ -1,0 +1,6 @@
+# IPA Board: retain the pinned upstream spelling; the app controls optional tone aliases.
+patch:
+  translator/enable_user_dict: false
+  translator/enable_completion: false
+  switches/@0/reset: 0
+  switches/@2/reset: 0

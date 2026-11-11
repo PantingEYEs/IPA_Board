@@ -1,0 +1,32 @@
+{
+  "format": "ipa-board-page-group",
+  "schemaVersion": 1,
+  "name": "Uncommon",
+  "appearance": {
+    "backgroundColor": "#000000",
+    "symbolColor": "#FFFFFF",
+    "popupBackgroundColor": "#FFFFFF",
+    "popupSymbolColor": "#000000",
+    "pointerPathColor": "#FFFFFF",
+    "pointerAxisColor": "#FFFFFF",
+    "pointerCrosshairColor": "#FF0000",
+    "heightDp": 210,
+    "fontSizeSp": 14,
+    "showGrid": true,
+    "showPointerLocation": false,
+    "usePointerDifferenceBlend": false
+  },
+  "pages": [
+    "Ελληνικά.json",
+    "עברית.json",
+    "ܣܘܪܚܐ.json",
+    "ไทย.json",
+    "仮名.json",
+    "注音.json",
+    "አማርኛ.json",
+    "မြန်မာ.json",
+    "བོད་སྐད་.json",
+    "हिन्दी.json"
+  ],
+  "activePage": "Ελληνικά.json"
+}

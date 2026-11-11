@@ -16,6 +16,9 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
     private var requestId = 0L
     // TIMING PROBE: test-owned observer; detached by close(), never enabled by app settings.
     internal var timing: CandidateTiming? = null
+    // The composing owner advances its selection generation while preserving text and caret.
+    // Return true only when that callback has also issued the replacement query.
+    internal var onCompositionPolicyChanged: (() -> Boolean)? = null
     private var queryStartedNs = 0L
     private val runtimeStates = EngineRuntimeStates()
     private val runtimeListeners = linkedSetOf<() -> Unit>()
@@ -44,10 +47,14 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
             // A single remote-mode transaction changes many keys. Each callback sees the
             // complete policy; apply it once rather than restarting queries for every key.
             if (policy != nextPolicy) {
+                val spellingChanged = policy.pinyinScheme != nextPolicy.pinyinScheme ||
+                    policy.terraAlternativeTones != nextPolicy.terraAlternativeTones
                 policy = nextPolicy
                 semantic.preferenceChanged()
                 syncBindings()
-                query(revision, raw, beforeCursor, afterCursor)
+                if (!spellingChanged || onCompositionPolicyChanged?.invoke() != true) {
+                    query(revision, raw, beforeCursor, afterCursor)
+                }
                 runtimeListeners.toList().forEach { it() }
             }
         }
@@ -89,6 +96,7 @@ class EngineCoordinator(private val context: Context, private val changed: (Long
         clients.forEach { it.unbind() }
         runtimeListeners.clear()
         timing = null
+        onCompositionPolicyChanged = null
     }
     private fun nativeState() = if (clients.none { policy.needsRuntime(it.label) }) "Literal input" else clients.filter { policy.needsRuntime(it.label) && it.state != "" }.joinToString(" · ") { it.label + it.state }
     private fun publish() {

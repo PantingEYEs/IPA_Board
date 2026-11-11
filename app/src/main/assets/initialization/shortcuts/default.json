@@ -1,0 +1,14 @@
+{
+  "format": "ipa-board-shortcuts",
+  "schemaVersion": 1,
+  "categories": {
+    "ctrl": {
+      "z": "undo",
+      "x": "cut",
+      "c": "copy",
+      "v": "paste",
+      "a": "select_all",
+      "y": "redo"
+    }
+  }
+}

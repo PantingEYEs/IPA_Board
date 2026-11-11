@@ -17,7 +17,10 @@ enum class ShiftState {
 }
 
 /** Executes mappings without keeping modifier state in the receiving application. */
-class KeyboardInputController(private val transformOutput: (String) -> String = { it }) {
+class KeyboardInputController(
+    private val transformOutput: (String) -> String = { it },
+    private val commitText: (InputConnection, String) -> Boolean = { connection, text -> connection.commitText(text, 1) }
+) {
     var shiftState: ShiftState = ShiftState.OFF
         private set
     val shiftEnabled: Boolean
@@ -74,6 +77,9 @@ class KeyboardInputController(private val transformOutput: (String) -> String = 
                     consumeSingleShift()
                     return true
                 }
+                // History actions already tried their exact shortcut fallback. Retrying the
+                // original mapping could change the command through Shift or dispatch it twice.
+                if (shortcutAction == KeyAction.UNDO || shortcutAction == KeyAction.REDO) return false
             }
             val handled = sendShortcut(connection, keyText, metaState)
             if (handled) consumeSingleShift()
@@ -90,8 +96,8 @@ class KeyboardInputController(private val transformOutput: (String) -> String = 
         }
 
         val handled = when (slot.action.singleStepAction) {
-            KeyAction.TEXT -> slot.text.isEmpty() || connection.commitText(
-                transformOutput(if (shiftEnabled) slot.text.uppercase(Locale.ROOT) else slot.text), 1
+            KeyAction.TEXT -> slot.text.isEmpty() || commitText(
+                connection, transformOutput(if (shiftEnabled) slot.text.uppercase(Locale.ROOT) else slot.text)
             )
             KeyAction.BACKSPACE -> backspace(connection)
             KeyAction.LEFT -> sendKey(connection, KeyEvent.KEYCODE_DPAD_LEFT, metaState)
@@ -102,6 +108,8 @@ class KeyboardInputController(private val transformOutput: (String) -> String = 
             KeyAction.END -> sendKey(connection, KeyEvent.KEYCODE_MOVE_END, metaState)
             KeyAction.TAB -> sendKey(connection, KeyEvent.KEYCODE_TAB, metaState)
             KeyAction.ENTER -> enter(connection, editorInfo, metaState)
+            KeyAction.UNDO -> historyAction(connection, R.id.undo, KeyEvent.KEYCODE_Z)
+            KeyAction.REDO -> historyAction(connection, R.id.redo, KeyEvent.KEYCODE_Y)
             KeyAction.SELECT_ALL -> connection.performContextMenuAction(R.id.selectAll)
             KeyAction.COPY -> connection.performContextMenuAction(R.id.copy)
             KeyAction.CUT -> connection.performContextMenuAction(R.id.cut)
@@ -117,6 +125,8 @@ class KeyboardInputController(private val transformOutput: (String) -> String = 
 
     fun executeAction(action: KeyAction, connection: InputConnection, editorInfo: EditorInfo?, metaState: Int): Boolean {
         return when (action.singleStepAction) {
+            KeyAction.UNDO -> historyAction(connection, R.id.undo, KeyEvent.KEYCODE_Z)
+            KeyAction.REDO -> historyAction(connection, R.id.redo, KeyEvent.KEYCODE_Y)
             KeyAction.SELECT_ALL -> {
                 if (connection.performContextMenuAction(R.id.selectAll)) true
                 else sendKey(connection, KeyEvent.KEYCODE_A, metaState)
@@ -147,6 +157,9 @@ class KeyboardInputController(private val transformOutput: (String) -> String = 
             else -> false
         }
     }
+
+    private fun historyAction(connection: InputConnection, contextAction: Int, fallbackKey: Int): Boolean =
+        connection.performContextMenuAction(contextAction) || sendKey(connection, fallbackKey, KeyEvent.META_CTRL_ON)
 
     private fun sendShortcut(connection: InputConnection, text: String, metaState: Int): Boolean {
         if (text.length != 1) return false

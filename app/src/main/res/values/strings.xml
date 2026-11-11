@@ -98,4 +98,23 @@
     <string name="shortcut_export_failed">Could not finish saving the file. Your configuration has not changed; please try again.</string>
     <string name="shortcut_export_read_failed">Could not read the saved Shortcut configuration. Nothing was changed.</string>
     <string name="shortcut_export_destination_failed">Could not open the file chooser. Your configuration has not changed.</string>
+    <string name="shortcut_import">Import configuration</string>
+    <string name="shortcut_import_help">Choose a Shortcut export, review its contents, then confirm to replace the included categories. You can export your current configuration first.</string>
+    <string name="shortcut_import_confirm_title">Restore Shortcut configuration?</string>
+    <string name="shortcut_import_confirm">Replace configuration</string>
+    <string name="shortcut_import_summary">This file will replace the following categories, including any empty lists:\n\n%1$s\n\nCategories missing from the file and other settings will stay unchanged.</string>
+    <string name="shortcut_import_summary_entry">%1$s: %2$d</string>
+    <string name="shortcut_import_shift">Shift shortcuts</string>
+    <string name="shortcut_import_ctrl">Ctrl shortcuts</string>
+    <string name="shortcut_import_toolbar">Toolbar bindings</string>
+    <string name="shortcut_import_replacements">Replacement rules</string>
+    <string name="shortcut_import_reading">Reading configuration…</string>
+    <string name="shortcut_import_saving">Saving configuration…</string>
+    <string name="shortcut_import_saved">Shortcut configuration imported.</string>
+    <string name="shortcut_import_cancelled">Import cancelled. No settings were changed.</string>
+    <string name="shortcut_import_interrupted">Import was interrupted while saving. Check your Shortcut configuration before retrying.</string>
+    <string name="shortcut_import_source_failed">Could not open the file picker. No settings were changed.</string>
+    <string name="shortcut_import_read_failed">Could not read a supported Shortcut configuration. Check the format, version and bindings. Files must be no larger than 4 MiB. No settings were changed.</string>
+    <string name="shortcut_import_save_failed">Could not save the imported configuration. The previous settings were kept.</string>
+    <string name="shortcut_import_restore_failed">Saving failed, and the previous settings could not be fully restored. Check your Shortcut configuration before continuing.</string>
 </resources>

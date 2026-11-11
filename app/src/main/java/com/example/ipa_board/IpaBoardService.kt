@@ -17,6 +17,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputConnection
 import android.widget.*
 import com.example.ipa_board.ime.*
 import com.example.ipa_board.emoji.*
@@ -37,8 +38,8 @@ class IpaBoardService : InputMethodService() {
     private lateinit var prefs: SharedPreferences
     private val remoteKeyboardMode by lazy { RemoteKeyboardMode(prefs) }
     private val pageEngineBindings by lazy { PageEngineBindingController(EngineSettings.preferences(this)) }
-    private var widthSwapEnabled = false
-    private val inputController = KeyboardInputController(::transformOutput)
+    private val widthSwap = WidthSwapController()
+    private val inputController = KeyboardInputController(commitText = ::commitWidthText)
     private lateinit var engines: EngineCoordinator
     private lateinit var composition: CompositionController
     private val emojiRepository by lazy { EmojiCatalogRepository.getInstance(this) }
@@ -233,13 +234,13 @@ class IpaBoardService : InputMethodService() {
         composition = CompositionController({ currentInputConnection }, { id, raw ->
             engines.query(id, if (directOnly) "" else raw, if (directOnly) "" else composition.beforeCursor,
                 if (directOnly) "" else composition.afterCursor)
-        }, { refreshCandidates() }, contextAllowed = { !directOnly }, transformOutput = ::transformOutput,
+        }, { refreshCandidates() }, contextAllowed = { !directOnly },
             initialInlineEnabled = prefs.getBoolean(SettingsConstants.KEY_INLINE_PREEDIT_ENABLED, true))
         engines = EngineCoordinator(this) { id, candidates, state ->
             engineStatus = state
             composition.acceptResults(id, candidates)
             refreshCandidates()
-        }
+        }.apply { onCompositionPolicyChanged = composition::invalidateCandidatesAndRequery }
         // Capture copies even before the first input view opens. Android still controls access
         // (normally the current/default IME); this cannot retrieve overwritten system history.
         clipboardObservation.start(prefs.getBoolean(SettingsConstants.KEY_CLIPBOARD_SYNC_ON_START, true))
@@ -286,12 +287,38 @@ class IpaBoardService : InputMethodService() {
         }
     }
     private fun calculatorEnabled() = isCalcEngineEnabled && EngineSettings.enabled(this, EngineFeature.CALCULATOR)
-    private fun transformOutput(text: String): String = if (widthSwapEnabled) CharacterWidthConverter.swap(text) else text
+    private fun acceptWidthInput(input: WidthSwapController.PreparedInput) {
+        if (widthSwap.accepted(input)) chrome?.setWidthSwapState(widthSwap.state)
+    }
+
+    private fun commitWidthText(connection: InputConnection, text: String): Boolean {
+        if (!composition.literal()) return false
+        val input = widthSwap.prepare(text)
+        if (!connection.commitText(input.text, 1)) return false
+        acceptWidthInput(input)
+        return true
+    }
+
+    private fun composeWidthText(text: String): Boolean {
+        val input = widthSwap.prepare(text)
+        if (!composition.input(input.text)) return false
+        acceptWidthInput(input)
+        return true
+    }
+
+    private fun confirmWithSpace(): Boolean {
+        val input = widthSwap.prepare(" ")
+        val result = composition.space(input.text)
+        if (result.insertedSpace) acceptWidthInput(input)
+        return result.handled
+    }
 
     private fun toggleWidthSwap() {
-        widthSwapEnabled = !widthSwapEnabled
-        chrome?.setWidthSwapEnabled(widthSwapEnabled)
-        composition.refreshOutput()
+        if (widthSwap.state == WidthSwapState.OFF &&
+            composition.transformSelection(CharacterWidthConverter::swap) == SelectionTransformResult.FAILED) return
+        widthSwap.cycle()
+        chrome?.setWidthSwapState(widthSwap.state)
+        refreshCandidates()
     }
     private fun togglePreeditMode() {
         if (!composition.setInlineEnabled(!composition.inlineEnabled)) return
@@ -342,8 +369,8 @@ class IpaBoardService : InputMethodService() {
         composition.updateCandidates(displayCandidates)
         chrome?.setInlinePreeditEnabled(composition.inlineEnabled)
         chrome?.render(raw, displayCandidates, baseStatus, composition.revision,
-            preeditDisplay = transformOutput(raw),
-            preeditCaret = transformOutput(raw.take(composition.caret.coerceIn(0, raw.length))).length)
+            preeditDisplay = composition.displayText,
+            preeditCaret = composition.displayCaret)
         updateQuickPasteStatus()
     }
 
@@ -374,7 +401,7 @@ class IpaBoardService : InputMethodService() {
         val crosshairColor = try { Color.parseColor(appearance.pointerCrosshairColor) } catch (_: Exception) { Color.RED }
         view.setPointerColors(pathColor, axisColor, crosshairColor, appearance.usePointerDifferenceBlend)
         view.setRemoteKeyboardEnabled(remoteKeyboardMode.active)
-        view.setWidthSwapEnabled(widthSwapEnabled)
+        view.setWidthSwapState(widthSwap.state)
         view.setInlinePreeditEnabled(composition.inlineEnabled)
         view.setKeyboardColors(Color.parseColor(appearance.backgroundColor), Color.parseColor(appearance.symbolColor))
         val layout = LayoutFileManager.activeLayout(this)
@@ -396,11 +423,10 @@ class IpaBoardService : InputMethodService() {
     private fun handleLongPressItem(slot: KeySlot, item: LongPressItem) {
         if (item.action == KeyAction.TEXT && item.text.isNotEmpty()) {
             if (!directOnly) {
-                composition.input(item.text)
-                if (inputController.consumeSingleShift()) applySettings()
+                if (composeWidthText(item.text) && inputController.consumeSingleShift()) applySettings()
             } else {
                 val ic = currentInputConnection ?: return
-                if (ic.commitText(transformOutput(item.text), 1)) {
+                if (commitWidthText(ic, item.text)) {
                     if (inputController.consumeSingleShift()) applySettings()
                 }
             }
@@ -548,13 +574,12 @@ class IpaBoardService : InputMethodService() {
                     if (inputController.consumeSingleShift()) applySettings()
                     return
                 }
-                slot.action == KeyAction.TEXT && text == " " && composition.space() -> {
-                    if (inputController.consumeSingleShift()) applySettings()
+                slot.action == KeyAction.TEXT && text == " " && composition.raw.isNotEmpty() -> {
+                    if (confirmWithSpace() && inputController.consumeSingleShift()) applySettings()
                     return
                 }
                 slot.action == KeyAction.TEXT && text != " " && text.isNotEmpty() -> {
-                    composition.input(text)
-                    if (inputController.consumeSingleShift()) applySettings()
+                    if (composeWidthText(text) && inputController.consumeSingleShift()) applySettings()
                     return
                 }
             }
@@ -580,7 +605,7 @@ class IpaBoardService : InputMethodService() {
                 result.fold(onSuccess = { catalog ->
                     val picker = EmojiPickerView(this, catalog) { entry ->
                         // Commit any pending composition first. Emoji bypass Shift/Ctrl and language conversion.
-                        if (composition.literal()) currentInputConnection?.commitText(transformOutput(entry.text), 1)
+                        if (composition.literal()) currentInputConnection?.let { commitWidthText(it, entry.text) }
                     }
                     fun updateStatus() {
                         view.showContent("Emoji · ${picker.currentCategoryName} ▾", picker)
@@ -610,7 +635,7 @@ class IpaBoardService : InputMethodService() {
     private fun showKaomojiPanel() {
         val view = chrome ?: return
         val panelView = KaomojiPanelView(this, kaomojiRepository) { item ->
-            if (composition.literal() && currentInputConnection?.commitText(transformOutput(item.text), 1) == true) {
+            if (composition.literal() && currentInputConnection?.let { commitWidthText(it, item.text) } == true) {
                 // Keep panel open so user can input multiple kaomojis
             }
         }

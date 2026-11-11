@@ -35,7 +35,7 @@ object EngineCatalog {
                 offBehavior = "Off: omit IPA graph candidates; other engines and literal input remain available.")
         )),
         EngineCategory("syllable", "Syllable Engines", listOf(
-            EngineInfo("Rime · Pinyin & Zhuyin (Chinese)", "$RIME_VERSION · Luna Pinyin 0.26 · Bopomofo 3.1", detail = "Chinese conversion from Pinyin or Zhuyin symbols, with five-tone filtering and optional omitted tones. Pinyin includes schema-defined spelling and key correction.", feature = EngineFeature.CHINESE_CONVERSION, offBehavior = "Off: omit Pinyin and Zhuyin conversion candidates; literal input and Chinese prediction stay available.", versionSources = listOf(EngineVersionSource.RIME, EngineVersionSource.TRIME)),
+            EngineInfo("Rime · Pinyin & Zhuyin (Chinese)", "$RIME_VERSION · Terra Pinyin 0.30 · Luna Pinyin 0.26 · Bopomofo 3.1", detail = "Choose a Pinyin scheme below. Terra Pinyin supports syllable-final tone symbols and omitted tones. Spelling correction is schema-defined, with no independent toggle. Zhuyin keeps its separate tone-aware input rules.", feature = EngineFeature.CHINESE_CONVERSION, offBehavior = "Off: omit Pinyin and Zhuyin conversion candidates; literal input and Chinese prediction stay available.", versionSources = listOf(EngineVersionSource.RIME, EngineVersionSource.TRIME)),
             EngineInfo("Mozc (Japanese)", MOZC_VERSION, feature = EngineFeature.JAPANESE_CONVERSION, offBehavior = "Off: Japanese conversion candidates are omitted; literal input and prediction stay available.", versionSources = listOf(EngineVersionSource.LIBRE_JAPANESE))
         )),
         EngineCategory("completion", "Completion Engines", listOf(

@@ -11,7 +11,10 @@ import android.view.WindowInsets
 import android.widget.ImageButton
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.widget.SwitchCompat
 import com.example.ipa_board.ime.*
 import android.content.SharedPreferences
@@ -28,10 +31,16 @@ class EngineManagementActivity : Activity() {
     private val preferences by lazy { EngineSettings.preferences(this) }
     private var diagnosticSwitch: SwitchCompat? = null
     private var logSizeText: TextView? = null
+    private var pinyinChoiceGroup: RadioGroup? = null
+    private val pinyinChoices = linkedMapOf<Int, PinyinScheme>()
+    private var terraOptions: LinearLayout? = null
+    private var alternativeTonesSwitch: SwitchCompat? = null
+    private var updatingPinyinControls = false
     private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         switches.filterKeys { it.key == key }.forEach { (feature, views) ->
             views.forEach { it.isChecked = EngineSettings.enabled(preferences, feature) }
         }
+        if (PinyinSettings.isKey(key)) refreshPinyinControls()
         if (key == DebugDiagnosticsSettings.KEY_ENABLED) {
             // DIAGNOSTICS: one removable switch; independent of every engine enable/disable choice.
             AppDiagnostics.configure(preferences)
@@ -182,6 +191,7 @@ class EngineManagementActivity : Activity() {
     override fun onResume() {
         super.onResume()
         refreshLogSizeDisplay()
+        refreshPinyinControls()
     }
 
     @Suppress("DEPRECATION")
@@ -358,6 +368,7 @@ class EngineManagementActivity : Activity() {
         listOf(engine.detail, engine.offBehavior, engine.fixedReason).filter { it.isNotEmpty() }.forEach {
             entry.addView(caption(it), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         }
+        if (engine.feature == EngineFeature.CHINESE_CONVERSION) addPinyinControls(entry)
         if (engine.feature == EngineFeature.SEMANTIC) {
             entry.addView(caption(getString(R.string.engine_semantic_latency_notice)).apply {
                 tag = "semantic-context-notice"
@@ -365,6 +376,82 @@ class EngineManagementActivity : Activity() {
             entry.addView(caption(getString(R.string.engine_semantic_pending)))
         }
         container.addView(entry, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+    }
+
+    private fun addPinyinControls(entry: LinearLayout) {
+        fun caption(resource: Int) = TextView(this).apply {
+            setText(resource)
+            textSize = 14f
+            setTextColor(Color.rgb(187, 187, 187))
+            setPadding(0, dp(8), 0, dp(4))
+        }
+        entry.addView(caption(R.string.pinyin_scheme_title))
+        pinyinChoiceGroup = RadioGroup(this).apply {
+            tag = "pinyin-scheme-options"
+            isSaveEnabled = false
+            orientation = RadioGroup.VERTICAL
+            PinyinScheme.entries.forEach { scheme ->
+                addView(RadioButton(this@EngineManagementActivity).apply {
+                    id = View.generateViewId()
+                    tag = "pinyin-scheme:${scheme.schemaId}"
+                    isSaveEnabled = false
+                    text = scheme.displayName
+                    setTextColor(Color.WHITE)
+                    buttonTintList = ColorStateList.valueOf(Color.WHITE)
+                    minimumHeight = dp(48)
+                    pinyinChoices[id] = scheme
+                })
+            }
+            setOnCheckedChangeListener { _, id ->
+                if (!updatingPinyinControls) pinyinChoices[id]?.let {
+                    completePinyinSave(PinyinSettings.setScheme(this@EngineManagementActivity, it))
+                }
+            }
+        }.also { entry.addView(it) }
+        entry.addView(caption(R.string.pinyin_scheme_scope))
+        terraOptions = LinearLayout(this).apply {
+            tag = "terra-pinyin-options"
+            orientation = LinearLayout.VERTICAL
+            addView(caption(R.string.terra_pinyin_primary_tones))
+            alternativeTonesSwitch = SwitchCompat(this@EngineManagementActivity).apply {
+                tag = "terra-alternative-tones"
+                isSaveEnabled = false
+                setText(R.string.terra_pinyin_alternative_tones)
+                textSize = 14f
+                setTextColor(Color.WHITE)
+                thumbTintList = ColorStateList.valueOf(Color.WHITE)
+                trackTintList = ColorStateList.valueOf(Color.DKGRAY)
+                minimumHeight = dp(48)
+                setOnCheckedChangeListener { _, checked ->
+                    if (!updatingPinyinControls) {
+                        completePinyinSave(PinyinSettings.setAlternativeTones(this@EngineManagementActivity, checked))
+                    }
+                }
+            }.also { addView(it) }
+            addView(caption(R.string.terra_pinyin_alternative_notice))
+        }.also { entry.addView(it) }
+        refreshPinyinControls()
+    }
+
+    private fun refreshPinyinControls() {
+        val group = pinyinChoiceGroup ?: return
+        updatingPinyinControls = true
+        try {
+            val selected = PinyinSettings.scheme(preferences)
+            pinyinChoices.entries.firstOrNull { it.value == selected }?.let { group.check(it.key) }
+            terraOptions?.visibility = if (selected == PinyinScheme.TERRA) View.VISIBLE else View.GONE
+            alternativeTonesSwitch?.isChecked = PinyinSettings.alternativeTones(preferences)
+        } finally { updatingPinyinControls = false }
+    }
+
+    private fun completePinyinSave(result: PinyinSettings.SaveResult) {
+        refreshPinyinControls()
+        val error = when (result) {
+            PinyinSettings.SaveResult.FAILED -> R.string.pinyin_setting_save_failed
+            PinyinSettings.SaveResult.RESTORE_FAILED -> R.string.pinyin_setting_restore_failed
+            else -> return
+        }
+        Toast.makeText(this, error, Toast.LENGTH_LONG).show()
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density + 0.5f).toInt()

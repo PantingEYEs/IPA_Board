@@ -35,7 +35,7 @@ class InlineEditorCompositionTest {
         val queries = mutableListOf<String>()
         private val base = requireNotNull(editor.onCreateInputConnection(EditorInfo()))
         private val ic: InputConnection = if (finalizesOnSelection) SelectionFinalizingConnection(base) else base
-        val controller = CompositionController({ ic }, { _, raw -> queries += raw }, {}, transformOutput = transform)
+        val controller = CompositionController({ ic }, { _, raw -> queries += raw }, {}, transformInput = transform)
 
         fun pending(raw: String, display: String = raw, rawCaret: Int = raw.length, displayCaret: Int = display.length) {
             assertEquals("The complete pending encoding must reach the engine", raw, queries.last())
@@ -122,19 +122,19 @@ class InlineEditorCompositionTest {
         }
     }
 
-    @Test fun tailEditingUsesTheDisplayedLengthWhenWidthConversionChangesTheEncodingLength() {
+    @Test fun tailEditingRetainsConvertedKanaAndSeparateCombiningMarksInActualEngineInput() {
         instrumentation.runOnMainSync {
             val f = fixture("前文\n123", "後文", transform = CharacterWidthConverter::swap)
             val c = f.controller
             c.input("ｶ")
-            f.pending("ｶ", "カ")
+            f.pending("カ")
             c.input("ﾞ")
-            f.pending("ｶﾞ", "ガ")
+            f.pending("カ\u3099")
             c.input("a")
-            f.pending("ｶﾞa", "ガａ")
+            f.pending("カ\u3099ａ")
             assertTrue(c.backspace())
-            f.pending("ｶﾞ", "ガ")
-            f.select(Candidate("パ", "日"), output = "ﾊﾟ")
+            f.pending("カ\u3099")
+            f.select(Candidate("パ", "日"))
         }
     }
 }

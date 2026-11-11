@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.view.View
+import android.view.ViewTreeObserver
 import android.widget.SeekBar
 import android.widget.Spinner
 import androidx.test.core.app.ActivityScenario
@@ -16,12 +18,16 @@ import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.tabs.TabLayout
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.Closeable
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class LayoutManagementTest {
@@ -122,7 +128,7 @@ class LayoutManagementTest {
                     }
 
                     onView(withId(R.id.sp_layouts)).check(matches(withSpinnerText(importedName)))
-                    onView(withText("Group Settings")).perform(click())
+                    groupSettingsAfterImport(scenario)
                     onView(withId(R.id.tv_height_value)).check(matches(withText("300dp")))
                     assertEquals(importedFilename, fixture.activeFilename())
                     assertEquals(imported, LayoutFileManager.loadLayout(fixture.context, importedFilename))
@@ -272,6 +278,45 @@ class LayoutManagementTest {
     }
 
     private fun pageSettings() { onView(withText("Page Settings")).perform(click()) }
+
+    private fun groupSettingsAfterImport(scenario: ActivityScenario<KeyboardPageActivity>) {
+        val drawn = CountDownLatch(1)
+        var root: View? = null
+        var listener: ViewTreeObserver.OnPreDrawListener? = null
+        try {
+            scenario.onActivity { activity ->
+                val content = activity.findViewById<View>(R.id.root_layout)
+                val tabs = activity.findViewById<TabLayout>(R.id.tab_layout)
+                val pager = activity.findViewById<ViewPager2>(R.id.view_pager)
+                root = content
+                listener = ViewTreeObserver.OnPreDrawListener {
+                    if (tabs.selectedTabPosition == 0 && pager.currentItem == 0 &&
+                        pager.scrollState == ViewPager2.SCROLL_STATE_IDLE &&
+                        !content.isLayoutRequested && !pager.isLayoutRequested &&
+                        activity.findViewById<View>(R.id.tv_height_value)?.isAttachedToWindow == true) {
+                        drawn.countDown()
+                    }
+                    true
+                }
+                content.viewTreeObserver.addOnPreDrawListener(requireNotNull(listener))
+                // Importing appearance resizes the preview above the tabs. Invoke the actual clickable
+                // TabView, not coordinates captured from its non-clickable label during that layout.
+                val tab = requireNotNull(tabs.getTabAt(0))
+                assertEquals("Group Settings", tab.text.toString())
+                assertTrue(tab.view.performClick())
+                assertEquals(0, tabs.selectedTabPosition)
+                assertEquals(0, pager.currentItem)
+                content.invalidate()
+            }
+            // A draw after the pager settles is the synchronization boundary, not a timed sleep/retry.
+            assertTrue("The selected group settings page must finish layout", drawn.await(3, TimeUnit.SECONDS))
+        } finally {
+            scenario.onActivity {
+                val observer = root?.viewTreeObserver
+                if (observer?.isAlive == true) listener?.let(observer::removeOnPreDrawListener)
+            }
+        }
+    }
 
     /** Every UI operation targets disposable files; restore the preferences changed by those operations. */
     private class LayoutFixture : Closeable {

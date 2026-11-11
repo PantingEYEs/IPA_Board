@@ -25,9 +25,30 @@ class ReplacementTextTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context get() = instrumentation.targetContext
     private val prefs get() = context.getSharedPreferences(SettingsConstants.PREFS_NAME, 0)
-    private var previous: String? = null
-    @Before fun setup() { previous = prefs.getString(ReplacementSettings.KEY, null); prefs.edit().remove(ReplacementSettings.KEY).commit() }
-    @After fun cleanup() { prefs.edit().apply { previous?.let { putString(ReplacementSettings.KEY, it) } ?: remove(ReplacementSettings.KEY) }.commit() }
+    private lateinit var previous: Map<String, *>
+    @Before fun setup() = instrumentation.runOnMainSync {
+        previous = prefs.all.toMap()
+        assertTrue(prefs.edit().remove(ReplacementSettings.KEY).commit())
+    }
+    @After fun cleanup() = instrumentation.runOnMainSync {
+        if (::previous.isInitialized) {
+            assertTrue(prefs.edit().clear().apply {
+                previous.forEach { (key, value) ->
+                    when (value) {
+                        is String -> putString(key, value)
+                        is Boolean -> putBoolean(key, value)
+                        is Int -> putInt(key, value)
+                        is Long -> putLong(key, value)
+                        is Float -> putFloat(key, value)
+                        is Set<*> -> putStringSet(key, value.map { it as String }.toSet())
+                        null -> remove(key)
+                        else -> error("Unsupported preference type")
+                    }
+                }
+            }.commit())
+            assertEquals(previous, prefs.all)
+        }
+    }
 
     @Test fun versionedCategoryRoundTripsOrderMultipleTargetsDuplicatesAndUnicode() {
         val rules = listOf(ReplacementRule("1", "鞥", "嗯"), ReplacementRule("2", "鞥", "嗯"),
@@ -91,6 +112,13 @@ class ReplacementTextTest {
         }
     }
     @Test fun editorAddsEditsOrdersDeletesAndPersistsWithoutChangingOtherShortcuts() {
+        // Initialization is a separate one-time operation performed by the settings Activity.
+        // Complete it before the editing baseline; cleanup also restores any defaults/markers it adds.
+        instrumentation.runOnMainSync {
+            val result = ShortcutDefaults.initialize(context)
+            assertTrue("Shortcut initialization must complete before testing replacement edits",
+                result == ShortcutDefaults.Result.APPLIED || result == ShortcutDefaults.Result.SKIPPED)
+        }
         val other = prefs.all.filterKeys { it != ReplacementSettings.KEY }
         ActivityScenario.launch(ShortcutManagerActivity::class.java).use { scenario ->
             fun add(source: String, target: String) {

@@ -8,10 +8,18 @@ import com.sun.jna.Native
 import com.sun.jna.NativeLibrary
 import com.sun.jna.Pointer
 import java.io.File
-import java.util.Locale
+import java.io.InputStream
+
+/** A schema can fail without poisoning the shared runtime or unrelated registered schemas. */
+internal class RimeSchemaUnavailableException(val issue: DiagnosticIssue) : RuntimeException(issue.code)
 
 /** Uses the existing Rime runtime through C API and a pinned read-only C++ candidate bridge. */
-internal class RimeEngine(private val context: Context) : QueryEngine {
+internal class RimeEngine(
+    private val context: Context,
+    availablePinyinSchemes: Set<PinyinScheme> = PinyinScheme.entries.toSet(),
+    private val openAsset: (String) -> InputStream = { context.assets.open(it) },
+) : QueryEngine {
+    private val availableSchemes = availablePinyinSchemes.toSet()
     // DIAGNOSTICS: identify native-library loading without logging its private path.
     private val library = AppDiagnostics.atStage(DiagnosticComponent.RIME, DiagnosticStage.LIBRARY) {
         NativeLibrary.getInstance(File(context.applicationInfo.nativeLibraryDir, "librime_jni.so").absolutePath)
@@ -25,17 +33,26 @@ internal class RimeEngine(private val context: Context) : QueryEngine {
     }
     private val strings = mutableListOf<Memory>()
     private val sessions = mutableMapOf<String, Long>()
-    override val segmentPattern = Regex("[A-Za-z]+(?:'[A-Za-z]+)*|[ㄅ-ㄩˉˊˇˋ˙]+(?:[' ][ㄅ-ㄩˉˊˇˋ˙]+)*")
+    private val schemaFailures = mutableMapOf<String, DiagnosticIssue>()
+    private var pinyinScheme = availableSchemes.first()
+    private var pinyinInput = RimePinyinInput(pinyinScheme)
+    override val segmentPattern get() = Regex("${pinyinInput.segmentPattern.pattern}|[ㄅ-ㄩˉˊˇˋ˙]+(?:[' ][ㄅ-ㄩˉˊˇˋ˙]+)*")
     override fun acceptsInput(raw: String): Boolean =
-        if (ZhuyinInput.containsSymbols(raw)) ZhuyinInput.encode(raw) != null else super.acceptsInput(raw)
+        if (ZhuyinInput.containsSymbols(raw)) ZhuyinInput.encode(raw) != null else pinyinInput.accepts(raw)
     private var scriptConversionEnabled = true
-    override fun configure(policy: EngineQueryPolicy) { scriptConversionEnabled = policy.enabled(EngineFeature.SCRIPT_CONVERSION) }
+    override fun configure(policy: EngineQueryPolicy) {
+        scriptConversionEnabled = policy.enabled(EngineFeature.SCRIPT_CONVERSION)
+        pinyinScheme = policy.pinyinScheme
+        pinyinInput = RimePinyinInput(pinyinScheme, policy.terraAlternativeTones)
+    }
+    internal val deploymentDirectory: File
+    internal val initializedSchemaIds: Set<String> get() = sessions.keys.toSet()
     private val converter: Pointer
     private val traditionalConverter: Pointer
     private val phrases by lazy {
         // DIAGNOSTICS: this prediction-only corpus is loaded lazily, independently of schemas.
         AppDiagnostics.atStage(DiagnosticComponent.RIME, DiagnosticStage.PREDICTION_CORPUS) {
-            context.assets.open("engines/rime/essay.txt").bufferedReader(Charsets.UTF_8).use {
+            openAsset("engines/rime/essay.txt").bufferedReader(Charsets.UTF_8).use {
                 PhraseContinuation(it.readText())
             }
         }
@@ -56,19 +73,44 @@ internal class RimeEngine(private val context: Context) : QueryEngine {
             check(Native.POINTER_SIZE == 8) { "Only 64-bit engine binaries are bundled" }
         }
         // DIAGNOSTICS: deploy bundled resources without including their paths or contents.
-        val dir = AppDiagnostics.atStage(DiagnosticComponent.RIME, DiagnosticStage.ASSETS) {
-            File(context.noBackupFilesDir, "rime-3.3.12-v4").apply {
+        deploymentDirectory = AppDiagnostics.atStage(DiagnosticComponent.RIME, DiagnosticStage.ASSETS) {
+            // A new, registry-specific deployment cannot reuse an old .ready marker or compile a
+            // removed compatibility schema from stale resources left by an earlier application.
+            val profile = availableSchemes.map { it.schemaId }.sorted().joinToString("-")
+            File(context.noBackupFilesDir, "rime-3.3.12-v5-$profile").apply {
                 check(mkdirs() || isDirectory)
                 val shared = File(this, "shared")
                 if (!File(shared, ".ready").exists()) {
-                    copyAssets("engines/rime", shared)
-                    File(shared, ".ready").writeText("1")
+                    val root = "engines/rime"
+                    val children = context.assets.list(root).orEmpty()
+                    for (name in children) {
+                        if (name != "default.custom.yaml" && PinyinScheme.entries.none { it.ownsResource(name) }) {
+                            copyAssets("$root/$name", File(shared, name))
+                        }
+                    }
+                    for (scheme in availableSchemes) {
+                        try {
+                            for (name in children.filter(scheme::ownsResource)) copyAssets("$root/$name", File(shared, name))
+                        } catch (error: Exception) {
+                            schemaFailures[scheme.schemaId] = AppDiagnostics.failure(DiagnosticComponent.RIME, DiagnosticStage.ASSETS, error)
+                        }
+                    }
+                    // Register only available schemas. Bopomofo depends on the shared tone dictionary,
+                    // never on the optional Luna schema or its dictionary/prism/session.
+                    File(shared, "default.custom.yaml").writeText(buildString {
+                        append("patch:\n  schema_list:\n")
+                        availableSchemes.filter { it.schemaId !in schemaFailures }.forEach {
+                            append("    - schema: ").append(it.schemaId).append('\n')
+                        }
+                        append("    - schema: bopomofo\n")
+                    })
+                    if (schemaFailures.isEmpty()) File(shared, ".ready").writeText("1")
                 }
                 File(this, "user").apply { check(mkdirs() || isDirectory) }
             }
         }
-        val shared = File(dir, "shared")
-        val user = File(dir, "user")
+        val shared = File(deploymentDirectory, "shared")
+        val user = File(deploymentDirectory, "user")
         // DIAGNOSTICS: isolate process-wide runtime initialization from deployment/maintenance.
         AppDiagnostics.atStage(DiagnosticComponent.RIME, DiagnosticStage.INITIALIZE) {
             val traits = Memory(96).apply {
@@ -82,24 +124,6 @@ internal class RimeEngine(private val context: Context) : QueryEngine {
         // DIAGNOSTICS: schema compilation/maintenance has its own loading stage.
         AppDiagnostics.atStage(DiagnosticComponent.RIME, DiagnosticStage.MAINTENANCE) {
             int("start_maintenance", 0); void("join_maintenance_thread")
-        }
-        for (schema in listOf("luna_pinyin", "bopomofo")) {
-            // DIAGNOSTICS: distinguish a missing runtime session from an unavailable schema.
-            val id = AppDiagnostics.atStage(DiagnosticComponent.RIME, DiagnosticStage.SESSION) {
-                fn("create_session").invokeLong(emptyArray()).also { check(it != 0L) }
-            }
-            // DIAGNOSTICS: fixed schema setup only; never log composition or user preferences.
-            AppDiagnostics.atStage(DiagnosticComponent.RIME, DiagnosticStage.SCHEMA) {
-                check(int("select_schema", id, schema) != 0) { "Rime schema not ready" }
-                sessions[schema] = id
-                void("set_option", id, "ascii_mode", 0)
-                void("set_option", id, "simplification", 0)
-                // Preserve schema behavior for compatibility; batch enumeration itself never selects
-                // or commits a candidate. The replay reference lives only in instrumentation tests.
-                void("set_option", id, "_auto_commit", 1)
-                // Emit traditional text once; the shared OpenCC switch supplies simplified variants.
-                for (option in listOf("zh_hans", "zh_hant_hk", "zh_hant_tw")) void("set_option", id, option, 0)
-            }
         }
         // DIAGNOSTICS: identify conversion resource/handle failures while loading OpenCC.
         converter = AppDiagnostics.atStage(DiagnosticComponent.RIME, DiagnosticStage.CONVERSION) {
@@ -123,7 +147,36 @@ internal class RimeEngine(private val context: Context) : QueryEngine {
             children.forEach { copyAssets("$path/$it", File(target, it)) }
         } else {
             target.parentFile?.let { check(it.mkdirs() || it.isDirectory) }
-            context.assets.open(path).use { input -> target.outputStream().use { input.copyTo(it) } }
+            openAsset(path).use { input -> target.outputStream().use { input.copyTo(it) } }
+        }
+    }
+
+    /** Session creation is lazy and failures are remembered per schema, not per engine process. */
+    private fun session(schema: String): Long {
+        schemaFailures[schema]?.let { throw RimeSchemaUnavailableException(it) }
+        sessions[schema]?.let { return it }
+        var id = 0L
+        try {
+            check(schema == "bopomofo" || availableSchemes.any { it.schemaId == schema }) { "Schema is not registered" }
+            id = AppDiagnostics.atStage(DiagnosticComponent.RIME, DiagnosticStage.SESSION) {
+                fn("create_session").invokeLong(emptyArray()).also { check(it != 0L) }
+            }
+            AppDiagnostics.atStage(DiagnosticComponent.RIME, DiagnosticStage.SCHEMA) {
+                check(int("select_schema", id, schema) != 0) { "Rime schema not ready" }
+                void("set_option", id, "ascii_mode", 0)
+                void("set_option", id, "simplification", 0)
+                void("set_option", id, "_auto_commit", 1)
+                for (option in listOf("zh_hans", "zh_hant_hk", "zh_hant_tw")) void("set_option", id, option, 0)
+            }
+            sessions[schema] = id
+            return id
+        } catch (error: Exception) {
+            if (id != 0L) runCatching { int("destroy_session", id) }
+            if (error is DiagnosticStageException &&
+                error.issue.kind in setOf(DiagnosticKind.NATIVE_LINK, DiagnosticKind.MEMORY)) throw error
+            val issue = AppDiagnostics.failure(DiagnosticComponent.RIME, DiagnosticStage.SCHEMA, error)
+            schemaFailures[schema] = issue
+            throw RimeSchemaUnavailableException(issue)
         }
     }
     private fun replay(id: Long, raw: String) {
@@ -148,7 +201,7 @@ internal class RimeEngine(private val context: Context) : QueryEngine {
     override fun query(raw: String, beforeCursor: String): List<Candidate> {
         if (raw.isNotEmpty()) return query(raw)
         if (beforeCursor.isBlank()) return emptyList()
-        // Luna Pinyin has no native next-word API. Continue phrases from its bundled essay corpus.
+        // Prediction uses the shared phrase corpus independently of the selected input schema.
         val previous = convert(PredictionContext.chinese(beforeCursor), traditionalConverter)
         return phrases.suggest(previous).flatMapIndexed { rank, phrase ->
             listOfNotNull(Candidate(phrase.text, "繁", rank, CandidateKind.PREDICTION),
@@ -160,10 +213,25 @@ internal class RimeEngine(private val context: Context) : QueryEngine {
     /** Reader injection compares the native snapshot against the test-only legacy replay algorithm. */
     internal fun queryWithReader(raw: String, reader: (Long, String) -> List<RimeNativeCandidate>): List<Candidate> {
         if (!acceptsInput(raw)) return emptyList()
-        val schema = if (ZhuyinInput.containsSymbols(raw)) "bopomofo" else "luna_pinyin"
+        val schema = if (ZhuyinInput.containsSymbols(raw)) "bopomofo" else pinyinScheme.schemaId
         val input = if (schema == "bopomofo") ZhuyinInput.encode(raw) ?: return emptyList()
-            else raw.lowercase(Locale.ROOT)
-        val id = sessions.getValue(schema)
+            else pinyinInput.encode(raw) ?: return emptyList()
+        val id = session(schema)
+        return try {
+            querySession(raw, schema, input, id, reader)
+        } catch (error: Exception) {
+            sessions.remove(schema)
+            runCatching { int("destroy_session", id) }
+            if (error is DiagnosticStageException &&
+                error.issue.kind in setOf(DiagnosticKind.NATIVE_LINK, DiagnosticKind.MEMORY)) throw error
+            val issue = AppDiagnostics.failure(DiagnosticComponent.RIME, DiagnosticStage.QUERY, error)
+            schemaFailures[schema] = issue
+            throw RimeSchemaUnavailableException(issue)
+        }
+    }
+
+    private fun querySession(raw: String, schema: String, input: String, id: Long,
+        reader: (Long, String) -> List<RimeNativeCandidate>): List<Candidate> {
         return try {
             replay(id, input)
             // Native snapshot validates the retained input and returns ranges without selecting.
@@ -173,7 +241,7 @@ internal class RimeEngine(private val context: Context) : QueryEngine {
                 // accept only an exact re-encoding boundary, never proportional offsets.
                 val end = (1..raw.length).lastOrNull { index ->
                     val prefix = raw.take(index)
-                    val encoded = if (schema == "bopomofo") ZhuyinInput.encode(prefix) else prefix.lowercase(Locale.ROOT)
+                    val encoded = if (schema == "bopomofo") ZhuyinInput.encode(prefix) else pinyinInput.encode(prefix)
                     encoded == input.take(encodedEnd)
                 } ?: return@flatMap emptyList()
                 val consumption = if (end < raw.length) CandidateConsumption(raw, end, "Rime", "$schema:${item.rank}") else null

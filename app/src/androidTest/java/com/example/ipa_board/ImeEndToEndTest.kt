@@ -167,7 +167,7 @@ class ImeEndToEndTest {
             fun state(enabled: Boolean) {
                 val toggle = awaitNode {
                     it.contentDescription?.toString() == "全角 / 半角转换" &&
-                        it.stateDescription?.toString() == if (enabled) "开启" else "关闭"
+                        it.stateDescription?.toString() == if (enabled) "锁定" else "关闭"
                 }
                 assertEquals(enabled, toggle.isSelected)
             }
@@ -181,20 +181,23 @@ class ImeEndToEndTest {
             awaitEditorText(scenario, original, composing = false)
 
             toolbar()
+            toolbar()
             state(true)
             key(1)
             awaitEditorText(scenario, original + swapped, composing = true)
             key(4)
-            // The original raw buffer is transformed on commit, never the already transformed display.
+            // Commit the actual stored text once; locked mode continues until explicitly disabled.
             awaitEditorText(scenario, original + swapped, composing = false)
-
+            state(true)
             key(3, AccessibilityNodeInfo.ACTION_LONG_CLICK)
             awaitEditorText(scenario, original + swapped + swappedHold, composing = true)
             key(4)
             awaitEditorText(scenario, original + swapped + swappedHold, composing = false)
+            state(true)
 
             key(2)
             state(false)
+            key(2, AccessibilityNodeInfo.ACTION_LONG_CLICK)
             key(2, AccessibilityNodeInfo.ACTION_LONG_CLICK)
             state(true)
             assertTrue(awaitNode { it.contentDescription?.toString()?.startsWith("Row 2, key 1:") == true }
@@ -210,7 +213,7 @@ class ImeEndToEndTest {
             }.performAction(AccessibilityNodeInfo.ACTION_CLICK))
             state(true)
 
-            // A new input session on the same service retains the toggle and exercises direct output.
+            // A new input session in the same service keeps locked mode and transforms direct text once.
             scenario.onActivity {
                 it.editor.inputType = android.text.InputType.TYPE_CLASS_TEXT or
                     android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
@@ -222,6 +225,7 @@ class ImeEndToEndTest {
             key(1)
             val prefix = original + swapped + swappedHold
             awaitEditorText(scenario, prefix + swapped, composing = false)
+            state(true)
             key(2)
             state(false)
             key(1)
@@ -229,7 +233,7 @@ class ImeEndToEndTest {
         }
     }
 
-    @Test fun widthSwapPreservesNativePinyinEncodingAndCandidateCommit() {
+    @Test fun convertedPinyinStaysLiteralAndAnOriginalPinyinCandidateIsCommittedUnchanged() {
         val layout = KeyboardLayout("Width Swap Candidate E2E", listOf(RowLayout(1f, listOf(
             KeySlot(1f, "nihao123", textBehavior = TextBehavior.AUTO),
             KeySlot(1f, action = KeyAction.WIDTH_SWAP),
@@ -238,20 +242,33 @@ class ImeEndToEndTest {
         withIsolatedKeyboard(listOf(layout)) { scenario, _ ->
             assertTrue(awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" }
                 .performAction(AccessibilityNodeInfo.ACTION_CLICK))
-            awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" && it.stateDescription?.toString() == "开启" }
+            driver.click { it.contentDescription?.toString() == "全角 / 半角转换" }
+            awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" && it.stateDescription?.toString() == "锁定" }
             assertTrue(awaitNode { it.contentDescription?.toString() == "Row 1, key 1: nihao123" }
                 .performAction(AccessibilityNodeInfo.ACTION_CLICK))
             awaitEditorText(scenario, "ｎｉｈａｏ１２３", composing = true)
-            // The engine still receives nihao123; selecting a Chinese candidate transforms its digits once.
+            // Fullwidth text is the actual query, with no hidden ASCII spelling restored for the engine.
+            driver.click { it.contentDescription?.toString()?.startsWith("Row 1, key 3:") == true }
+            awaitEditorText(scenario, "ｎｉｈａｏ１２３", composing = false)
+            driver.click { it.contentDescription?.toString() == "全角 / 半角转换" }
+            awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" && it.stateDescription?.toString() == "关闭" }
+
+            // Keep the real native conversion check on separately entered, actual ASCII spelling.
+            driver.click { it.contentDescription?.toString() == "Row 1, key 1: nihao123" }
+            awaitEditorText(scenario, "ｎｉｈａｏ１２３nihao123", composing = true)
             awaitNode { it.contentDescription?.toString() == "你好123" && it.isClickable }
+            driver.click { it.contentDescription?.toString() == "全角 / 半角转换" }
+            driver.click { it.contentDescription?.toString() == "全角 / 半角转换" }
+            awaitEditorText(scenario, "ｎｉｈａｏ１２３nihao123", composing = true)
             assertTrue(awaitNode { it.contentDescription?.toString() == "Expand" }
                 .performAction(AccessibilityNodeInfo.ACTION_CLICK))
             awaitNode { it.text?.toString()?.startsWith("Candidates (") == true }
-            awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" && it.stateDescription?.toString() == "开启" }
+            awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" && it.stateDescription?.toString() == "锁定" }
             assertTrue(awaitNode { it.contentDescription?.toString() == "Return to Keyboard" }
                 .performAction(AccessibilityNodeInfo.ACTION_CLICK))
-            driver.select(scenario, "你好123", "你好１２３")
-            awaitEditorText(scenario, "你好１２３", composing = false)
+            driver.select(scenario, "你好123", "ｎｉｈａｏ１２３你好123")
+            awaitEditorText(scenario, "ｎｉｈａｏ１２３你好123", composing = false)
+            awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" && it.stateDescription?.toString() == "锁定" }
         }
     }
 
@@ -285,6 +302,7 @@ class ImeEndToEndTest {
         val oldFlags = ui.serviceInfo.flags
         val pages = mutableListOf<String>()
         var scenario: ActivityScenario<ImeTestEditorActivity>? = null
+        var primaryFailure: Throwable? = null
         try {
             ui.serviceInfo = ui.serviceInfo.apply {
                 flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
@@ -292,27 +310,35 @@ class ImeEndToEndTest {
             layouts.forEach { layout -> pages += LayoutFileManager.createLayout(context, layout.name, layout) }
             PageGroupManager.addPages(context, PageGroupManager.active(context).id, pages)
             PageGroupManager.selectPage(context, pages.first())
-            shell("ime enable $ime"); shell("ime set $ime")
+            ImeTestImeState.enableAndSelect(context, ime, ::shell)
             val activeScenario = ActivityScenario.launch(ImeTestEditorActivity::class.java)
             scenario = activeScenario
             driver.awaitKeyboard(activeScenario) { it.contentDescription?.toString()?.startsWith("Row 1, key 1:") == true }
-            assertEquals("The keyboard width conversion starts disabled", "关闭",
+            repeat(3) {
+                if (awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" }.stateDescription?.toString() != "关闭") {
+                    driver.click { it.contentDescription?.toString() == "全角 / 半角转换" }
+                    instrumentation.waitForIdleSync()
+                }
+            }
+            assertEquals("The fixture starts with width conversion disabled", "关闭",
                 awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" }.stateDescription?.toString())
             body(activeScenario, pages)
+        } catch (error: Throwable) {
+            primaryFailure = error
+            throw error
         } finally {
-            try {
+            cleanupImeFixture(primaryFailure, {
                 // This toggle is service-local rather than a preference; turn it off before the editor closes.
-                find {
-                    it.contentDescription?.toString() == "全角 / 半角转换" && it.stateDescription?.toString() == "开启"
-                }?.let { check(it.performAction(AccessibilityNodeInfo.ACTION_CLICK)) }
-            } finally {
-                scenario?.close()
-                shell("ime set $oldIme")
-                if (!alreadyEnabled) shell("ime disable $ime")
-                pages.forEach { LayoutFileManager.deleteLayout(context, it) }
+                repeat(3) {
+                    find {
+                        it.contentDescription?.toString() == "全角 / 半角转换" && it.stateDescription?.toString() != "关闭"
+                    }?.let { check(it.performAction(AccessibilityNodeInfo.ACTION_CLICK)); instrumentation.waitForIdleSync() }
+                }
+            }, { scenario?.close() }, {
+                ImeTestImeState.restore(context, ime, oldIme, alreadyEnabled, ::shell)
+            }, { pages.forEach { LayoutFileManager.deleteLayout(context, it) } }, {
                 ui.serviceInfo = ui.serviceInfo.apply { flags = oldFlags }
-                groupSnapshot.close()
-            }
+            }, { groupSnapshot.close() })
         }
     }
 
@@ -335,6 +361,7 @@ class ImeEndToEndTest {
         val alreadyEnabled = context.getSystemService(android.view.inputmethod.InputMethodManager::class.java).enabledInputMethodList.any { it.id == ime }
         val oldFlags = ui.serviceInfo.flags
         var page: String? = null
+        var primaryFailure: Throwable? = null
         fun openCategoryMenu() {
             driver.click { it.text?.toString()?.startsWith("Emoji · ") == true && it.isClickable }
         }
@@ -371,7 +398,7 @@ class ImeEndToEndTest {
             )))
             PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(page))
             PageGroupManager.selectPage(context, page)
-            shell("ime enable $ime"); shell("ime set $ime")
+            ImeTestImeState.enableAndSelect(context, ime, ::shell)
             ActivityScenario.launch(ImeTestEditorActivity::class.java).use { scenario ->
                 driver.awaitKeyboard(scenario) { it.contentDescription?.toString() == "Row 1, key 2: n" }
                 driver.click { it.contentDescription?.toString() == "Row 1, key 2: n" }
@@ -415,18 +442,19 @@ class ImeEndToEndTest {
                 shell("input keyevent 4")
                 awaitNode { it.contentDescription?.toString() == "Row 1, key 1: Emoji" }
             }
+        } catch (error: Throwable) {
+            primaryFailure = error
+            throw error
         } finally {
-            try {
-                shell("ime set $oldIme")
-                if (!alreadyEnabled) shell("ime disable $ime")
-                prefs.edit().apply { if (oldPage == null) remove(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE) else putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, oldPage) }.commit()
-                page?.let { LayoutFileManager.deleteLayout(context, it) }
+            cleanupImeFixture(primaryFailure, {
+                ImeTestImeState.restore(context, ime, oldIme, alreadyEnabled, ::shell)
+            }, {
+                assertTrue(prefs.edit().apply { if (oldPage == null) remove(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE) else putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, oldPage) }.commit())
+            }, { page?.let { LayoutFileManager.deleteLayout(context, it) } }, {
                 ui.serviceInfo = ui.serviceInfo.apply { flags = oldFlags }
-                groupSnapshot.close()
-            } finally {
+            }, { groupSnapshot.close() }, {
                 if (installedBefore == null) installedFile.delete() else installedFile.writeBytes(installedBefore)
-                EmojiCatalogRepository.getInstance(context).invalidate()
-            }
+            }, { EmojiCatalogRepository.getInstance(context).invalidate() })
         }
     }
 
@@ -441,6 +469,7 @@ class ImeEndToEndTest {
         val alreadyEnabled = context.getSystemService(android.view.inputmethod.InputMethodManager::class.java).enabledInputMethodList.any { it.id == ime }
         val oldFlags = ui.serviceInfo.flags
         var page: String? = null
+        var primaryFailure: Throwable? = null
         try {
             ui.serviceInfo = ui.serviceInfo.apply { flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS }
             page = LayoutFileManager.createLayout(context, "Preview E2E", KeyboardLayout("Preview", listOf(
@@ -448,7 +477,7 @@ class ImeEndToEndTest {
             )))
             PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(page))
             PageGroupManager.selectPage(context, page)
-            shell("ime enable $ime"); shell("ime set $ime")
+            ImeTestImeState.enableAndSelect(context, ime, ::shell)
             ActivityScenario.launch(ImeTestEditorActivity::class.java).use { scenario ->
                 driver.awaitKeyboard(scenario) { it.contentDescription?.toString() == "Row 1, key 1: a, long press: ɑ😀" }
                 // Wait for the IME entrance animation before obtaining screen touch coordinates.
@@ -474,13 +503,17 @@ class ImeEndToEndTest {
                 instrumentation.waitForIdleSync()
                 scenario.onActivity { assertEquals("ɑ😀a", it.editor.text.toString()) }
             }
+        } catch (error: Throwable) {
+            primaryFailure = error
+            throw error
         } finally {
-            shell("ime set $oldIme")
-            if (!alreadyEnabled) shell("ime disable $ime")
-            prefs.edit().apply { if (oldPage == null) remove(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE) else putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, oldPage) }.commit()
-            page?.let { LayoutFileManager.deleteLayout(context, it) }
-            ui.serviceInfo = ui.serviceInfo.apply { flags = oldFlags }
-            groupSnapshot.close()
+            cleanupImeFixture(primaryFailure, {
+                ImeTestImeState.restore(context, ime, oldIme, alreadyEnabled, ::shell)
+            }, {
+                assertTrue(prefs.edit().apply { if (oldPage == null) remove(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE) else putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, oldPage) }.commit())
+            }, { page?.let { LayoutFileManager.deleteLayout(context, it) } }, {
+                ui.serviceInfo = ui.serviceInfo.apply { flags = oldFlags }
+            }, { groupSnapshot.close() })
         }
     }
 
@@ -496,6 +529,7 @@ class ImeEndToEndTest {
         val oldFlags = ui.serviceInfo.flags
         var page: String? = null
         var alternatePage: String? = null
+        var primaryFailure: Throwable? = null
         try {
             ui.serviceInfo = ui.serviceInfo.apply { flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS }
             page = LayoutFileManager.createLayout(context, "IME E2E", BuiltinLayouts.mixed.copy(name = "IME E2E"))
@@ -505,7 +539,7 @@ class ImeEndToEndTest {
             PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(page))
             PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(alternatePage))
             PageGroupManager.selectPage(context, page)
-            shell("ime enable $ime"); shell("ime set $ime")
+            ImeTestImeState.enableAndSelect(context, ime, ::shell)
             ActivityScenario.launch(ImeTestEditorActivity::class.java).use { scenario ->
                 driver.awaitKeyboard(scenario) { it.contentDescription?.toString() == "Keyboard Overview" }
                 for (letter in "nihao") {
@@ -566,14 +600,17 @@ class ImeEndToEndTest {
                 while (find { it.contentDescription?.toString() == "Keyboard Overview" } != null && android.os.SystemClock.uptimeMillis() < deadline) Thread.sleep(80)
                 assertNull(find { it.contentDescription?.toString() == "Keyboard Overview" })
             }
+        } catch (error: Throwable) {
+            primaryFailure = error
+            throw error
         } finally {
-            shell("ime set $oldIme")
-            if (!alreadyEnabled) shell("ime disable $ime")
-            prefs.edit().apply { if (oldPage == null) remove(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE) else putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, oldPage) }.commit()
-            page?.let { LayoutFileManager.deleteLayout(context, it) }
-            alternatePage?.let { LayoutFileManager.deleteLayout(context, it) }
-            ui.serviceInfo = ui.serviceInfo.apply { flags = oldFlags }
-            groupSnapshot.close()
+            cleanupImeFixture(primaryFailure, {
+                ImeTestImeState.restore(context, ime, oldIme, alreadyEnabled, ::shell)
+            }, {
+                assertTrue(prefs.edit().apply { if (oldPage == null) remove(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE) else putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, oldPage) }.commit())
+            }, { page?.let { LayoutFileManager.deleteLayout(context, it) } }, {
+                alternatePage?.let { LayoutFileManager.deleteLayout(context, it) }
+            }, { ui.serviceInfo = ui.serviceInfo.apply { flags = oldFlags } }, { groupSnapshot.close() })
         }
     }
 }

@@ -15,6 +15,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.ipa_board.shortcuts.ReplacementSettings
 import com.example.ipa_board.shortcuts.ShortcutExport
+import com.example.ipa_board.shortcuts.ShortcutDefaults
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.*
@@ -319,8 +320,11 @@ class ShortcutExportTest {
 
     private fun withAppSettings(body: (SharedPreferences) -> Unit) {
         val prefs = target.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
-        val before = keys.associateWith { prefs.all[it] }
-        assertTrue(prefs.edit().apply { keys.forEach(::remove) }.commit())
+        val before = (keys + ShortcutDefaults.KEY_INITIALIZED).associateWith { prefs.all[it] }
+        assertTrue(prefs.edit().apply {
+            keys.forEach(::remove)
+            putBoolean(ShortcutDefaults.KEY_INITIALIZED, true)
+        }.commit())
         try { body(prefs) } finally {
             assertTrue(prefs.edit().apply {
                 before.forEach { (key, value) ->

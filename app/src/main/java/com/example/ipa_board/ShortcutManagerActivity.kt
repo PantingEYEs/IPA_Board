@@ -20,21 +20,37 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.ViewModelProvider
 import com.example.ipa_board.shortcuts.ShortcutExport
+import com.example.ipa_board.shortcuts.ShortcutImportModel
+import com.example.ipa_board.shortcuts.ReplacementRuleEditor
+import com.example.ipa_board.shortcuts.ShortcutDefaults
+import java.io.InputStream
 import java.io.OutputStream
 
 class ShortcutManagerActivity : ComponentActivity() {
     private lateinit var barPreview: MultifunctionBarView
     private lateinit var exportButton: Button
     private lateinit var exportStatus: TextView
+    private lateinit var importButton: Button
+    private lateinit var importStatus: TextView
+    private lateinit var importModel: ShortcutImportModel
+    private lateinit var replacementEditor: ReplacementRuleEditor
+    private var importDialog: AlertDialog? = null
+    private var importDialogPhase: ShortcutImportModel.Phase? = null
+    internal val shortcutImportState: ShortcutImportModel.State get() = importModel.state.value!!
     private var exportPending = false
     internal enum class ExportOutcome { SAVED, CANCELLED, FAILED, IGNORED }
     private val exportLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         completeShortcutExport(it.resultCode, it.data?.data)
     }
+    private val importLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        completeShortcutImport(it.resultCode, it.data?.data)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ShortcutDefaults.initialize(this)
         setContentView(R.layout.activity_shortcut)
 
         val root = findViewById<android.view.View>(R.id.shortcut_root)
@@ -50,9 +66,15 @@ class ShortcutManagerActivity : ComponentActivity() {
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener { finish() }
         exportButton = findViewById(R.id.btn_export_shortcuts)
         exportStatus = findViewById(R.id.shortcut_export_status)
+        importButton = findViewById(R.id.btn_import_shortcuts)
+        importStatus = findViewById(R.id.shortcut_import_status)
+        importModel = ViewModelProvider(this)[ShortcutImportModel::class.java]
+        importModel.restore(savedInstanceState?.getBoolean("shortcut_import_picking", false) == true,
+            savedInstanceState?.getBoolean("shortcut_import_active", false) == true,
+            savedInstanceState?.getBoolean("shortcut_import_saving", false) == true)
         exportPending = savedInstanceState?.getBoolean("shortcut_export_pending", false) ?: false
-        exportButton.isEnabled = !exportPending
         exportButton.setOnClickListener { launchShortcutExport() }
+        importButton.setOnClickListener { launchShortcutImport() }
 
         barPreview = MultifunctionBarView(this).apply {
             editing = true
@@ -62,7 +84,9 @@ class ShortcutManagerActivity : ComponentActivity() {
         findViewById<ViewGroup>(R.id.multifunction_bar_preview).addView(barPreview)
         refreshBarPreview()
 
-        com.example.ipa_board.shortcuts.ReplacementRuleEditor(this, findViewById(R.id.replacement_rules))
+        replacementEditor = ReplacementRuleEditor(this, findViewById(R.id.replacement_rules))
+        importModel.state.observe(this) { renderImport(it) }
+        updateTransferButtons()
         findViewById<Button>(R.id.btn_manage_shift_shortcuts).setOnClickListener {
             showShortcutManagerDialog(isShift = true)
         }
@@ -79,7 +103,7 @@ class ShortcutManagerActivity : ComponentActivity() {
 
     /** Validate before opening a destination; export only saved settings, never editor drafts. */
     internal fun launchShortcutExport(launch: (Intent) -> Unit = { exportLauncher.launch(it) }) {
-        if (exportPending) return
+        if (exportPending || importModel.busy || isDestroyed || isFinishing) return
         try {
             ShortcutExport.capture(this)
         } catch (_: Exception) {
@@ -87,7 +111,7 @@ class ShortcutManagerActivity : ComponentActivity() {
             return
         }
         exportPending = true
-        exportButton.isEnabled = false
+        updateTransferButtons()
         exportStatus.visibility = View.GONE
         try {
             launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
@@ -97,7 +121,7 @@ class ShortcutManagerActivity : ComponentActivity() {
             })
         } catch (_: Exception) {
             exportPending = false
-            exportButton.isEnabled = true
+            updateTransferButtons()
             showExportStatus(R.string.shortcut_export_destination_failed)
         }
     }
@@ -107,7 +131,7 @@ class ShortcutManagerActivity : ComponentActivity() {
         openOutput: (Uri) -> OutputStream? = { contentResolver.openOutputStream(it, "wt") }): ExportOutcome {
         if (!exportPending) return ExportOutcome.IGNORED
         exportPending = false
-        exportButton.isEnabled = true
+        updateTransferButtons()
         if (resultCode != RESULT_OK) {
             showExportStatus(R.string.shortcut_export_cancelled)
             return ExportOutcome.CANCELLED
@@ -135,7 +159,92 @@ class ShortcutManagerActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean("shortcut_export_pending", exportPending)
+        outState.putBoolean("shortcut_import_picking", shortcutImportState.phase == ShortcutImportModel.Phase.PICKING)
+        outState.putBoolean("shortcut_import_active", importModel.busy)
+        outState.putBoolean("shortcut_import_saving", shortcutImportState.phase == ShortcutImportModel.Phase.SAVING)
         super.onSaveInstanceState(outState)
+    }
+
+    internal fun launchShortcutImport(launch: (Intent) -> Unit = { importLauncher.launch(it) }) {
+        if (exportPending || isDestroyed || isFinishing || !importModel.begin()) return
+        try {
+            launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "application/json"
+            })
+        } catch (_: Exception) { importModel.selectionFailed() }
+    }
+
+    internal fun completeShortcutImport(resultCode: Int, uri: Uri?,
+        openInput: (Uri) -> InputStream? = applicationContext.contentResolver::openInputStream) {
+        if (isDestroyed || isFinishing || shortcutImportState.phase != ShortcutImportModel.Phase.PICKING) return
+        if (resultCode != RESULT_OK) importModel.cancel()
+        else importModel.read { openInput(requireNotNull(uri)) }
+    }
+
+    internal fun confirmShortcutImport(): Boolean {
+        if (isDestroyed || isFinishing) return false
+        return importModel.confirm(applicationContext)
+    }
+
+    internal fun cancelShortcutImport() {
+        if (!isDestroyed && !isFinishing) importModel.cancel()
+    }
+
+    private fun updateTransferButtons() {
+        val enabled = !exportPending && !importModel.busy
+        exportButton.isEnabled = enabled
+        importButton.isEnabled = enabled
+    }
+
+    private fun renderImport(state: ShortcutImportModel.State) {
+        updateTransferButtons()
+        importStatus.visibility = if (state.message == null) View.GONE else View.VISIBLE
+        state.message?.let(importStatus::setText)
+        if (importDialogPhase != state.phase) {
+            importDialog?.dismiss()
+            importDialog = null
+            importDialogPhase = null
+        }
+        if (state.phase == ShortcutImportModel.Phase.READY && !isFinishing && !isDestroyed) {
+            if (importDialog?.isShowing == true) return
+            val plan = requireNotNull(state.plan)
+            val labels = mapOf("shift" to R.string.shortcut_import_shift, "ctrl" to R.string.shortcut_import_ctrl,
+                "multifunctionBar" to R.string.shortcut_import_toolbar, "replacementText" to R.string.shortcut_import_replacements)
+            val summary = plan.categoryNames.joinToString("\n") { category ->
+                getString(R.string.shortcut_import_summary_entry, getString(labels.getValue(category)), plan.counts.getValue(category))
+            }
+            importDialog = AlertDialog.Builder(this)
+                .setTitle(R.string.shortcut_import_confirm_title)
+                .setMessage(getString(R.string.shortcut_import_summary, summary))
+                .setNegativeButton(R.string.multifunction_bar_cancel) { _, _ -> cancelShortcutImport() }
+                .setPositiveButton(R.string.shortcut_import_confirm) { _, _ -> confirmShortcutImport() }
+                .setOnCancelListener { cancelShortcutImport() }
+                .create().also { it.show() }
+            importDialogPhase = state.phase
+        } else if (state.phase == ShortcutImportModel.Phase.SAVING && !isFinishing && !isDestroyed) {
+            if (importDialog?.isShowing != true) {
+                importDialog = AlertDialog.Builder(this)
+                    .setMessage(R.string.shortcut_import_saving)
+                    .setCancelable(false)
+                    .create().also { it.show() }
+                importDialogPhase = state.phase
+            }
+        } else {
+            importDialog?.dismiss()
+            importDialog = null
+            importDialogPhase = null
+        }
+        if (state.message == R.string.shortcut_import_saved || state.message == R.string.shortcut_import_restore_failed) {
+            refreshBarPreview()
+            replacementEditor.refresh()
+        }
+    }
+
+    override fun onDestroy() {
+        importDialog?.dismiss()
+        importDialog = null
+        super.onDestroy()
     }
 
     private fun refreshBarPreview() {

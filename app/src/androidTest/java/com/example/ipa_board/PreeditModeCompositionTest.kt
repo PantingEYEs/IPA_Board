@@ -86,7 +86,7 @@ class PreeditModeCompositionTest {
         var currentConnection: InputConnection? = ic
         val queries = mutableListOf<String>()
         val controller = CompositionController({ currentConnection }, { _, raw -> queries += raw }, {},
-            transformOutput = transform, initialInlineEnabled = inline)
+            transformInput = transform, initialInlineEnabled = inline)
 
         fun offer(candidate: Candidate) = controller.acceptResults(controller.revision, listOf(candidate))
 
@@ -147,10 +147,14 @@ class PreeditModeCompositionTest {
             assertEquals(listOf("你好"), f.ic.commits)
             c.input("hello")
             f.offer(Candidate("hello", "EN"))
-            assertTrue(c.space())
+            val englishSpace = c.space()
+            assertTrue(englishSpace.handled)
+            assertTrue(englishSpace.insertedSpace)
             f.assertHost("前你好hello 後", 9)
             c.input("x")
-            assertTrue(c.space())
+            val literalSpace = c.space()
+            assertTrue(literalSpace.handled)
+            assertTrue(literalSpace.insertedSpace)
             f.assertHost("前你好hello x 後", 11)
             assertEquals(listOf("你好", "hello ", "x "), f.ic.commits)
             assertEquals(0, f.ic.composingWrites)
@@ -215,7 +219,7 @@ class PreeditModeCompositionTest {
         }
     }
 
-    @Test fun widthChangesAndCalculatorReplacementStayPendingAndConvertOnlyOnCommit() {
+    @Test fun widthChangesPreserveDeferredInputAndCalculatorReplacementIsNotConverted() {
         instrumentation.runOnMainSync {
             var width = false
             val f = fixture(transform = { if (width) CharacterWidthConverter.swap(it) else it })
@@ -225,25 +229,29 @@ class PreeditModeCompositionTest {
             val stale = Candidate("过期", "简")
             f.offer(stale)
             width = true
-            c.refreshOutput()
             assertEquals("ｶﾞaＡ😀", c.raw)
+            assertEquals("ｶﾞaＡ😀", c.displayText)
+            assertEquals(old, c.revision)
             assertEquals(c.raw, f.queries.last())
-            assertFalse(c.select(stale, old))
+            assertEquals(listOf(stale), c.candidates)
             f.assertHost()
             f.ic.assertNoPendingWrites()
             assertTrue(c.literal())
-            f.assertHost("前ガａA😀後", 6)
-            assertEquals(listOf("ガａA😀"), f.ic.commits)
+            f.assertHost("前ｶﾞaＡ😀後", 7)
+            assertEquals(listOf("ｶﾞaＡ😀"), f.ic.commits)
             width = false
             c.input("sqrt(i)")
             f.offer(Candidate("0.7…+(0.7…)i", "∑"))
+            width = true
             assertTrue(c.select(c.candidates.single()))
             assertEquals("0.7+(0.7)i", c.raw)
-            f.assertHost("前ガａA😀後", 6)
+            assertEquals("0.7+(0.7)i", c.displayText)
+            f.assertHost("前ｶﾞaＡ😀後", 7)
+            width = false
             c.input("+1")
             assertTrue(c.literal())
-            f.assertHost("前ガａA😀0.7+(0.7)i+1後", 18)
-            assertEquals(listOf("ガａA😀", "0.7+(0.7)i+1"), f.ic.commits)
+            f.assertHost("前ｶﾞaＡ😀0.7+(0.7)i+1後", 19)
+            assertEquals(listOf("ｶﾞaＡ😀", "0.7+(0.7)i+1"), f.ic.commits)
         }
     }
 
@@ -487,11 +495,11 @@ class PreeditModeCompositionTest {
                 consumption = CandidateConsumption(c.raw, 1, "Rime", "synthetic-width"))
             f.offer(prefix)
             assertTrue(c.select(prefix))
-            assertEquals("ｶﾞ", c.raw)
-            f.assertHost("前A後", 2)
+            assertEquals("ガ", c.raw)
+            f.assertHost("前Ａ後", 2)
             assertTrue(c.literal())
-            f.assertHost("前Aガ後", 3)
-            assertEquals(listOf("A", "ガ"), f.ic.commits)
+            f.assertHost("前Ａガ後", 3)
+            assertEquals(listOf("Ａ", "ガ"), f.ic.commits)
             assertEquals(0, f.ic.composingWrites)
         }
     }
@@ -504,7 +512,7 @@ class PreeditModeCompositionTest {
             f.assertHost()
             f.ic.assertNoPendingWrites()
             c.input("ｶﾞ")
-            assertEquals("ｶﾞ", c.raw)
+            assertEquals("ガ", c.raw)
             f.assertHost("前" + "A".repeat(64) + "後", 65)
             c.input("A".repeat(65))
             assertEquals("", c.raw)

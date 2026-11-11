@@ -57,33 +57,46 @@ class LayoutFileManagerTest {
         assertEquals(1L, prefs.getLong(SettingsConstants.KEY_LAYOUT_REVISION, 0))
     }
 
-    @Test fun initializationMatchesNormalImportForEveryBundledFile() {
-        val filenames = context.assets.list("initialization/keyboards").orEmpty()
-            .filter { it.endsWith(".json", ignoreCase = true) }.sorted()
+    @Test fun initializationMatchesNormalFolderImportForEveryBundledGroupAndPage() {
+        val sources = bundledPageGroupSources(context)
+        val pageCount = sources.sumOf { folder -> folder.files.count { !it.name.equals("group_config.json", true) } }
         val manualContext = IsolatedLayoutContext(InstrumentationRegistry.getInstrumentation().targetContext)
         try {
-            filenames.forEach { filename ->
-                manualContext.assets.open("initialization/keyboards/$filename").use {
-                    LayoutFileManager.importLayout(manualContext, it, filename)
+            val manualGroups = sources.map { folder ->
+                val result = PageGroupTransfer.importGroup(manualContext, PageGroupTransfer.readFolder(folder))
+                assertEquals(PageGroupTransfer.Status.IMPORTED, result.status)
+                PageGroupManager.state(manualContext).groups.single { it.id == result.groupIds.single() }
+            }
+            LayoutFileManager.initDefaultLayout(context)
+            val initial = PageGroupManager.state(context)
+            assertEquals(sources.map { it.name }, initial.groups.map { it.name })
+            assertEquals(pageCount, LayoutFileManager.listLayoutFiles(context).size)
+            assertEquals(initial.groups.first().id, initial.activeGroupId)
+            sources.zip(initial.groups).forEach { (source, actual) ->
+                val metadata = source.files.single { it.name.equals("group_config.json", true) }
+                    .open().bufferedReader().use { org.json.JSONObject(it.readText()) }
+                val pages = metadata.getJSONArray("pages")
+                val expectedNames = (0 until pages.length()).map { pages.getString(it) }
+                assertEquals(expectedNames, actual.pages)
+                assertEquals(if (metadata.isNull("activePage")) null else metadata.getString("activePage"), actual.activePage)
+                assertEquals(GroupAppearance.fromJson(metadata.getJSONObject("appearance")), actual.appearance)
+            }
+            manualGroups.zip(initial.groups).forEach { (expected, actual) ->
+                assertEquals(expected.name, actual.name)
+                assertEquals(expected.appearance, actual.appearance)
+                assertEquals(expected.pages, actual.pages)
+                assertEquals(expected.activePage, actual.activePage)
+                actual.pages.forEach { filename ->
+                    assertEquals(LayoutFileManager.loadLayout(manualContext, filename), LayoutFileManager.loadLayout(context, filename))
                 }
             }
-            LayoutFileManager.initDefaultLayout(context)
-            val expected = LayoutFileManager.listLayoutFiles(manualContext)
-            assertEquals(expected, LayoutFileManager.listLayoutFiles(context))
-            expected.forEach { filename ->
-                assertEquals(LayoutFileManager.loadLayout(manualContext, filename),
-                    LayoutFileManager.loadLayout(context, filename))
-            }
-            val manualPrefs = manualContext.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
             val actualPrefs = context.getSharedPreferences(SettingsConstants.PREFS_NAME, Context.MODE_PRIVATE)
-            listOf(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, SettingsConstants.KEY_BG_COLOR_HEX,
-                SettingsConstants.KEY_SYMBOL_COLOR_HEX, SettingsConstants.KEY_KEYBOARD_HEIGHT).forEach { key ->
-                assertEquals(manualPrefs.all[key], actualPrefs.all[key])
-            }
-            assertEquals(PageGroupManager.active(manualContext).pages, PageGroupManager.active(context).pages)
-            assertEquals(PageGroupManager.active(manualContext).appearance, PageGroupManager.active(context).appearance)
+            val preferences = actualPrefs.all
+            val files = LayoutFileManager.listLayoutFiles(context)
             LayoutFileManager.initDefaultLayout(context)
-            assertEquals(expected, LayoutFileManager.listLayoutFiles(context))
+            assertEquals(files, LayoutFileManager.listLayoutFiles(context))
+            assertEquals(initial, PageGroupManager.state(context))
+            assertEquals(preferences, actualPrefs.all)
         } finally {
             manualContext.cleanUp()
         }

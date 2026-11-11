@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pinyin_scheme_title">Pinyin scheme</string>
+    <string name="pinyin_scheme_scope">Applies to Romanized Chinese input. Zhuyin has its own scheme. Your selection is kept when Chinese conversion is off.</string>
+    <string name="terra_pinyin_primary_tones">Tone keys at the end of a syllable: - (1st), / (2nd), &lt; (3rd), \\ (4th). For example, hao&lt; and ni&lt;hao&lt;. Tones may be omitted; apostrophes separate syllables.</string>
+    <string name="terra_pinyin_alternative_tones">Alternative tone keys (; , .)</string>
+    <string name="terra_pinyin_alternative_notice">When enabled, ; , . can mark the 1st, 3rd and 4th tones after a syllable. These marks may then be interpreted as tones in Terra Chinese candidates. &gt; is not a tone key. Literal input and other language engines keep their own rules.</string>
+    <string name="pinyin_setting_save_failed">Could not save the Pinyin option. The previous setting was restored.</string>
+    <string name="pinyin_setting_restore_failed">Could not save or restore the Pinyin option. Check the current selection before continuing.</string>
+</resources>

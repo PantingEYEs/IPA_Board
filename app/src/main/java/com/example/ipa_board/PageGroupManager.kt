@@ -69,6 +69,15 @@ object PageGroupManager {
     @Synchronized fun initialize(context: Context) {
         val preferences = prefs(context)
         if (preferences.contains(SettingsConstants.KEY_PAGE_GROUP_STATE)) return
+        write(context, migrationState(context))
+        // Legacy values are only migration inputs; all subsequent appearance writes target a group.
+        preferences.edit().remove(SettingsConstants.KEY_BG_COLOR_HEX).remove(SettingsConstants.KEY_SYMBOL_COLOR_HEX)
+            .remove(SettingsConstants.KEY_KEYBOARD_HEIGHT).remove(SettingsConstants.KEY_KEYBOARD_FONT_SIZE).apply()
+    }
+
+    /** Build the legacy migration without publishing intermediate state during a group transaction. */
+    internal fun migrationState(context: Context): PageGroupState {
+        val preferences = prefs(context)
         val pages = LayoutFileManager.getLayoutOrder(context).distinct()
         val appearance = GroupAppearance(
             backgroundColor = preferences.getString(SettingsConstants.KEY_BG_COLOR_HEX, null) ?: SettingsConstants.DEFAULT_BG_COLOR_HEX,
@@ -79,15 +88,16 @@ object PageGroupManager {
         ).let { try { it.validated() } catch (_: IllegalArgumentException) { it.copy(backgroundColor = "#000000", symbolColor = "#FFFFFF") } }
         val active = preferences.getString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, null)?.takeIf { it in pages } ?: pages.firstOrNull()
         val group = PageGroup(UUID.randomUUID().toString(), "Default", pages, active, appearance)
-        write(context, PageGroupState(group.id, listOf(group)))
-        // Legacy values are only migration inputs; all subsequent appearance writes target a group.
-        preferences.edit().remove(SettingsConstants.KEY_BG_COLOR_HEX).remove(SettingsConstants.KEY_SYMBOL_COLOR_HEX)
-            .remove(SettingsConstants.KEY_KEYBOARD_HEIGHT).remove(SettingsConstants.KEY_KEYBOARD_FONT_SIZE).apply()
+        return PageGroupState(group.id, listOf(group))
     }
 
     @Synchronized fun state(context: Context): PageGroupState {
         initialize(context)
-        val root = JSONObject(requireNotNull(prefs(context).getString(SettingsConstants.KEY_PAGE_GROUP_STATE, null)))
+        return decodeState(requireNotNull(prefs(context).getString(SettingsConstants.KEY_PAGE_GROUP_STATE, null)))
+    }
+
+    internal fun decodeState(source: String): PageGroupState {
+        val root = JSONObject(source)
         require(root.getInt("version") == 1) { "Unsupported page-group format" }
         val array = root.getJSONArray("groups")
         val groups = (0 until array.length()).map { i ->
@@ -189,14 +199,17 @@ object PageGroupManager {
         write(context, old.copy(groups = old.groups.map { if (it.id == id) transform(it) else it }))
     }
     private fun write(context: Context, state: PageGroupState) {
-        val groups = JSONArray()
-        state.groups.forEach { group -> groups.put(JSONObject().put("id", group.id).put("name", group.name)
-            .put("pages", JSONArray(group.pages.distinct())).put("activePage", group.activePage ?: "")
-            .put("appearance", group.appearance.toJson())) }
-        val root = JSONObject().put("version", 1).put("activeGroupId", state.activeGroupId).put("groups", groups)
         val selected = state.active.activePage?.takeIf { it in state.active.pages && LayoutFileManager.loadLayout(context, it) != null }
             ?: state.active.pages.firstOrNull { LayoutFileManager.loadLayout(context, it) != null }
-        prefs(context).edit().putString(SettingsConstants.KEY_PAGE_GROUP_STATE, root.toString())
+        prefs(context).edit().putString(SettingsConstants.KEY_PAGE_GROUP_STATE, encodeState(state).toString())
             .putString(SettingsConstants.KEY_ACTIVE_LAYOUT_FILE, selected ?: SettingsConstants.DEFAULT_LAYOUT_FILENAME).apply()
     }
+
+    internal fun encodeGroup(group: PageGroup): JSONObject = JSONObject().put("id", group.id).put("name", group.name)
+        .put("pages", JSONArray(group.pages.distinct())).put("activePage", group.activePage ?: "")
+        .put("appearance", group.appearance.toJson())
+
+    internal fun encodeState(state: PageGroupState): JSONObject = JSONObject().put("version", 1)
+        .put("activeGroupId", state.activeGroupId)
+        .put("groups", JSONArray().apply { state.groups.forEach { put(encodeGroup(it)) } })
 }

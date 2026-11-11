@@ -140,14 +140,19 @@ class PageGroupTest {
         assertTrue(PageGroupManager.state(context).groups.all { it.pages.isEmpty() })
     }
 
-    @Test fun manualImportAndCreationJoinCurrentGroupAndInitializationUsesGroupZero() {
+    @Test fun folderInitializationKeepsGroupsSeparateAndManualPagesStillJoinTheCurrentGroup() {
+        val bundled = bundledPageGroupSources(context)
         LayoutFileManager.initDefaultLayout(context)
-        val bundledCount = context.assets.list("initialization/keyboards").orEmpty().count { it.endsWith(".json", true) }
-        val initial = PageGroupManager.active(context)
-        val expected = initial.pages
-        assertEquals(1, PageGroupManager.state(context).groups.size)
-        assertEquals(bundledCount, expected.size)
-        assertEquals(LayoutFileManager.listLayoutFiles(context).toSet(), expected.toSet())
+        val initial = PageGroupManager.state(context)
+        assertEquals(bundled.map { it.name }, initial.groups.map { it.name })
+        assertEquals(initial.groups.first().id, initial.activeGroupId)
+        assertEquals(bundled.sumOf { folder -> folder.files.count { !it.name.equals("group_config.json", true) } },
+            initial.groups.sumOf { it.pages.size })
+        assertEquals(LayoutFileManager.listLayoutFiles(context).toSet(), initial.groups.flatMap { it.pages }.toSet())
+        initial.groups.zip(bundled).forEach { (group, source) ->
+            assertEquals(PageGroupTransfer.readFolder(source).pageNames.size, group.pages.size)
+            assertTrue(group.pages.isNotEmpty())
+        }
         val second = PageGroupManager.create(context, "Manual")
         val imported = BuiltinLayouts.mixed.toJson().byteInputStream().use { LayoutFileManager.importLayout(context, it, "imported.json") }
         val blank = LayoutFileManager.createBlankLayout(context, "blank")
@@ -155,7 +160,7 @@ class PageGroupTest {
         assertEquals(second, PageGroupManager.active(context).id)
         assertEquals(blank, PageGroupManager.activeFilename(context))
         LayoutFileManager.initDefaultLayout(context)
-        assertEquals(expected, PageGroupManager.state(context).groups.first { it.id == initial.id }.pages)
+        assertEquals(initial.groups, PageGroupManager.state(context).groups.filter { it.id != second })
         val before = LayoutFileManager.listLayoutFiles(context)
         val invalid = JSONObject().put("version", 99).put("layout", JSONObject(BuiltinLayouts.mixed.toJson())).toString()
         assertThrows(IllegalArgumentException::class.java) { invalid.byteInputStream().use { LayoutFileManager.importLayout(context, it) } }

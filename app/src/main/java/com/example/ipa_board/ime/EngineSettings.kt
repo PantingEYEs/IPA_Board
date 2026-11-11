@@ -39,12 +39,22 @@ object EngineSettings {
         } }
         false
     }
-    fun isKey(key: String?) = EngineFeature.entries.any { it.key == key }
-    internal fun snapshot(prefs: SharedPreferences) = EngineQueryPolicy(EngineFeature.entries.associateWith { enabled(prefs, it) })
+    fun isKey(key: String?) = EngineFeature.entries.any { it.key == key } || PinyinSettings.isKey(key)
+    internal fun snapshot(prefs: SharedPreferences): EngineQueryPolicy {
+        val values = prefs.all
+        return EngineQueryPolicy(EngineFeature.entries.associateWith {
+            if (values.containsKey(it.key)) values[it.key] as Boolean else it.defaultEnabled
+        }, PinyinSettings.decodeScheme(values[PinyinSettings.KEY_SCHEME]),
+            PinyinSettings.decodeAlternativeTones(values[PinyinSettings.KEY_TERRA_ALTERNATIVE_TONES]))
+    }
 }
 
 /** Passed explicitly to isolated engine processes; SharedPreferences are not read across processes. */
-internal data class EngineQueryPolicy(private val values: Map<EngineFeature, Boolean> = emptyMap()) {
+internal data class EngineQueryPolicy(
+    private val values: Map<EngineFeature, Boolean> = emptyMap(),
+    val pinyinScheme: PinyinScheme = PinyinSettings.DEFAULT_SCHEME,
+    val terraAlternativeTones: Boolean = false,
+) {
     fun enabled(feature: EngineFeature) = values[feature] ?: feature.defaultEnabled
     fun wantsQuery(language: String, prediction: Boolean): Boolean = when (language) {
         "IPA" -> !prediction && enabled(EngineFeature.IPA_CONVERSION)
@@ -62,10 +72,14 @@ internal data class EngineQueryPolicy(private val values: Map<EngineFeature, Boo
     }
     fun writeTo(bundle: Bundle) {
         EngineFeature.entries.forEach { bundle.putBoolean(it.key, enabled(it)) }
+        bundle.putString(PinyinSettings.KEY_SCHEME, pinyinScheme.schemaId)
+        bundle.putBoolean(PinyinSettings.KEY_TERRA_ALTERNATIVE_TONES, terraAlternativeTones)
     }
     companion object {
+        @Suppress("DEPRECATION") // Inspect raw values so malformed/older envelopes use the compatibility defaults safely.
         fun from(bundle: Bundle) = EngineQueryPolicy(EngineFeature.entries.associateWith {
             bundle.getBoolean(it.key, it.defaultEnabled)
-        })
+        }, PinyinSettings.decodeScheme(bundle.get(PinyinSettings.KEY_SCHEME)),
+            PinyinSettings.decodeAlternativeTones(bundle.get(PinyinSettings.KEY_TERRA_ALTERNATIVE_TONES)))
     }
 }

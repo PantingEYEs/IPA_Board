@@ -17,10 +17,12 @@ import com.example.ipa_board.ime.EngineFeature
 import com.example.ipa_board.ime.EngineSettings
 import com.example.ipa_board.ime.RemoteKeyboardMode
 import org.junit.Assert.*
+import org.junit.Rule
 import org.junit.Test
 
 /** Only synthetic text in our own editor; device runs require regression.py's external snapshot. */
 class MultifunctionBarImeTest {
+    @get:Rule val lifecycleTrace: org.junit.rules.TestRule = ImeLifecycleTrace()
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val ui = instrumentation.uiAutomation
     private val driver = ImeTestDriver()
@@ -136,7 +138,12 @@ class MultifunctionBarImeTest {
             MultifunctionBarSlot.LEFT_THIRD to MultifunctionBarBinding(KeyAction.SHIFT),
             MultifunctionBarSlot.RIGHT_THIRD to MultifunctionBarBinding(KeyAction.BACKSPACE)
         )) { scenario ->
-            if (driver.awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" }.isSelected) click("全角 / 半角转换")
+            repeat(3) {
+                if (driver.awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" }.isSelected) {
+                    click("全角 / 半角转换")
+                    instrumentation.waitForIdleSync()
+                }
+            }
             click("ɑ中😀")
             editor(scenario, "ɑ中😀")
             driver.click { it.contentDescription?.toString()?.startsWith("Row 1, key 1:") == true }
@@ -148,6 +155,8 @@ class MultifunctionBarImeTest {
             editor(scenario, "ɑ中😀")
             click("Return to Keyboard")
             click("全角 / 半角转换")
+            click("全角 / 半角转换")
+            driver.awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" && it.stateDescription?.toString() == "锁定" }
             assertTrue(driver.awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" }.isSelected)
             instrumentation.runOnMainSync {
                 MultifunctionBarSettings.save(context, MultifunctionBarSlot.LEFT_FIRST,
@@ -170,11 +179,13 @@ class MultifunctionBarImeTest {
             click("全角 / 半角转换")
             assertFalse(driver.awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" }.isSelected)
             driver.awaitNode { it.text?.toString() == "Engine Dashboard" }
-            // The existing width action repaints pending input from its original encoding.
-            editor(scenario, "ɑ中😀AB １")
+            // Switching affects future input; rebinding and switching never repaint older segments.
+            editor(scenario, "ɑ中😀ＡＢ　1")
             click("Return to Keyboard")
+            click("Ab １")
+            editor(scenario, "ɑ中😀ＡＢ　1Ab １")
             driver.click { it.contentDescription?.toString()?.startsWith("Row 1, key 2:") == true }
-            editor(scenario, "ɑ中😀AB １", composing = false)
+            editor(scenario, "ɑ中😀ＡＢ　1Ab １", composing = false)
         }
     }
 
@@ -244,6 +255,7 @@ class MultifunctionBarImeTest {
         val oldFlags = ui.serviceInfo.flags
         var filename: String? = null
         var scenario: ActivityScenario<ImeTestEditorActivity>? = null
+        var primaryFailure: Throwable? = null
         try {
             instrumentation.runOnMainSync {
                 assertTrue(prefs.edit().remove(MultifunctionBarSettings.KEY_BINDINGS).remove(RemoteKeyboardMode.KEY_SNAPSHOT)
@@ -256,28 +268,31 @@ class MultifunctionBarImeTest {
             filename = LayoutFileManager.createLayout(context, fixture.name, fixture)
             PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(filename))
             PageGroupManager.selectPage(context, filename)
-            shell("ime enable $ime")
-            shell("ime set $ime")
+            ImeTestImeState.enableAndSelect(context, ime, ::shell)
             val editor = ActivityScenario.launch(ImeTestEditorActivity::class.java)
             scenario = editor
             if (multiline) editor.onActivity {
                 it.editor.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
                 it.editor.setHorizontallyScrolling(false)
             }
-            driver.awaitKeyboard(editor) { it.contentDescription?.toString()?.startsWith("Row 1, key 1:") == true }
-            body(editor)
-        } finally {
-            try { scenario?.close() } finally {
-                try { shell("ime set $oldIme"); if (!alreadyEnabled) shell("ime disable $ime") } finally {
-                    try { filename?.let { LayoutFileManager.deleteLayout(context, it) } } finally {
-                        try { groupSnapshot.close() } finally {
-                            try {
-                                assertTrue(prefs.edit().apply { before.forEach { (key, value) -> restoreValue(key, value) } }.commit())
-                            } finally { ui.serviceInfo = ui.serviceInfo.apply { flags = oldFlags } }
-                        }
-                    }
-                }
+            try {
+                driver.awaitKeyboard(editor) { it.contentDescription?.toString()?.startsWith("Row 1, key 1:") == true }
+            } catch (error: Throwable) {
+                addImeReadinessDiagnostics(error, context, ime, editor)
+                throw error
             }
+            body(editor)
+        } catch (error: Throwable) {
+            primaryFailure = error
+            throw error
+        } finally {
+            cleanupImeFixture(primaryFailure, { scenario?.close() }, {
+                ImeTestImeState.restore(context, ime, oldIme, alreadyEnabled, ::shell)
+            }, { filename?.let { LayoutFileManager.deleteLayout(context, it) } }, {
+                groupSnapshot.close()
+            }, {
+                assertTrue(prefs.edit().apply { before.forEach { (key, value) -> restoreValue(key, value) } }.commit())
+            }, { ui.serviceInfo = ui.serviceInfo.apply { flags = oldFlags } })
         }
     }
 

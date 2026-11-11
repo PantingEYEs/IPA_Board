@@ -9,6 +9,8 @@
 | [项目说明](../README.md) | 安装要求、当前功能、管理入口与构建方式 |
 | [更新日志](../CHANGELOG.md) | 开发中及已发布版本的变更 |
 | [引擎接入与来源](engine-integration.md) | 已接入引擎、固定资源、开关、生命周期与限制 |
+| [地球拼音](terra-pinyin.md) | 方案选择、声调键、预编辑切换及独立部署 |
+| [全半角互换](character-width.md) | 单次／锁定模式、选区操作、候选与字符边界 |
 | [IPA 必要接口](engine-specification.md) | 引擎接受的操作/信息、候选格式与安全边界 |
 | [IPA 资源更新](ipa-updates.md) | Release 清单、正式／预发布渠道与引擎／预编译词典独立更新 |
 | [语义排序](context-ranking.md) | 默认关闭的 E5、上下文处理、重排规则与验证范围 |
@@ -16,7 +18,8 @@
 | [引擎仪表盘](engine-dashboard.md) | ◷ 绑定、只读状态及当前功能边界 |
 | [Emoji 目录与浏览](emoji-catalog.md) | Unicode 目录、连续分区、分类导航与更新 |
 | [Shortcut 替代文字](shortcut-replacements.md) | 候选完整匹配、追加规则、选择行为与导出衔接 |
-| [Shortcut 配置导出](shortcut-export.md) | 保存入口、四类配置、版本化 JSON 与取消／失败行为 |
+| [Shortcut 配置导入与导出](shortcut-export.md) | 四类配置、版本化 JSON、导入确认与取消／失败行为 |
+| [键盘页组文件夹](page-group-transfer.md) | 整组导入／导出、重名副本、元数据及默认初始化 |
 | [浮窗多功能操作](popup-multifunctional-actions.md) | 按键双模式、图形编辑、撤回与运行时手势 |
 
 ## 开发与验证

@@ -80,15 +80,26 @@ class KeyboardPageActivity : Activity() {
     private val MIN_HEIGHT_DP = 150
     private val IMPORT_REQUEST_CODE = 123
     private val EXPORT_REQUEST_CODE = 124
+    private val GROUP_IMPORT_REQUEST_CODE = 125
+    private val GROUP_EXPORT_REQUEST_CODE = 126
     private var pendingExport: String? = null
+    private var pagePickerPending = false
     private data class ClearedLayout(val filename: String, val original: KeyboardLayout)
     private var clearedLayout: ClearedLayout? = null
+    private data class RetainedState(val cleared: ClearedLayout?, val transfer: PageGroupTransferController)
+    private lateinit var groupTransfer: PageGroupTransferController
+    private var transferDialog: AlertDialog? = null
+    private var transferDialogPhase: PageGroupTransferController.Phase? = null
+    internal val groupTransferState get() = groupTransfer.state
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         pendingExport = savedInstanceState?.getString("pending_export")
         editingFilename = savedInstanceState?.getString("editing_filename")
-        clearedLayout = lastNonConfigurationInstance as? ClearedLayout
+        val retained = lastNonConfigurationInstance as? RetainedState
+        clearedLayout = retained?.cleared
+        groupTransfer = retained?.transfer ?: PageGroupTransferController(this, savedInstanceState?.getString("group_transfer_phase"))
+        pagePickerPending = savedInstanceState?.getBoolean("page_picker_pending") ?: false
         setContentView(R.layout.activity_keyboard_page)
 
         val rootLayout = findViewById<View>(R.id.root_layout)
@@ -213,7 +224,10 @@ class KeyboardPageActivity : Activity() {
         }
         groupSettingsView.findViewById<Button>(R.id.btn_reorder_groups).setOnClickListener { showReorderGroupsDialog() }
         groupSettingsView.findViewById<Button>(R.id.btn_group_pages).setOnClickListener { showGroupPagesDialog() }
+        groupSettingsView.findViewById<Button>(R.id.btn_import_group).setOnClickListener { launchGroupImport() }
+        groupSettingsView.findViewById<Button>(R.id.btn_export_group).setOnClickListener { launchGroupExport() }
         refreshPreview()
+        groupTransfer.attach(this) { renderGroupTransfer() }
     }
 
     override fun onPostCreate(savedInstanceState: Bundle?) {
@@ -951,26 +965,52 @@ class KeyboardPageActivity : Activity() {
         }
     }
 
-    override fun onRetainNonConfigurationInstance(): Any? = clearedLayout
+    override fun onRetainNonConfigurationInstance(): Any = RetainedState(clearedLayout, groupTransfer)
+
+    override fun onDestroy() {
+        groupTransfer.detach(this)
+        transferDialog?.setOnCancelListener(null)
+        transferDialog?.dismiss()
+        transferDialog = null
+        super.onDestroy()
+    }
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString("pending_export", pendingExport)
         outState.putString("editing_filename", editingFilename)
         outState.putBoolean("all_pages", allPages.isChecked)
+        outState.putBoolean("page_picker_pending", pagePickerPending)
+        // Validated page content stays only in the retained controller, never in a saved Bundle.
+        outState.putString("group_transfer_phase", groupTransfer.state.phase.name)
         super.onSaveInstanceState(outState)
     }
 
     private fun startImport() {
+        if (groupTransfer.state.busy || pagePickerPending) return
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             type = "application/json"
             putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
             addCategory(Intent.CATEGORY_OPENABLE)
         }
-        startActivityForResult(intent, IMPORT_REQUEST_CODE)
+        pagePickerPending = true
+        try { startActivityForResult(intent, IMPORT_REQUEST_CODE) }
+        catch (_: android.content.ActivityNotFoundException) {
+            pagePickerPending = false
+            Toast.makeText(this, R.string.group_transfer_picker_failed, Toast.LENGTH_LONG).show()
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == GROUP_IMPORT_REQUEST_CODE) {
+            completeGroupImport(resultCode, data?.data)
+            return
+        }
+        if (requestCode == GROUP_EXPORT_REQUEST_CODE) {
+            if (!isDestroyed && !isFinishing) groupTransfer.exportPicked(data?.data?.takeIf { resultCode == RESULT_OK })
+            return
+        }
+        if (requestCode == EXPORT_REQUEST_CODE || requestCode == IMPORT_REQUEST_CODE) pagePickerPending = false
         if (requestCode == EXPORT_REQUEST_CODE) {
             if (resultCode == RESULT_OK) {
                 try {
@@ -1030,6 +1070,7 @@ class KeyboardPageActivity : Activity() {
     }
 
     private fun startExport() {
+        if (groupTransfer.state.busy || pagePickerPending) return
         val filename = editingFilename ?: return
         val layout = LayoutFileManager.loadLayout(this, filename)
         if (layout != null) {
@@ -1037,11 +1078,74 @@ class KeyboardPageActivity : Activity() {
                 put("version", 4)
                 put("layout", JSONObject(layout.toJson()))
             }.toString(2)
-            startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            pagePickerPending = true
+            try { startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                 type = "application/json"
                 addCategory(Intent.CATEGORY_OPENABLE)
                 putExtra(Intent.EXTRA_TITLE, filename)
-            }, EXPORT_REQUEST_CODE)
+            }, EXPORT_REQUEST_CODE) }
+            catch (_: android.content.ActivityNotFoundException) {
+                pendingExport = null
+                pagePickerPending = false
+                Toast.makeText(this, R.string.group_transfer_picker_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    internal fun launchGroupImport(launch: (Intent) -> Unit = { startActivityForResult(it, GROUP_IMPORT_REQUEST_CODE) }) {
+        if (isDestroyed || isFinishing || pagePickerPending || !groupTransfer.beginImport()) return
+        try { launch(groupFolderIntent()) }
+        catch (_: Exception) { groupTransfer.pickerFailed() }
+    }
+
+    internal fun completeGroupImport(resultCode: Int, uri: Uri?, source: (Context, Uri) -> PageGroupTransfer.SourceFolder = PageGroupDocuments::source) {
+        if (isDestroyed || isFinishing) return
+        groupTransfer.importPicked(uri?.takeIf { resultCode == RESULT_OK }, source)
+    }
+
+    internal fun confirmGroupImport(): Boolean = !isDestroyed && !isFinishing && groupTransfer.confirmImport()
+
+    private fun launchGroupExport() {
+        if (isDestroyed || isFinishing || pagePickerPending) return
+        groupTransfer.beginExport(PageGroupManager.active(this).id)
+    }
+
+    private fun groupFolderIntent() = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+    }
+
+    private fun renderGroupTransfer() {
+        if (isDestroyed || isFinishing) return
+        val state = groupTransfer.state
+        findViewById<Button>(R.id.btn_import_group).isEnabled = !state.busy
+        findViewById<Button>(R.id.btn_export_group).isEnabled = !state.busy
+        if (transferDialogPhase != state.phase) {
+            transferDialog?.setOnCancelListener(null)
+            transferDialog?.dismiss()
+            transferDialog = null
+            transferDialogPhase = state.phase
+            if (state.working) {
+                transferDialog = AlertDialog.Builder(this)
+                    .setMessage(R.string.group_transfer_working).setCancelable(false).show()
+            } else if (state.phase == PageGroupTransferController.Phase.CONFIRMING) {
+                transferDialog = AlertDialog.Builder(this).setTitle(R.string.import_page_group)
+                    .setMessage(getString(R.string.group_import_confirm, state.folderName, state.pageCount))
+                    .setNegativeButton(android.R.string.cancel) { _, _ -> groupTransfer.cancelConfirmation() }
+                    .setPositiveButton(R.string.import_page_group) { _, _ -> confirmGroupImport() }
+                    .setOnCancelListener { groupTransfer.cancelConfirmation() }.show()
+            }
+        }
+        if (groupTransfer.takeExportPicker()) {
+            try { startActivityForResult(groupFolderIntent(), GROUP_EXPORT_REQUEST_CODE) }
+            catch (_: Exception) { groupTransfer.pickerFailed() }
+        }
+        groupTransfer.takeCompletion()?.let { result ->
+            if (result.needsRefresh) {
+                clearedLayout = null
+                editingFilename = null
+                refreshGroupUi()
+            }
+            Toast.makeText(this, result.message, Toast.LENGTH_LONG).show()
         }
     }
 
