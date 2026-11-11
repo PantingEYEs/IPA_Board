@@ -6,7 +6,9 @@
 
 0.0.4 计划成为首个不再按 GPL-3.0 整体发行的版本，具体后续协议在依赖与接入代码的许可核验完成后敲定。Rime/OpenCC、Mozc、ONNX Runtime Extensions 将从各自官方源码构建；LatinIME 从 HeliBoard 取得并独立构建适用 Apache-2.0 的代码；OpenBoard 英文词表继续使用现成的 `main_en-US.dict`，不自行编译。这些第三方运行资源将改为应用内下载，不随正式发布 APK 提供；Rime/OpenCC 构建与桥接不使用 Trime 工具，Mozc 和 Extensions 同时修复 ELF 段对齐。上述迁移尚未完成，当前开发版仍包含既有资源，详见 [0.0.4 开发计划](docs/0.0.4-development-plan.md)。
 
-其他目标包括 App 内蓝牙键盘、About、宽屏 Stretch/Split、Shortcut 配置导出和基础输入稳定性。连续光标、长按队列与 Rime 批量查询优化已加入开发版；IPA Engine 与配套词典继续内置，现有 UTF-16 退格行为保留。
+0.0.4 开发版已加入 Shortcut 配置导入／导出、默认编辑快捷键与可绑定的撤销／重做、页组文件夹导入／导出及更新后的初始化预设、地球拼音和三态全半角互换。连续光标、长按队列与 Rime 批量查询优化已加入开发版；IPA Engine 与配套词典继续内置，现有 UTF-16 退格行为保留。
+
+后续目标包括 App 内蓝牙键盘、About、宽屏 Stretch/Split 和基础输入稳定性。
 
 0.0.3 修复同一输入框重新打开键盘时无候选的问题，加入 Popup 多功能操作、按页引擎绑定、可编辑多功能栏、科学计算、只读引擎仪表盘、日志管理与 Remote Keyboard Mode（Phase 1），改进 Emoji 浏览，并提供 IPA 预置键盘和实验性 IPA 引擎。开发周期的交付范围与后续目标见 [归档计划](docs/archive/0.0.3-development-plan.md)。
 
@@ -103,7 +105,9 @@ Shift 第一次点击启用临时大写（`Shift •`），再次点击锁定大
 
 空括号、错配、未闭合、缺失指数、`0^0` 等未定义情况、除零及超出计算容量的表达式不提供计算结果候选，原文仍可输入。
 
-功能键还支持光标导航、选区、复制/剪切/粘贴、Emoji、候选展开及切页。Shortcut 页面可配置 Shift/Ctrl 映射；快捷键支持取决于接收应用，Ctrl+Backspace 执行普通退格。
+功能键还支持光标导航、选区、复制/剪切/粘贴、撤销/重做、Emoji、候选展开及切页。Shortcut 页面可配置 Shift/Ctrl 映射；快捷键支持取决于接收应用，Ctrl+Backspace 执行普通退格。
+
+**Undo／Redo** 可绑定到按键、长按、滑动、Popup、Shift/Ctrl 快捷键或多功能栏；优先请求宿主撤销／重做，不支持时分别发送 Ctrl+Z／Ctrl+Y。实际效果取决于编辑器，不建立独立的应用内撤销历史。
 
 **Continuous Cursor Up / Down / Left / Right** 是独立于单步方向键的四个可绑定功能，标志为 `↑…`、`↓…`、`←…`、`→…`。例如可设置短按 Arrow Left、长按 Continuous Cursor Left；也可绑定到 Popup 项目或多功能栏。重复启动与 50 毫秒间隔沿用 Continuous Delete，停止与取消遵循各入口的同一手势规则。连续功能被单次触发时移动一步；绑定为按键主功能且没有另设长按内容时，按住可重复，已有独立长按配置始终优先。移动复用原方向键行为，包括 Shift 选区及编辑器边界，不新增默认绑定。
 

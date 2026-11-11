@@ -4,6 +4,8 @@
 
 Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划](docs/0.0.4-development-plan.md)。
 
+- Shortcut 配置导入、默认编辑快捷键及撤销／重做、页组文件夹导入／导出与初始化预设、地球拼音、三态全半角互换及空格确认整理已通过 [PR #48](https://github.com/PantingEYEs/IPA_Board/pull/48) 合入 `0.0.4-dev`（2026-11-10，merge commit `6141c69`）。[#45](https://github.com/PantingEYEs/IPA_Board/issues/45)、[#36](https://github.com/PantingEYEs/IPA_Board/issues/36)、[#33](https://github.com/PantingEYEs/IPA_Board/issues/33) 已补充完成说明并关闭；#33 的配置导出已在 PR #47 实现，本次另行补充配置导入。各阶段验证结果及限制保留于下文，不合计为全量通过。
+
 - 重写全半角互换：改为“关闭→单次→锁定→关闭”，单次仅作用于下一个完整字符，锁定不因上屏或移动光标取消。文字在输入时转换一次，已有预编辑、候选及分段后缀不被后续开关重新转换；关闭→单次时可转换整个选区，第二次只锁定。保留键盘原字形、已有功能绑定和原文粘贴；详见[操作说明](docs/character-width.md)。
 
 - 整理空格确认的内部回执：由实际提交分支报告是否插入空格，消除服务层重复候选判断，保持已有输入行为。新增空格合同与真实按键验证通过；专项 54/55，唯一旧用例在键盘启动阶段超时，恢复校验成功，详见[测试记录](docs/testing.md#2026-11-10-空格确认结果收敛行为保持)。
@@ -22,7 +24,7 @@ Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划]
 
 - 状态菜单开关、可绑定非内联预编辑及 Shortcut 配置导出已通过 [PR #47](https://github.com/PantingEYEs/IPA_Board/pull/47) 合入 `0.0.4-dev`（2026-11-10，merge commit `1d7570a`）。[#46](https://github.com/PantingEYEs/IPA_Board/issues/46) 已修复并关闭；[#37](https://github.com/PantingEYEs/IPA_Board/issues/37) 与 [#17](https://github.com/PantingEYEs/IPA_Board/issues/17) 按维护者决定接受非内联绕行后关闭，不表示原始内联兼容性问题已根治，进一步调查暂缓。
 
-- 新增 [#33](https://github.com/PantingEYEs/IPA_Board/issues/33) Shortcut 配置导出：同页选择 **Export configuration**，将已保存的 Shift／Ctrl 映射、六个多功能栏绑定和替代文字规则保存为一个版本化 JSON 文件，完整保留文字、输入行为、规则顺序及重复项。明确区分成功、取消和失败，导出不改变配置或执行绑定；本阶段不含导入。见 [格式说明](docs/shortcut-export.md)。
+- 新增 [#33](https://github.com/PantingEYEs/IPA_Board/issues/33) Shortcut 配置导出：同页选择 **Export configuration**，将已保存的 Shift／Ctrl 映射、六个多功能栏绑定和替代文字规则保存为一个版本化 JSON 文件，完整保留文字、输入行为、规则顺序及重复项。明确区分成功、取消和失败，导出不改变配置或执行绑定；此条记录 PR #47 的导出阶段，配置导入在后续 PR #48 中加入。见 [格式说明](docs/shortcut-export.md)。
 
 - 内联预编辑在尾部输入时不再重复设置编辑器光标，避免对显式光标设置敏感的宿主提前结束预编辑；中部移动、插入和退格仍保留必要定位。受控编辑器验证覆盖完整拼音、选词和变长字符转换。维护者复测 [#17](https://github.com/PantingEYEs/IPA_Board/issues/17) 的 Notion 问题仍可复现，按其决定暂缓继续修复，保留非内联绕行。
 
