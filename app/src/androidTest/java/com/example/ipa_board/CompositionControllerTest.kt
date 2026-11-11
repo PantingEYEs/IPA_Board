@@ -47,7 +47,7 @@ class CompositionControllerTest {
             assertEquals("0.7071+(0.7071)i+1word…", editor.text.toString())
         }
     }
-    @Test fun widthToggleRepaintsCompositionButKeepsEngineEncodingAndRejectsOldCandidates() {
+    @Test fun widthTogglePreservesPendingTextAndCandidatesCommitWithoutAnotherConversion() {
         instrumentation.runOnMainSync {
             val editor = EditText(instrumentation.targetContext)
             val ic = requireNotNull(editor.onCreateInputConnection(EditorInfo()))
@@ -55,30 +55,35 @@ class CompositionControllerTest {
             var enabled = false
             val queries = mutableListOf<String>()
             val controller = CompositionController({ ic }, { _, raw -> queries += raw }, {},
-                transformOutput = { if (enabled) CharacterWidthConverter.swap(it) else it })
+                transformInput = { if (enabled) CharacterWidthConverter.swap(it) else it })
             val raw = "nihao123,Ａ"
             controller.input(raw)
             assertEquals("已有上下文 $raw", editor.text.toString())
             val old = controller.revision
             val word = Candidate("你好123,Ａ", "简/EN")
             controller.acceptResults(old, listOf(word))
+            val queryCount = queries.size
+            val caret = editor.selectionStart
             enabled = true
-            controller.refreshOutput()
             assertEquals(raw, controller.raw)
+            assertEquals(raw, controller.displayText)
+            assertEquals(old, controller.revision)
+            assertEquals(queryCount, queries.size)
             assertEquals(raw, queries.last())
-            assertEquals("已有上下文 ｎｉｈａｏ１２３，A", editor.text.toString())
+            assertEquals("已有上下文 $raw", editor.text.toString())
+            assertEquals(caret, editor.selectionStart)
+            assertEquals("已有上下文 ".length, BaseInputConnection.getComposingSpanStart(editor.text))
             assertEquals("已有上下文 ", controller.beforeCursor)
-            assertFalse("A toggle must invalidate the previous candidate snapshot", controller.select(word, old))
-            controller.acceptResults(old, listOf(word))
-            assertTrue(controller.candidates.isEmpty())
-            controller.acceptResults(controller.revision, listOf(word))
-            assertTrue(controller.select(word))
-            assertEquals("已有上下文 你好１２３，A", editor.text.toString())
+            assertTrue("A width toggle must not reinterpret this pending candidate", controller.select(word, old))
+            assertEquals("已有上下文 你好123,Ａ", editor.text.toString())
             assertEquals(-1, BaseInputConnection.getComposingSpanStart(editor.text))
-            enabled = false
             controller.input("b")
+            assertEquals("ｂ", controller.raw)
+            assertEquals("ｂ", queries.last())
+            assertEquals("ｂ", controller.displayText)
+            enabled = false
             assertTrue(controller.literal())
-            assertEquals("已有上下文 你好１２３，Ab", editor.text.toString())
+            assertEquals("已有上下文 你好123,Ａｂ", editor.text.toString())
         }
     }
 
@@ -89,25 +94,26 @@ class CompositionControllerTest {
             ic.commitText("前文後文", 1)
             editor.setSelection(2)
             val controller = CompositionController({ ic }, { _, _ -> }, {},
-                transformOutput = CharacterWidthConverter::swap)
+                transformInput = CharacterWidthConverter::swap)
             controller.input("ｶﾞ")
+            assertEquals("ガ", controller.raw)
             assertEquals("前文ガ後文", editor.text.toString())
             assertEquals("前文", controller.beforeCursor)
             assertEquals("後文", controller.afterCursor)
             val word = Candidate("パ", "日")
             controller.acceptResults(controller.revision, listOf(word))
             assertTrue(controller.select(word))
-            assertEquals("前文ﾊﾟ後文", editor.text.toString())
-            assertEquals("前文ﾊﾟ", controller.beforeCursor)
+            assertEquals("前文パ後文", editor.text.toString())
+            assertEquals("前文パ", controller.beforeCursor)
             assertEquals("後文", controller.afterCursor)
             controller.input("a")
             controller.input("Ａ".repeat(65))
-            assertEquals("前文ﾊﾟａ" + "A".repeat(65) + "後文", editor.text.toString())
+            assertEquals("前文パａ" + "A".repeat(65) + "後文", editor.text.toString())
             assertEquals("", controller.raw)
             assertEquals(-1, BaseInputConnection.getComposingSpanStart(editor.text))
             controller.input("1１")
             controller.finish()
-            assertEquals("前文ﾊﾟａ" + "A".repeat(65) + "１1後文", editor.text.toString())
+            assertEquals("前文パａ" + "A".repeat(65) + "１1後文", editor.text.toString())
             assertEquals(-1, BaseInputConnection.getComposingSpanStart(editor.text))
         }
     }
@@ -123,11 +129,13 @@ class CompositionControllerTest {
                     return accept
                 }
             }
+            var enabled = true
             val controller = CompositionController({ ic }, { _, _ -> }, {},
-                transformOutput = CharacterWidthConverter::swap)
+                transformInput = { if (enabled) CharacterWidthConverter.swap(it) else it })
             controller.input("aＡ😀")
             assertFalse(controller.literal())
-            assertEquals("aＡ😀", controller.raw)
+            assertEquals("ａA😀", controller.raw)
+            enabled = false
             accept = true
             assertTrue(controller.literal())
             assertEquals(listOf("ａA😀", "ａA😀"), committed)
@@ -165,11 +173,15 @@ class CompositionControllerTest {
             assertFalse(controller.backspace())
             controller.input("hello")
             controller.acceptResults(controller.revision, listOf(Candidate("hello", "EN")))
-            controller.space()
+            val englishSpace = controller.space()
+            assertTrue(englishSpace.handled)
+            assertTrue(englishSpace.insertedSpace)
             assertEquals("IPA hello ", editor.text.toString())
             controller.input("hanyu")
             controller.acceptResults(controller.revision, listOf(Candidate("漢語", "繁")))
-            controller.space()
+            val chineseSpace = controller.space()
+            assertTrue(chineseSpace.handled)
+            assertFalse(chineseSpace.insertedSpace)
             assertEquals("IPA hello 漢語", editor.text.toString())
         }
     }

@@ -2,6 +2,7 @@ package com.example.ipa_board
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.Typeface
 import android.view.Gravity
 import android.view.MotionEvent
@@ -32,7 +33,7 @@ class MultifunctionBarView(context: Context) : LinearLayout(context) {
     private var bindings = MultifunctionBarSettings.defaults()
     private var calculatorEnabled = false
     private var remoteKeyboardEnabled = false
-    private var widthSwapEnabled = false
+    private var widthSwapState = WidthSwapState.OFF
     private var inlinePreeditEnabled = true
     private var shiftState = ShiftState.OFF
     private var ctrlEnabled = false
@@ -87,7 +88,9 @@ class MultifunctionBarView(context: Context) : LinearLayout(context) {
 
     fun setCalculatorEnabled(value: Boolean) { calculatorEnabled = value; render() }
     fun setRemoteKeyboardEnabled(value: Boolean) { remoteKeyboardEnabled = value; render() }
-    fun setWidthSwapEnabled(value: Boolean) { widthSwapEnabled = value; render() }
+    fun setWidthSwapState(value: WidthSwapState) { widthSwapState = value; render() }
+    /** Compatibility for callers that only represent a persistent on/off preview. */
+    fun setWidthSwapEnabled(value: Boolean) = setWidthSwapState(if (value) WidthSwapState.LOCKED else WidthSwapState.OFF)
     fun setInlinePreeditEnabled(value: Boolean) {
         if (inlinePreeditEnabled == value) return
         inlinePreeditEnabled = value
@@ -101,7 +104,7 @@ class MultifunctionBarView(context: Context) : LinearLayout(context) {
             val action = binding.action
             val active = !editing && when (action) {
                 KeyAction.REMOTE_KEYBOARD -> remoteKeyboardEnabled
-                KeyAction.WIDTH_SWAP -> widthSwapEnabled
+                KeyAction.WIDTH_SWAP -> widthSwapState != WidthSwapState.OFF
                 KeyAction.PREEDIT_MODE -> !inlinePreeditEnabled
                 KeyAction.CALCULATOR -> calculatorEnabled
                 KeyAction.SHIFT -> shiftState != ShiftState.OFF
@@ -110,17 +113,26 @@ class MultifunctionBarView(context: Context) : LinearLayout(context) {
             }
             button.text = when {
                 action == KeyAction.SHIFT && !editing && shiftState == ShiftState.CAPS_LOCK -> context.getString(R.string.caps_lock_label) + " •"
+                action == KeyAction.WIDTH_SWAP && active -> action.keyLabel + " •"
                 action in setOf(KeyAction.SHIFT, KeyAction.CTRL) && active -> action.keyLabel + " •"
                 action == KeyAction.TEXT -> binding.asKeySlot().displayText(!editing && shiftState != ShiftState.OFF).ifEmpty { "∅" }
                 action == KeyAction.PREEDIT_MODE && !editing -> if (inlinePreeditEnabled) "内联" else "非内联"
                 else -> action.keyLabel
             }
-            button.setTypeface(null, if (!editing && action == KeyAction.SHIFT && shiftState == ShiftState.CAPS_LOCK) Typeface.BOLD else Typeface.NORMAL)
+            val locked = !editing && (action == KeyAction.SHIFT && shiftState == ShiftState.CAPS_LOCK ||
+                action == KeyAction.WIDTH_SWAP && widthSwapState == WidthSwapState.LOCKED)
+            button.setTypeface(null, if (locked) Typeface.BOLD else Typeface.NORMAL)
+            button.paintFlags = if (locked && action == KeyAction.WIDTH_SWAP)
+                button.paintFlags or Paint.UNDERLINE_TEXT_FLAG else button.paintFlags and Paint.UNDERLINE_TEXT_FLAG.inv()
             button.contentDescription = if (action == KeyAction.TEXT) binding.text.ifEmpty { "unassigned" } else description(action)
             button.isSelected = active
             button.stateDescription = if (editing) null else when (action) {
                 KeyAction.REMOTE_KEYBOARD -> context.getString(if (active) R.string.remote_keyboard_on else R.string.remote_keyboard_off)
-                KeyAction.WIDTH_SWAP -> if (active) "开启" else "关闭"
+                KeyAction.WIDTH_SWAP -> when (widthSwapState) {
+                    WidthSwapState.OFF -> "关闭"
+                    WidthSwapState.SINGLE -> "单次"
+                    WidthSwapState.LOCKED -> "锁定"
+                }
                 KeyAction.PREEDIT_MODE -> if (inlinePreeditEnabled) "内联" else "非内联"
                 KeyAction.CALCULATOR, KeyAction.CTRL -> if (active) "On" else "Off"
                 KeyAction.SHIFT -> context.getString(when (shiftState) {

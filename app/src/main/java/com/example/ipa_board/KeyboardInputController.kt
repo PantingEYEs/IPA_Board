@@ -17,7 +17,10 @@ enum class ShiftState {
 }
 
 /** Executes mappings without keeping modifier state in the receiving application. */
-class KeyboardInputController(private val transformOutput: (String) -> String = { it }) {
+class KeyboardInputController(
+    private val transformOutput: (String) -> String = { it },
+    private val commitText: (InputConnection, String) -> Boolean = { connection, text -> connection.commitText(text, 1) }
+) {
     var shiftState: ShiftState = ShiftState.OFF
         private set
     val shiftEnabled: Boolean
@@ -93,8 +96,8 @@ class KeyboardInputController(private val transformOutput: (String) -> String = 
         }
 
         val handled = when (slot.action.singleStepAction) {
-            KeyAction.TEXT -> slot.text.isEmpty() || connection.commitText(
-                transformOutput(if (shiftEnabled) slot.text.uppercase(Locale.ROOT) else slot.text), 1
+            KeyAction.TEXT -> slot.text.isEmpty() || commitText(
+                connection, transformOutput(if (shiftEnabled) slot.text.uppercase(Locale.ROOT) else slot.text)
             )
             KeyAction.BACKSPACE -> backspace(connection)
             KeyAction.LEFT -> sendKey(connection, KeyEvent.KEYCODE_DPAD_LEFT, metaState)

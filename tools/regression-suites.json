@@ -37,7 +37,9 @@
         "com.example.ipa_board.InlineEditorCompositionTest",
         "com.example.ipa_board.PinyinSettingsTest",
         "com.example.ipa_board.PinyinPolicySwitchTest",
-        "com.example.ipa_board.EngineServiceSchemaFailureTest"
+        "com.example.ipa_board.EngineServiceSchemaFailureTest",
+        "com.example.ipa_board.WidthSwapCompositionTest",
+        "com.example.ipa_board.SpaceConfirmationTest"
       ]
     },
     "engines": {
@@ -100,7 +102,8 @@
         "com.example.ipa_board.CalculatorImeTest",
         "com.example.ipa_board.PageEngineBindingImeTest",
         "com.example.ipa_board.StatusMenuToggleImeTest",
-        "com.example.ipa_board.PreeditModeImeTest"
+        "com.example.ipa_board.PreeditModeImeTest",
+        "com.example.ipa_board.WidthSwapImeTest"
       ]
     },
     "semantic": {
@@ -185,7 +188,10 @@
         "com.example.ipa_board.PinyinPolicySwitchTest",
         "com.example.ipa_board.PinyinSettingsUiTest",
         "com.example.ipa_board.TerraPinyinImeTest",
-        "com.example.ipa_board.EngineServiceSchemaFailureTest"
+        "com.example.ipa_board.EngineServiceSchemaFailureTest",
+        "com.example.ipa_board.WidthSwapCompositionTest",
+        "com.example.ipa_board.WidthSwapImeTest",
+        "com.example.ipa_board.SpaceConfirmationTest"
       ]
     },
     "ipa": {
@@ -433,6 +439,36 @@
         "com.example.ipa_board.LayoutImportContractTest",
         "com.example.ipa_board.KeyboardConfigurationTest",
         "com.example.ipa_board.ShortcutDefaultsTest"
+      ]
+    },
+    "width-swap": {
+      "classes": [
+        "com.example.ipa_board.WidthSwapCompositionTest",
+        "com.example.ipa_board.SpaceConfirmationTest",
+        "com.example.ipa_board.WidthSwapImeTest",
+        "com.example.ipa_board.CompositionControllerTest",
+        "com.example.ipa_board.PreeditModeCompositionTest",
+        "com.example.ipa_board.InlineEditorCompositionTest",
+        "com.example.ipa_board.SegmentedCompositionTest",
+        "com.example.ipa_board.KeyboardInputControllerTest",
+        "com.example.ipa_board.ImeChromeTest",
+        "com.example.ipa_board.KeyEditorTest",
+        "com.example.ipa_board.MultifunctionBarTest",
+        "com.example.ipa_board.ImeEndToEndTest",
+        "com.example.ipa_board.MultifunctionBarImeTest",
+        "com.example.ipa_board.CalculatorImeTest",
+        "com.example.ipa_board.PreeditModeImeTest",
+        "com.example.ipa_board.PinyinPolicySwitchTest",
+        "com.example.ipa_board.TerraPinyinImeTest"
+      ]
+    },
+    "space-confirmation": {
+      "classes": [
+        "com.example.ipa_board.SpaceConfirmationTest",
+        "com.example.ipa_board.CompositionControllerTest",
+        "com.example.ipa_board.PreeditModeCompositionTest",
+        "com.example.ipa_board.SegmentedCompositionTest",
+        "com.example.ipa_board.WidthSwapImeTest"
       ]
     },
     "terra-pinyin": {

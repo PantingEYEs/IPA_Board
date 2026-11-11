@@ -1,6 +1,7 @@
 package com.example.ipa_board
 
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.drawable.ColorDrawable
 import android.view.View
 import android.view.ViewGroup
@@ -126,12 +127,11 @@ class ImeChromeTest {
             assertFalse(widthSwap.isSelected)
             assertEquals("关闭", widthSwap.stateDescription)
             assertMatchesCalculator(false)
-            var enabled = false
+            val widthMode = WidthSwapController()
             var toggles = 0
             chrome.onWidthSwapToggle = {
-                enabled = !enabled
                 toggles++
-                chrome.setWidthSwapEnabled(enabled)
+                chrome.setWidthSwapState(widthMode.cycle())
             }
             chrome.showPanel(ImeChromeView.Panel.KAOMOJI)
             val customStatus = EditText(context)
@@ -139,17 +139,38 @@ class ImeChromeTest {
             widthSwap.performClick()
             assertEquals(1, toggles)
             assertTrue(widthSwap.isSelected)
-            assertEquals("开启", widthSwap.stateDescription)
+            assertEquals("单次", widthSwap.stateDescription)
+            assertEquals("◩ •", widthSwap.text.toString())
+            assertFalse(widthSwap.typeface?.isBold == true)
+            assertEquals(0, widthSwap.paintFlags and Paint.UNDERLINE_TEXT_FLAG)
             assertMatchesCalculator(true)
             assertEquals(ImeChromeView.Panel.KAOMOJI, chrome.panel)
             assertSame(chrome.statusContainer, customStatus.parent)
             widthSwap.performClick()
             assertEquals(2, toggles)
+            assertTrue(widthSwap.isSelected)
+            assertEquals("锁定", widthSwap.stateDescription)
+            assertEquals("◩ •", widthSwap.text.toString())
+            assertTrue(widthSwap.typeface.isBold)
+            assertTrue(widthSwap.paintFlags and Paint.UNDERLINE_TEXT_FLAG != 0)
+            assertMatchesCalculator(true)
+            assertEquals("全角 / 半角转换", widthSwap.contentDescription)
+            assertEquals(ImeChromeView.Panel.KAOMOJI, chrome.panel)
+            assertSame(chrome.statusContainer, customStatus.parent)
+            widthSwap.performClick()
+            assertEquals(3, toggles)
             assertFalse(widthSwap.isSelected)
             assertEquals("关闭", widthSwap.stateDescription)
+            assertEquals("◩", widthSwap.text.toString())
+            assertFalse(widthSwap.typeface?.isBold == true)
+            assertEquals(0, widthSwap.paintFlags and Paint.UNDERLINE_TEXT_FLAG)
             assertMatchesCalculator(false)
             assertEquals(ImeChromeView.Panel.KAOMOJI, chrome.panel)
             assertSame(chrome.statusContainer, customStatus.parent)
+            chrome.setWidthSwapEnabled(true)
+            assertEquals("锁定", widthSwap.stateDescription)
+            chrome.setWidthSwapEnabled(false)
+            assertEquals("关闭", widthSwap.stateDescription)
         }
     }
 

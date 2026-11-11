@@ -299,7 +299,7 @@ enum class KeyAction(val wireValue: String, val title: String, val keyLabel: Str
     END("end", "End", "End", "Move to the end of the line. Shift extends the selection."),
     EMOJI("emoji", "Emoji", "☺\uFE0E", "Open the scrollable emoji panel. Tap an emoji to insert it; Return closes the panel."),
     KAOMOJI("kaomoji", "顔文字", "顔", "Open the scrollable 顔文字 panel. Tap a 顔文字 to insert it; Return closes the panel."),
-    WIDTH_SWAP("width_swap", "全角 / 半角转换", "◩", "Off by default. When enabled, swap full-width and half-width forms of typed characters that have a width counterpart. Tap again to turn off."),
+    WIDTH_SWAP("width_swap", "全角 / 半角转换", "◩", "Off by default. Tap once to swap the next character, tap again before typing to lock, and tap again to turn off. Pending text and candidates are not converted again. Clipboard paste is unchanged."),
     PREEDIT_MODE("preedit_mode", "预编辑模式", "预编辑", "默认内联，在输入框内显示预编辑文本。切换模式时将当前预编辑原样确认；非内联模式在键盘上显示预编辑，仅在选词或确认后写入输入框。"),
     CALCULATOR("calculator", "计算器", "∑", "Toggle calculator mode. Evaluate math expressions and output results as candidates."),
     ENGINE_DASHBOARD("engine_dashboard", "Engine Dashboard", "◷", "Open the read-only engine dashboard. Return closes the panel."),

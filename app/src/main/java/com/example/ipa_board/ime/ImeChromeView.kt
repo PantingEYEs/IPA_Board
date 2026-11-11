@@ -19,6 +19,7 @@ import com.example.ipa_board.MultifunctionBarSlot
 import com.example.ipa_board.MultifunctionBarBinding
 import com.example.ipa_board.KeyAction
 import com.example.ipa_board.ShiftState
+import com.example.ipa_board.WidthSwapState
 
 /** IME chrome, with a toolbar layout shared by Shortcut Management. Outside keyboard-page JSON. */
 class ImeChromeView(context: Context) : LinearLayout(context) {
@@ -115,7 +116,7 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         body.addView(overlay, FrameLayout.LayoutParams(-1, -1))
         addView(body, LayoutParams(-1, dp(210)))
         setRemoteKeyboardEnabled(false)
-        setWidthSwapEnabled(false)
+        setWidthSwapState(WidthSwapState.OFF)
         setCalculatorEnabled(false)
         showPanel(Panel.KEYBOARD)
     }
@@ -157,9 +158,10 @@ class ImeChromeView(context: Context) : LinearLayout(context) {
         multifunctionBar.setRemoteKeyboardEnabled(enabled)
     }
 
-    fun setWidthSwapEnabled(enabled: Boolean) {
-        multifunctionBar.setWidthSwapEnabled(enabled)
-    }
+    fun setWidthSwapState(state: WidthSwapState) = multifunctionBar.setWidthSwapState(state)
+
+    /** Compatibility for old previews; runtime code passes the full three-state value. */
+    fun setWidthSwapEnabled(enabled: Boolean) = setWidthSwapState(if (enabled) WidthSwapState.LOCKED else WidthSwapState.OFF)
 
     fun setInlinePreeditEnabled(enabled: Boolean) {
         if (inlinePreeditEnabled == enabled) return

@@ -27,7 +27,7 @@ class KeyboardInputControllerTest {
         instrumentation.runOnMainSync {
             val connection = RecordingConnection(instrumentation.targetContext)
             var enabled = false
-            val controller = KeyboardInputController { if (enabled) CharacterWidthConverter.swap(it) else it }
+            val controller = KeyboardInputController(transformOutput = { if (enabled) CharacterWidthConverter.swap(it) else it })
             controller.handle(text("aＡ😀"), connection, null)
             assertEquals("aＡ😀", connection.committed.last())
             enabled = true

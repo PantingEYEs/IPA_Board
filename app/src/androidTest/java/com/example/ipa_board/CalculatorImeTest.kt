@@ -13,10 +13,12 @@ import com.example.ipa_board.ime.EngineFeature
 import com.example.ipa_board.ime.EngineSettings
 import com.example.ipa_board.ime.RemoteKeyboardMode
 import org.junit.Assert.*
+import org.junit.Rule
 import org.junit.Test
 
 /** Real IME candidates in a synthetic editor; run only through regression.py. */
 class CalculatorImeTest {
+    @get:Rule val lifecycleTrace: org.junit.rules.TestRule = ImeLifecycleTrace()
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val ui = instrumentation.uiAutomation
     private val driver = ImeTestDriver()
@@ -31,14 +33,27 @@ class CalculatorImeTest {
         val number = first.toBigDecimal()
         assertTrue(number >= java.math.BigDecimal.ZERO && number < java.math.BigDecimal.ONE)
         repeat(2) {
-            click("\u5168\u89d2 / \u534a\u89d2\u8f6c\u6362")
-            editor(scenario,CharacterWidthConverter.swap("rand()"))
-            candidate(first)
-            click("\u5168\u89d2 / \u534a\u89d2\u8f6c\u6362")
+            setWidthState("锁定")
             editor(scenario,"rand()")
+            // A real policy refresh, rather than a width repaint, must retain the same sample.
+            instrumentation.runOnMainSync {
+                assertTrue(EngineSettings.preferences(context).edit().putBoolean(EngineFeature.RANKING.key, true).commit())
+            }
+            instrumentation.waitForIdleSync()
+            candidate(first)
+            setWidthState("关闭")
+            editor(scenario,"rand()")
+            instrumentation.runOnMainSync {
+                assertTrue(EngineSettings.preferences(context).edit().putBoolean(EngineFeature.RANKING.key, false).commit())
+            }
+            instrumentation.waitForIdleSync()
             candidate(first)
         }
+        setWidthState("锁定")
         select(first)
+        // Calculator output is accepted as-is, without another width conversion.
+        editor(scenario,first)
+        setWidthState("关闭")
         editor(scenario,first)
         key(2,1)
         candidate(number.add(java.math.BigDecimal.ONE).stripTrailingZeros().toPlainString())
@@ -252,6 +267,14 @@ class CalculatorImeTest {
         it.contentDescription?.toString()?.startsWith("Row $row, key $column:") == true
     }
     private fun click(description: String) = driver.click { it.contentDescription?.toString() == description }
+    private fun setWidthState(expected: String) {
+        repeat(3) {
+            if (driver.awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" }.stateDescription?.toString() == expected) return
+            click("全角 / 半角转换")
+            instrumentation.waitForIdleSync()
+        }
+        assertEquals(expected, driver.awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" }.stateDescription?.toString())
+    }
     private fun candidate(text: String) = driver.awaitNode {
         it.contentDescription?.toString() == text && it.text?.toString() == "$text "
     }
@@ -290,6 +313,7 @@ class CalculatorImeTest {
         val oldFlags = ui.serviceInfo.flags
         var filename: String? = null
         var scenario: ActivityScenario<ImeTestEditorActivity>? = null
+        var primaryFailure: Throwable? = null
         try {
             instrumentation.runOnMainSync {
                 assertTrue(prefs.edit().remove(MultifunctionBarSettings.KEY_BINDINGS).remove(RemoteKeyboardMode.KEY_SNAPSHOT)
@@ -310,33 +334,40 @@ class CalculatorImeTest {
             filename = LayoutFileManager.createLayout(context, layout.name, layout)
             PageGroupManager.addPages(context, PageGroupManager.active(context).id, listOf(filename))
             PageGroupManager.selectPage(context, filename)
-            shell("ime enable $ime")
-            shell("ime set $ime")
+            ImeTestImeState.enableAndSelect(context, ime, ::shell)
             val editor = ActivityScenario.launch(ImeTestEditorActivity::class.java)
             scenario = editor
-            driver.awaitKeyboard(editor) { it.contentDescription?.toString()?.startsWith("Row 1, key 1:") == true }
+            try {
+                driver.awaitKeyboard(editor) { it.contentDescription?.toString()?.startsWith("Row 1, key 1:") == true }
+            } catch (error: Throwable) {
+                addImeReadinessDiagnostics(error, context, ime, editor)
+                throw error
+            }
             val calcWasOn = driver.awaitNode { it.contentDescription?.toString() == "Calculator" }.isSelected
-            val widthWasOn = driver.awaitNode { it.contentDescription?.toString() == "全角 / 半角转换" }.isSelected
+            var interactionFailure: Throwable? = null
             try {
                 if (!calcWasOn) click("Calculator")
-                if (widthWasOn) click("全角 / 半角转换")
+                setWidthState("关闭")
                 body(editor)
+            } catch (error: Throwable) {
+                interactionFailure = error
+                throw error
             } finally {
-                if (driver.find { it.contentDescription?.toString() == "Calculator" }?.isSelected != calcWasOn) click("Calculator")
-                if (driver.find { it.contentDescription?.toString() == "全角 / 半角转换" }?.isSelected != widthWasOn) click("全角 / 半角转换")
+                cleanupImeFixture(interactionFailure, {
+                    if (driver.find { it.contentDescription?.toString() == "Calculator" }?.isSelected != calcWasOn) click("Calculator")
+                }, { setWidthState("关闭") })
             }
+        } catch (error: Throwable) {
+            primaryFailure = error
+            throw error
         } finally {
-            try { scenario?.close() } finally {
-                try { shell("ime set $oldIme"); if (!alreadyEnabled) shell("ime disable $ime") } finally {
-                    try { filename?.let { LayoutFileManager.deleteLayout(context, it) } } finally {
-                        try { groupSnapshot.close() } finally {
-                            try {
-                                assertTrue(prefs.edit().apply { before.forEach { (key, value) -> restoreValue(key, value) } }.commit())
-                            } finally { ui.serviceInfo = ui.serviceInfo.apply { flags = oldFlags } }
-                        }
-                    }
-                }
-            }
+            cleanupImeFixture(primaryFailure, { scenario?.close() }, {
+                ImeTestImeState.restore(context, ime, oldIme, alreadyEnabled, ::shell)
+            }, { filename?.let { LayoutFileManager.deleteLayout(context, it) } }, {
+                groupSnapshot.close()
+            }, {
+                assertTrue(prefs.edit().apply { before.forEach { (key, value) -> restoreValue(key, value) } }.commit())
+            }, { ui.serviceInfo = ui.serviceInfo.apply { flags = oldFlags } })
         }
     }
 
