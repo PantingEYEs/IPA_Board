@@ -6,6 +6,7 @@ import pathlib
 import struct
 import sys
 import zipfile
+from verify_onnx_extensions import verify as verify_onnx_extensions
 
 root = pathlib.Path(__file__).resolve().parents[1]
 manifest = json.loads((root / 'tools/engine-assets.lock.json').read_text())
@@ -31,6 +32,11 @@ for abi, digest in bridge_lock['runtimeSha256'].items():
 if errors:
     sys.exit('Missing or modified resources:\n' + '\n'.join(errors))
 print(f"Verified {len(manifest['files'])} engine resource hashes.")
+try:
+    verify_onnx_extensions(root)
+except (ValueError, OSError) as error:
+    sys.exit(f'Source-built ONNX Runtime Extensions verification failed: {error}')
+print('Verified source-built Extensions: both ABIs, 16KB ELF layout, dependencies, JNI and Java interface.')
 
 def print_alignment(label, data):
     offset = struct.unpack_from('<Q', data, 32)[0]

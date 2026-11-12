@@ -22,6 +22,51 @@ import org.junit.Test
 import java.io.File
 
 class EngineManagementTest {
+    @Test fun semanticRowKeepsTheBundledExtensionsIdentityAfterMetadataRefresh() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val notice = context.assets.open("licenses/onnx-extensions/SOURCE.txt").bufferedReader().use { it.readText() }
+        val buildRevision = requireNotNull(Regex("Build: https://github.com/PantingEYEs/IPA_Engine/tree/([a-f0-9]{40})")
+            .find(notice)).groupValues[1]
+        val row = EngineCatalog.configurable().single { it.feature == EngineFeature.SEMANTIC }
+        val originalLoader = EngineVersionLookup.metadataLoaderOverride
+        EngineVersionLookup.metadataLoaderOverride = { source ->
+            if (source == EngineVersionSource.MOZC || source == EngineVersionSource.E5)
+                """{"sha":"1234567890abcdef1234567890abcdef12345678"}"""
+            else """{"tag_name":"v-future","draft":false,"prerelease":false}"""
+        }
+        fun assertCurrent(root: View) {
+            val current = root.findViewWithTag<TextView>("engine-current:${row.name}").text.toString()
+            assertTrue(current.contains("ONNX Runtime 1.23.2"))
+            assertTrue(current.contains("Extensions 0.13.0"))
+            assertTrue(current.contains("IPA build ${buildRevision.take(7)}"))
+            assertFalse(current.contains("v-future"))
+            assertFalse(current.contains("1234567890ab"))
+        }
+        try {
+            ActivityScenario.launch(EngineManagementActivity::class.java).use { scenario ->
+                scenario.onActivity { activity ->
+                    val root = activity.findViewById<View>(R.id.engine_management_root)
+                    assertCurrent(root)
+                    root.findViewWithTag<View>("category:ranking").performClick()
+                }
+                val deadline = android.os.SystemClock.elapsedRealtime() + 5_000
+                var latestReceived = false
+                do {
+                    scenario.onActivity { activity ->
+                        val root = activity.findViewById<View>(R.id.engine_management_root)
+                        latestReceived = root.findViewWithTag<TextView>("engine-latest:${row.name}").text
+                            .contains("ONNX Runtime: v-future")
+                        assertCurrent(root)
+                    }
+                    if (!latestReceived) android.os.SystemClock.sleep(20)
+                } while (!latestReceived && android.os.SystemClock.elapsedRealtime() < deadline)
+                assertTrue("Latest metadata must remain separate from the installed build", latestReceived)
+                scenario.recreate()
+                scenario.onActivity { activity -> assertCurrent(activity.findViewById(R.id.engine_management_root)) }
+            }
+        } finally { EngineVersionLookup.metadataLoaderOverride = originalLoader }
+    }
+
     @Test fun mozcRowsKeepBundledIdentityWhenLatestUpstreamChanges() {
         val originalLoader = EngineVersionLookup.metadataLoaderOverride
         EngineVersionLookup.metadataLoaderOverride = { source ->

@@ -137,7 +137,8 @@
     },
     "semantic": {
       "classes": [
-        "com.example.ipa_board.SemanticContextIntegrationTest"
+        "com.example.ipa_board.SemanticContextIntegrationTest",
+        "com.example.ipa_board.OnnxExtensionsCompatibilityTest"
       ]
     },
     "full": {
@@ -224,7 +225,8 @@
         "com.example.ipa_board.EngineServiceSchemaFailureTest",
         "com.example.ipa_board.WidthSwapCompositionTest",
         "com.example.ipa_board.WidthSwapImeTest",
-        "com.example.ipa_board.SpaceConfirmationTest"
+        "com.example.ipa_board.SpaceConfirmationTest",
+        "com.example.ipa_board.OnnxExtensionsCompatibilityTest"
       ]
     },
     "ipa": {
@@ -522,6 +524,16 @@
         "com.example.ipa_board.RemoteKeyboardEnginePolicyTest",
         "com.example.ipa_board.EngineControlsTest",
         "com.example.ipa_board.EngineManagementTest"
+      ]
+    },
+    "onnx-extensions": {
+      "classes": [
+        "com.example.ipa_board.OnnxExtensionsCompatibilityTest",
+        "com.example.ipa_board.SemanticContextIntegrationTest",
+        "com.example.ipa_board.MultilingualEngineTest",
+        "com.example.ipa_board.EngineManagementTest",
+        "com.example.ipa_board.EngineVersionLookupContractTest",
+        "com.example.ipa_board.EngineSettingsContractTest"
       ]
     }
   }

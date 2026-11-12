@@ -33,9 +33,10 @@
       "sha256": "82048d1f462218adae4ba76477089ab0ba76093d84f733540066db1a8ba6b827"
     },
     {
-      "file": "extensions.aar",
-      "url": "https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-extensions-android/0.13.0/onnxruntime-extensions-android-0.13.0.aar",
-      "sha256": "cb98c6fbeac1a9707228c4b76cfbb395b4dc4d310900aefaa672561d17fd6d9d"
+      "file": "onnxruntime-extensions-android-0.13.0-ipa-e5-16kb.aar",
+      "url": "https://raw.githubusercontent.com/PantingEYEs/IPA_Engine/dd6f7fb09530a6e0daff5ac8d5987d855a76142e/artifacts/onnxruntime-extensions-android-0.13.0-ipa-e5-16kb.aar",
+      "sha256": "20620659f2695dc5e36cca7f339e64c606f36413b9a42c144eac0aace73cecc6",
+      "source_revision": "dd6f7fb09530a6e0daff5ac8d5987d855a76142e"
     },
     {
       "file": "model.onnx",
@@ -382,11 +383,6 @@
       "bytes": 30241654
     },
     {
-      "path": "app/libs/onnxruntime-extensions-android-0.13.0.aar",
-      "sha256": "cb98c6fbeac1a9707228c4b76cfbb395b4dc4d310900aefaa672561d17fd6d9d",
-      "bytes": 9040811
-    },
-    {
       "path": "app/src/main/assets/engines/semantic/centering.json",
       "sha256": "f02c1d01cf2847822c8c11a3b378fb41bff5e056cd9272c6a370ce2ed1d26585",
       "bytes": 25151
@@ -422,11 +418,6 @@
       "bytes": 1104
     },
     {
-      "path": "app/src/main/assets/licenses/ONNX-Runtime-Extensions-MIT.txt",
-      "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
-      "bytes": 1141
-    },
-    {
       "path": "app/src/main/assets/licenses/ONNX-Runtime-MIT.txt",
       "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c",
       "bytes": 1073
@@ -438,13 +429,8 @@
     },
     {
       "path": "app/src/main/assets/licenses/E5-source.txt",
-      "sha256": "46f71029eb47aeaa72368b512f3e79d0a1fa1ad3ffe0c74e59c43a80ecaa71f2",
-      "bytes": 780
-    },
-    {
-      "path": "app/src/main/assets/licenses/ONNX-Runtime-Extensions-ThirdPartyNotices.txt",
-      "sha256": "f5fdecd0efb3ff1b4b619f74fe0cb4991299101853ba9ffe988265f8a067d74a",
-      "bytes": 53916
+      "sha256": "d33261db6ae843a7ec58070c1e31db1e4f6f1d540204930a9fbac1d5c97d78aa",
+      "bytes": 1097
     },
     {
       "path": "app/src/main/assets/licenses/ONNX-Runtime-ThirdPartyNotices.txt",
@@ -693,6 +679,106 @@
       "path": "tools/mozc/sources.lock.json",
       "sha256": "77d8c405f54baf3c0e9b73e0a1977b9950234e0156c46ee585a64d557b67fd51",
       "bytes": 1468
+    },
+    {
+      "path": "app/libs/onnxruntime-extensions-android-0.13.0-ipa-e5-16kb.aar",
+      "sha256": "20620659f2695dc5e36cca7f339e64c606f36413b9a42c144eac0aace73cecc6",
+      "bytes": 1509753
+    },
+    {
+      "path": "app/src/main/assets/licenses/onnx-extensions/GSL-4.0.0-LICENSE.txt",
+      "sha256": "4c21dc82a1c7186ea754fd59d504c00947953a3401fe8e24eaa44109ef8e2555",
+      "bytes": 1157
+    },
+    {
+      "path": "app/src/main/assets/licenses/onnx-extensions/NDK-r29-NOTICE.toolchain.txt",
+      "sha256": "789714a9076571c580cf531bdcebec776a4d889c12c3c1108adafc6e4338710a",
+      "bytes": 799639
+    },
+    {
+      "path": "app/src/main/assets/licenses/onnx-extensions/NDK-r29-NOTICE.txt",
+      "sha256": "faf0dc52cf6ce9ab09a04b0c074a378dd2565ee1ed9bc1179d83793bcdba012e",
+      "bytes": 516438
+    },
+    {
+      "path": "app/src/main/assets/licenses/onnx-extensions/ONNX-Runtime-1.23.2-Float16-Notice.txt",
+      "sha256": "697c1b54af6267cfc3d86ef41f643dcb291e979109178881a69c508b0e05fcec",
+      "bytes": 1160
+    },
+    {
+      "path": "app/src/main/assets/licenses/onnx-extensions/ONNX-Runtime-1.23.2-MIT.txt",
+      "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c",
+      "bytes": 1073
+    },
+    {
+      "path": "app/src/main/assets/licenses/onnx-extensions/ONNX-Runtime-Extensions-0.13.0-MIT.txt",
+      "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+      "bytes": 1141
+    },
+    {
+      "path": "app/src/main/assets/licenses/onnx-extensions/ONNX-Runtime-Extensions-0.13.0-ThirdPartyNotices.txt",
+      "sha256": "f5fdecd0efb3ff1b4b619f74fe0cb4991299101853ba9ffe988265f8a067d74a",
+      "bytes": 53916
+    },
+    {
+      "path": "app/src/main/assets/licenses/onnx-extensions/Protobuf-21.12-LICENSE.txt",
+      "sha256": "6e5e117324afd944dcf67f36cf329843bc1a92229a8cd9bb573d7a83130fea7d",
+      "bytes": 1732
+    },
+    {
+      "path": "app/src/main/assets/licenses/onnx-extensions/README.md",
+      "sha256": "bfa9ff3e63880830237322acad8c87c08ffd04fb5bda85aeede2d07e5ab1e7bd",
+      "bytes": 823
+    },
+    {
+      "path": "app/src/main/assets/licenses/onnx-extensions/SentencePiece-0.1.96-bundled-Abseil-LICENSE.txt",
+      "sha256": "d3e2f59e1d71176dfdb555ece6a41f7a5aa0f52ff21211010ace314f57695f6b",
+      "bytes": 11365
+    },
+    {
+      "path": "app/src/main/assets/licenses/onnx-extensions/SentencePiece-0.1.96-Darts-clone-LICENSE.txt",
+      "sha256": "155f59997298ee336602c49f9c1110f268ac394ca2197eb02647a3555935ad52",
+      "bytes": 1481
+    },
+    {
+      "path": "app/src/main/assets/licenses/onnx-extensions/SentencePiece-0.1.96-LICENSE.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "bytes": 11358
+    },
+    {
+      "path": "app/src/main/assets/licenses/onnx-extensions/SOURCE.txt",
+      "sha256": "f403d528a270ec2dfb7e29ecb7293a64b2ce4ff39da32ceca0f8c5f48c47bcb5",
+      "bytes": 799
+    },
+    {
+      "path": "app/src/main/assets/licenses/onnx-extensions/sources.json",
+      "sha256": "ee49c688036008b2141b289612abf734f7e349758240258d6711188a2cf4c24c",
+      "bytes": 7095
+    },
+    {
+      "path": "app/src/main/assets/licenses/onnx-extensions/reference/ndk-r29-source.properties",
+      "sha256": "716f3518a923198cfab037abb32dc3f1b1f7e9a9dcdcda6b66be5906215d2658",
+      "bytes": 107
+    },
+    {
+      "path": "tools/onnx-extensions/sources.lock.json",
+      "sha256": "a3ed8244669279a5402ec7ecbcbad256c8132dc4c1ecc7b6f08a0fc788d4a640",
+      "bytes": 3368
+    },
+    {
+      "path": "tools/onnx-extensions/artifacts.json",
+      "sha256": "7ca15ea49cd796b50a8dfdbbaf3f6cff2c76d0f8af5ac4a27d1a586e8e08da95",
+      "bytes": 9483
+    },
+    {
+      "path": "tools/onnx-extensions/verify_artifacts.py",
+      "sha256": "d263d76730293b1c9b4fa7e0073f95a4ce2cc8b011189c117cd398ec3f69f7c9",
+      "bytes": 28016
+    },
+    {
+      "path": "tools/onnx-extensions/verifier-source.json",
+      "sha256": "94eb164102a0941576187c01c035f055a6ce7e9de723113dcc91800e44ef8720",
+      "bytes": 355
     }
   ],
   "sourceBuilds": [
@@ -707,6 +793,19 @@
       "artifact_manifest": "tools/mozc/artifacts.json",
       "data_version": "24.11.oss",
       "notices": "app/src/main/assets/licenses/mozc/THIRD_PARTY_NOTICES.md"
+    },
+    {
+      "component": "ONNX Runtime Extensions",
+      "upstream_repository": "https://github.com/microsoft/onnxruntime-extensions.git",
+      "upstream_revision": "9d5638b0b1f28ed2ca9ef589d5ec3ea86f859432",
+      "build_repository": "https://github.com/PantingEYEs/IPA_Engine.git",
+      "build_branch": "ranking",
+      "build_revision": "dd6f7fb09530a6e0daff5ac8d5987d855a76142e",
+      "source_lock": "tools/onnx-extensions/sources.lock.json",
+      "artifact_manifest": "tools/onnx-extensions/artifacts.json",
+      "operator_profile": "SPM_TOKENIZER only",
+      "ort_version": "1.23.2",
+      "notices": "app/src/main/assets/licenses/onnx-extensions/SOURCE.txt"
     }
   ]
 }

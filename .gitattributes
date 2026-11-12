@@ -7,3 +7,6 @@ app/src/main/assets/licenses/* -whitespace
 # Preserve the pinned Mozc notices/build records byte-for-byte, including upstream formatting.
 app/src/main/assets/licenses/mozc/** -text -whitespace
 tools/mozc/*.json -text -whitespace
+# Keep the source-built Extensions notices and pinned build records byte-exact.
+app/src/main/assets/licenses/onnx-extensions/** -text -whitespace
+tools/onnx-extensions/** -text -whitespace

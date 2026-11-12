@@ -3,7 +3,9 @@ Revision: 614241f622f53c4eeff9890bdc4f31cfecc418b3
 Source: https://huggingface.co/intfloat/multilingual-e5-small/tree/614241f622f53c4eeff9890bdc4f31cfecc418b3
 Model card: https://huggingface.co/intfloat/multilingual-e5-small/blob/614241f622f53c4eeff9890bdc4f31cfecc418b3/README.md
 E5 source and MIT license: https://github.com/microsoft/unilm/tree/master/e5
-Runtime: ONNX Runtime 1.23.2 (MIT), ONNX Runtime Extensions 0.13.0 (MIT)
+Runtime: ONNX Runtime 1.23.2 (MIT), source-built ONNX Runtime Extensions 0.13.0 SPM-only (IPA Engine ranking dd6f7fb09530a6e0daff5ac8d5987d855a76142e).
+Extensions notices and pinned build source: licenses/onnx-extensions/SOURCE.txt and sources.json.
 Tokenizer: exact XLM-R SentencePiece graph, built with tools/build_semantic_tokenizer.py.
-SentencePiece source (Apache 2.0): https://github.com/google/sentencepiece/tree/v0.2.0
+Graph-generation tool SentencePiece 0.2.0 source (Apache 2.0): https://github.com/google/sentencepiece/tree/v0.2.0
 The AVX512 name denotes the upstream quantization preset; the ONNX graph uses portable CPU operators, not an x86 native binary.
+Native SentencePiece runtime: v0.1.96 with the pinned Extensions upstream patches; see onnx-extensions notices.
