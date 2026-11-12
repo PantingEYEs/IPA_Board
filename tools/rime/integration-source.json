@@ -1,0 +1,24 @@
+{
+  "repository": "https://github.com/PantingEYEs/IPA_Engine",
+  "branch": "chinese",
+  "commit": "073aabe899fdcbdd195e2e9199fb25c43a574f47",
+  "scope": "Byte-exact source-build handoff. ELF verifier copied from OpenCC/scripts/verify_artifacts.py. Full reproducible recipes and source proof remain at the pinned commit.",
+  "records": {
+    "artifacts.json": {
+      "sha256": "402ffd0d2467905683cb56ba00c066e18a8c0d57b5d02177ae2b87ad25ae8812",
+      "sizeBytes": 14958
+    },
+    "elf_verifier.py": {
+      "sha256": "e9f58fae54a2cbbfb5457f7d82edbd0c78122f48766f86888945355ecdff0631",
+      "sizeBytes": 5445
+    },
+    "resource-sources.lock.json": {
+      "sha256": "15050533f82e860d386a3a8592f7d54bd108d607fc01243f0863e97989c54e4c",
+      "sizeBytes": 15142
+    },
+    "sources.lock.json": {
+      "sha256": "58b9a4950ccc53917a89ac71604a6496f58b0ae66a6990ca8203b8e6e2e51a47",
+      "sizeBytes": 1772
+    }
+  }
+}

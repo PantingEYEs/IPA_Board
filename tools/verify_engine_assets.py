@@ -7,6 +7,7 @@ import struct
 import sys
 import zipfile
 from verify_onnx_extensions import verify as verify_onnx_extensions
+from verify_rime import verify as verify_rime
 
 root = pathlib.Path(__file__).resolve().parents[1]
 manifest = json.loads((root / 'tools/engine-assets.lock.json').read_text())
@@ -15,28 +16,15 @@ for item in manifest['files']:
     path = root / item['path']
     if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != item['sha256']:
         errors.append(item['path'])
-# The C++ reader is pinned independently: accepting a new engine asset hash is not an ABI review.
-bridge_root = root / 'app/src/main/cpp/vendor/librime'
-bridge_lock = json.loads((bridge_root / 'manifest.json').read_text())
-for vendor in ['librime', 'boost']:
-    vendor_root = root / 'app/src/main/cpp/vendor' / vendor
-    header_lock = json.loads((vendor_root / 'manifest.json').read_text())
-    for name, digest in header_lock['headers'].items():
-        path = vendor_root / name
-        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
-            errors.append(str(path.relative_to(root)))
-for abi, digest in bridge_lock['runtimeSha256'].items():
-    path = root / 'app/src/main/jniLibs' / abi / 'librime_jni.so'
-    if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
-        errors.append('Rime bridge ABI requires review: ' + abi)
 if errors:
     sys.exit('Missing or modified resources:\n' + '\n'.join(errors))
 print(f"Verified {len(manifest['files'])} engine resource hashes.")
 try:
+    verify_rime(root)
     verify_onnx_extensions(root)
 except (ValueError, OSError) as error:
-    sys.exit(f'Source-built ONNX Runtime Extensions verification failed: {error}')
-print('Verified source-built Extensions: both ABIs, 16KB ELF layout, dependencies, JNI and Java interface.')
+    sys.exit(f'Source-built engine package verification failed: {error}')
+print('Verified source-built Rime/OpenCC and Extensions: both ABIs, 16KB ELF layout, dependencies, JNI and Java interface.')
 
 def print_alignment(label, data):
     offset = struct.unpack_from('<Q', data, 32)[0]
@@ -49,7 +37,7 @@ for path in sorted((root / 'app/src/main/jniLibs').glob('*/*.so')):
     print_alignment(path.relative_to(root), path.read_bytes())
 for path in sorted((root / 'app/src/main/assets/engines/ipa').glob('**/*.so')):
     print_alignment(path.relative_to(root), path.read_bytes())
-for path in sorted((root / 'app/libs').glob('onnxruntime*.aar')):
+for path in sorted((root / 'app/libs').glob('*.aar')):
     with zipfile.ZipFile(path) as archive:
         for name in sorted(archive.namelist()):
             if name.endswith('.so') and any(f'jni/{abi}/' in name for abi in ('arm64-v8a', 'x86_64')):

@@ -1,4 +1,5 @@
-# IPA Board: retain the pinned upstream spelling; the app controls optional tone aliases.
+# Copyright (c) 2026 PantingEYEs. All rights reserved.
+# Project-authored policy overlay; no project license has been selected.
 patch:
   translator/enable_user_dict: false
   translator/enable_completion: false

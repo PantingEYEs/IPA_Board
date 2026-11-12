@@ -6,7 +6,7 @@
 
 0.0.4 计划成为首个不再按 GPL-3.0 整体发行的版本，具体后续协议在依赖与接入代码的许可核验完成后敲定。官方源码构建的 [Mozc 与配套 OSS 词典](docs/mozc-upstream.md)、[SentencePiece 专用 ONNX Runtime Extensions](docs/onnx-extensions-upstream.md)已完成接入；#51 经 [PR #59](https://github.com/PantingEYEs/IPA_Board/pull/59) 合入 `0.0.4-dev`。ONNX Runtime 主库、E5 模型与排序规则保持不变。
 
-后续工作为 [Rime/OpenCC 官方构建与桥接迁移 #49](https://github.com/PantingEYEs/IPA_Board/issues/49)、[HeliBoard LatinIME 独立构建 #52](https://github.com/PantingEYEs/IPA_Board/issues/52)、[第三方资源下载与安装 #53](https://github.com/PantingEYEs/IPA_Board/issues/53)和[来源／许可核验 #54](https://github.com/PantingEYEs/IPA_Board/issues/54)。Rime/OpenCC 将不再使用 Trime 构建和桥接工具；LatinIME 按实际采用的源码核验许可。OpenBoard 英文词表继续使用现成的 `main_en-US.dict`，不自行编译。运行资源目前仍内置；第三方资源拆包、客户端下载及项目协议变更尚未完成，IPA Engine 与配套词典继续内置。详见 [0.0.4 开发计划](docs/0.0.4-development-plan.md)。
+本分支正在接入 [Rime/OpenCC 官方构建与桥接迁移 #49](docs/rime-upstream.md)：固定 chinese 构建采用 librime 1.17.0／OpenCC 1.4.2，保留既有中文方案与混排合同。后续工作为 [HeliBoard LatinIME 独立构建 #52](https://github.com/PantingEYEs/IPA_Board/issues/52)、[第三方资源下载与安装 #53](https://github.com/PantingEYEs/IPA_Board/issues/53)和[来源／许可核验 #54](https://github.com/PantingEYEs/IPA_Board/issues/54)。当前 Rime/OpenCC 接入不再使用 Trime 组合库、JNA 或外置候选桥接；LatinIME 按实际采用的源码核验许可。OpenBoard 英文词表继续使用现成的 `main_en-US.dict`，不自行编译。运行资源目前仍内置；第三方资源拆包、客户端下载及项目协议变更尚未完成，IPA Engine 与配套词典继续内置。详见 [0.0.4 开发计划](docs/0.0.4-development-plan.md)。
 
 0.0.4 开发版已加入 Shortcut 配置导入／导出与替代文字、默认编辑快捷键与可绑定的撤销／重做、页组文件夹导入／导出及更新后的初始化预设、地球拼音、可绑定的预编辑模式切换和三态全半角互换。连续光标、长按队列与 Rime 批量查询优化已加入开发版，现有 UTF-16 退格行为保留。
 
@@ -55,7 +55,7 @@ Shift 第一次点击启用临时大写（`Shift •`），再次点击锁定大
 - 点击候选上屏，右侧按钮展开候选；空格选择首选词，英文追加空格。Enter 原样结束组合，再次按下执行编辑器动作。
 - 候选按钮最小宽度随键盘按键宽度调整。切页保留组合文本，工具面板的 Return 或系统返回键返回键盘。
 
-主页 **Engine → Engine Management** 提供各项输入能力的独立开关和关闭后的回退说明；全部候选引擎关闭时仍可原样上屏。展开类目会尝试并列显示当前版本与官方最新来源信息；Mozc 显示 Google 源码修订与配套 OSS 数据版本，E5 区分模型、ONNX Runtime 主库与 Extensions 源码构建信息。现有 Rime、Mozc、LatinIME 与 E5 暂不提供手动替换。
+主页 **Engine → Engine Management** 提供各项输入能力的独立开关和关闭后的回退说明；全部候选引擎关闭时仍可原样上屏。展开类目会尝试并列显示当前版本与官方最新来源信息；Rime/OpenCC 区分官方运行库、兼容数据与 IPA_Engine chinese 构建，源码分支最新提交不表示可安装更新；Mozc 显示 Google 源码修订与配套 OSS 数据版本，E5 区分模型、ONNX Runtime 主库与 Extensions 源码构建信息。现有 Rime、Mozc、LatinIME 与 E5 暂不提供手动替换。
 
 **Syllable Engines → Rime → Pinyin scheme** 可选择朙月拼音或地球拼音（Terra Pinyin）；当前默认仍为朙月拼音。地球拼音用音节末尾的 `-`、`/`、`<`、`\` 输入一至四声，例如 `ni<hao<`，也可省略声调。可选的 `;`、`,`、`.` 声调替代键默认关闭，开启后会影响中文候选对这些标点的解释。切换方案或替代键保留待输入原文和光标，只更新候选；配置独立于页级引擎绑定及 Remote Keyboard Mode。地球拼音和注音不依赖朙月拼音资源或会话，所选方案失败时不自动改用其他方案；详见 [地球拼音](docs/terra-pinyin.md)。
 

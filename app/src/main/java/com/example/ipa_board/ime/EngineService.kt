@@ -114,6 +114,8 @@ abstract class EngineService : Service() {
     })
     override fun onBind(intent: Intent): IBinder = requests.binder
     override fun onUnbind(intent: Intent): Boolean { runtimeReporter.clearObservers(); return super.onUnbind(intent) }
+    // The companion retains the process-owned engine across Service instances. Rebinding reuses
+    // that owner; closing it here would leave a closed engine in the shared cache.
     override fun onDestroy() { runtimeReporter.clearObservers(); work.removeCallbacksAndMessages(null); super.onDestroy() }
 }
 

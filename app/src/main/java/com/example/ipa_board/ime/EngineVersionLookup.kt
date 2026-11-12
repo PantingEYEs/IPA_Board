@@ -12,12 +12,13 @@ import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
 
 /** Versions of the pinned distribution sources, not a promise of binary compatibility. */
-enum class EngineVersionSource(val label: String, val endpoint: String) {
-    RIME("librime", "https://api.github.com/repos/rime/librime/releases/latest"),
-    TRIME("Trime source", "https://api.github.com/repos/osfans/trime/releases/latest"),
-    MOZC("Mozc upstream", "https://api.github.com/repos/google/mozc/commits/master"),
+enum class EngineVersionSource(val label: String, val endpoint: String, val revisionMetadata: Boolean = false) {
+    RIME("librime upstream", "https://api.github.com/repos/rime/librime/releases/latest"),
+    OPENCC("OpenCC upstream", "https://api.github.com/repos/BYVoid/OpenCC/releases/latest"),
+    CHINESE_BUILD("IPA chinese source", "https://api.github.com/repos/PantingEYEs/IPA_Engine/commits/chinese", true),
+    MOZC("Mozc upstream", "https://api.github.com/repos/google/mozc/commits/master", true),
     HELIBOARD("HeliBoard source", "https://api.github.com/repos/HeliBorg/HeliBoard/releases/latest"),
-    E5("E5 model", "https://huggingface.co/api/models/intfloat/multilingual-e5-small"),
+    E5("E5 model", "https://huggingface.co/api/models/intfloat/multilingual-e5-small", true),
     ONNX_RUNTIME("ONNX Runtime", "https://api.github.com/repos/microsoft/onnxruntime/releases/latest")
 }
 
@@ -60,10 +61,7 @@ internal class EngineVersionLookup(
             return@synchronized it.value
         }
         val value = try {
-            parse(source, metadataLoader(source)).also { value ->
-                // DIAGNOSTICS: well-formed metadata without a usable version has a fixed failure code.
-                if (value == null) AppDiagnostics.signal(DiagnosticComponent.VERSION_LOOKUP, DiagnosticStage.VERSION_CHECK, DiagnosticKind.INVALID_DATA)
-            }
+            parse(source, metadataLoader(source))
         } catch (e: Exception) {
             // DIAGNOSTICS: Report no endpoint or response body; preserve the cached unavailable result.
             AppDiagnostics.failure(DiagnosticComponent.VERSION_LOOKUP, DiagnosticStage.VERSION_CHECK, e)
@@ -115,7 +113,7 @@ internal class EngineVersionLookup(
 
         internal fun parse(source: EngineVersionSource, body: String): String {
             val json = JSONObject(body)
-            return if (source == EngineVersionSource.E5 || source == EngineVersionSource.MOZC) {
+            return if (source.revisionMetadata) {
                 val sha = json.getString("sha")
                 require(sha.matches(Regex("[a-fA-F0-9]{40}")))
                 "revision ${sha.take(12)}"

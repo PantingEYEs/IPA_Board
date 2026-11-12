@@ -20,6 +20,41 @@ import java.util.concurrent.atomic.AtomicReference
 class EngineVersionLookupContractTest {
     private val source = EngineVersionSource.HELIBOARD
 
+    @Test fun chineseUpstreamReleasesAndIntegrationSourceRemainSeparate() {
+        val lookup = EngineVersionLookup({ requested ->
+            when (requested) {
+                EngineVersionSource.RIME -> release("1.99.0")
+                EngineVersionSource.OPENCC -> release("ver.2.0.0")
+                EngineVersionSource.CHINESE_BUILD -> """{"sha":"1234567890abcdef1234567890abcdef12345678"}"""
+                else -> error("Unexpected source")
+            }
+        }, { 0L }, EngineVersionLookup.Cache())
+        try {
+            assertEquals(listOf("librime upstream: 1.99.0"), result(lookup, EngineVersionSource.RIME))
+            assertEquals(listOf("OpenCC upstream: ver.2.0.0"), result(lookup, EngineVersionSource.OPENCC))
+            assertEquals(listOf("IPA chinese source: revision 1234567890ab"), result(lookup, EngineVersionSource.CHINESE_BUILD))
+        } finally { lookup.close() }
+    }
+
+    @Test fun unavailableChineseBuildDoesNotHideUpstreamReleaseAndCanRecover() {
+        val clock = AtomicLong()
+        val attempts = AtomicInteger()
+        val lookup = EngineVersionLookup({ requested ->
+            if (requested == EngineVersionSource.CHINESE_BUILD) {
+                if (attempts.incrementAndGet() == 1) """{"sha":"truncated"}"""
+                else """{"sha":"abcdef1234567890abcdef1234567890abcdef12"}"""
+            } else release("1.17.0")
+        }, clock::get, EngineVersionLookup.Cache())
+        try {
+            assertEquals(listOf("IPA chinese source: unavailable"), result(lookup, EngineVersionSource.CHINESE_BUILD))
+            assertEquals(listOf("librime upstream: 1.17.0"), result(lookup, EngineVersionSource.RIME))
+            clock.set(29_999)
+            assertEquals(listOf("IPA chinese source: unavailable"), result(lookup, EngineVersionSource.CHINESE_BUILD))
+            assertEquals(1, attempts.get())
+            clock.set(30_000)
+            assertEquals(listOf("IPA chinese source: revision abcdef123456"), result(lookup, EngineVersionSource.CHINESE_BUILD))
+        } finally { lookup.close() }
+    }
     @Test fun mozcUsesUpstreamCommitMetadataWithoutRequiringAReleaseTag() {
         val revision = "1234567890abcdef1234567890abcdef12345678"
         val lookup = EngineVersionLookup({ requested ->

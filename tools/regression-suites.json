@@ -3,6 +3,27 @@
   "package": "com.example.ipa_board",
   "runner": "com.example.ipa_board.RegressionTestRunner",
   "suites": {
+    "rime-upstream": {
+      "classes": [
+        "com.example.ipa_board.RimeUpstreamRuntimeTest",
+        "com.example.ipa_board.RimeMigrationTest",
+        "com.example.ipa_board.RimeBatchTest",
+        "com.example.ipa_board.TerraPinyinEngineTest",
+        "com.example.ipa_board.TerraPinyinFailureTest",
+        "com.example.ipa_board.ZhuyinEngineTest",
+        "com.example.ipa_board.MultilingualEngineTest",
+        "com.example.ipa_board.SegmentedCompositionTest",
+        "com.example.ipa_board.ReplacementTextTest",
+        "com.example.ipa_board.PinyinSettingsTest",
+        "com.example.ipa_board.PinyinPolicySwitchTest",
+        "com.example.ipa_board.PageEngineBindingContractTest",
+        "com.example.ipa_board.EngineServiceSchemaFailureTest",
+        "com.example.ipa_board.EngineSettingsContractTest",
+        "com.example.ipa_board.EngineControlsTest",
+        "com.example.ipa_board.EngineManagementTest",
+        "com.example.ipa_board.EngineVersionLookupContractTest"
+      ]
+    },
     "mozc-upstream": {
       "classes": [
         "com.example.ipa_board.MozcUpstreamRuntimeTest",
@@ -39,6 +60,7 @@
     },
     "platform": {
       "classes": [
+        "com.example.ipa_board.RimeMigrationTest",
         "com.example.ipa_board.BluetoothRemoteEngineModeTest",
         "com.example.ipa_board.CompositionControllerTest",
         "com.example.ipa_board.KeyboardInputControllerTest",
@@ -70,6 +92,7 @@
     },
     "engines": {
       "classes": [
+        "com.example.ipa_board.RimeUpstreamRuntimeTest",
         "com.example.ipa_board.MozcUpstreamRuntimeTest",
         "com.example.ipa_board.MultilingualEngineTest",
         "com.example.ipa_board.ZhuyinEngineTest",
@@ -143,6 +166,8 @@
     },
     "full": {
       "classes": [
+        "com.example.ipa_board.RimeUpstreamRuntimeTest",
+        "com.example.ipa_board.RimeMigrationTest",
         "com.example.ipa_board.MozcUpstreamRuntimeTest",
         "com.example.ipa_board.BluetoothRemoteEngineModeTest",
         "com.example.ipa_board.BluetoothRemoteInputTest",
@@ -534,6 +559,11 @@
         "com.example.ipa_board.EngineManagementTest",
         "com.example.ipa_board.EngineVersionLookupContractTest",
         "com.example.ipa_board.EngineSettingsContractTest"
+      ]
+    },
+    "rime-migration": {
+      "classes": [
+        "com.example.ipa_board.RimeMigrationTest"
       ]
     }
   }

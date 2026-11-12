@@ -1,21 +1,6 @@
 {
   "archives": [
     {
-      "file": "trime-arm64.apk",
-      "url": "https://github.com/osfans/trime/releases/download/v3.3.12/com.osfans.trime-v3.3.12-0-ge09ac711-arm64-v8a-release.apk",
-      "sha256": "c727d509cbae8ba6a6b3616f57ea299d46bb13072812342811d03aea0bc3cb98"
-    },
-    {
-      "file": "trime-x64.apk",
-      "url": "https://github.com/osfans/trime/releases/download/v3.3.12/com.osfans.trime-v3.3.12-0-ge09ac711-x86_64-release.apk",
-      "sha256": "0b32fee993f59614a69269aea30f817c48d7af67b35965ed4eb107e68340ee6f"
-    },
-    {
-      "file": "jna.aar",
-      "url": "https://repo.maven.apache.org/maven2/net/java/dev/jna/jna/5.17.0/jna-5.17.0.aar",
-      "sha256": "4dbeffffa665d97ad5aa7eee297531d3c841a86716ab7f774fd6956422b3cf38"
-    },
-    {
       "file": "heliboard-4.1-heli.apk",
       "url": "https://github.com/HeliBorg/HeliBoard/releases/download/v4.1/HeliBoard_4.1-release.apk",
       "sha256": "eb9c06685ebd5b7307491da9ef15fb5e29694077a934a8699b9b6772c6f76075",
@@ -53,14 +38,15 @@
       "url": "https://raw.githubusercontent.com/PantingEYEs/IPA_Engine/53eed9518f932934a28aceb4e03a453d545f80b8/pre-release/v0.0.1-dev/ipa-engine-v0.0.1-dev-android-arm64-v8a.aar",
       "sha256": "b22396473a316750617b28cbf611d823aa7ef8c92133052ddea92e6d3f70f887",
       "source_revision": "53eed9518f932934a28aceb4e03a453d545f80b8"
+    },
+    {
+      "file": "ipa-rime-android-1.17.0-opencc-1.4.2.aar",
+      "url": "https://raw.githubusercontent.com/PantingEYEs/IPA_Engine/073aabe899fdcbdd195e2e9199fb25c43a574f47/Rime/artifacts/ipa-rime-android-1.17.0-opencc-1.4.2.aar",
+      "sha256": "aa006bfd082f5862774b0d094be056c9ce3204ec914915279f32da0ff9d6d99e",
+      "source_revision": "073aabe899fdcbdd195e2e9199fb25c43a574f47"
     }
   ],
   "files": [
-    {
-      "path": "app/libs/jna-5.17.0.aar",
-      "sha256": "4dbeffffa665d97ad5aa7eee297531d3c841a86716ab7f774fd6956422b3cf38",
-      "bytes": 522249
-    },
     {
       "path": "app/src/main/assets/engines/english/main_en-US.dict",
       "sha256": "bd950ef4b57655120eee65cee62a5d216a63f721d9a8bb759ce2022437840443",
@@ -70,237 +56,6 @@
       "path": "app/src/main/assets/engines/mozc.data",
       "sha256": "26d8d5391e37dba926df23e6f01e90158dd755af111712ce84f065a700a852b5",
       "bytes": 18955930
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/default.custom.yaml",
-      "sha256": "816f3b0cafe473bbfb6fafad97c2bbbc388a65fdb79e142506bf2ee2a4efbc3a",
-      "bytes": 98,
-      "source": "IPA Board registered Rime schemas"
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/default.yaml",
-      "sha256": "dd55653a991f9418eb425ee2112666f82e3e753c5ce3ed5702dd243041a45382",
-      "bytes": 1365
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/essay.txt",
-      "sha256": "196d508a9bb12fc6d711eed83f5ddc4d5c2d382d92d15b4e51175e4d3802cfab",
-      "bytes": 5887784
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/key_bindings.yaml",
-      "sha256": "5c484257cccbab899bc874dfeb9257ce7190c99fee3abc33321767c8dac56af9",
-      "bytes": 2954
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/luna_pinyin.custom.yaml",
-      "sha256": "f287778fd6b352aa3a40ddd959d37771236d79b59f45c250f99a457817d1111c",
-      "bytes": 105
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/luna_pinyin.dict.yaml",
-      "sha256": "270b0c6879436d7b0b606aa684507ea7e173c62b6d5df3966804637872d520fd",
-      "bytes": 891247
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/luna_pinyin.schema.yaml",
-      "sha256": "df48caa2901ca04d79978af926c79b118b3e6e5b5cf97b9d8c9b9d67d748a744",
-      "bytes": 2077
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/luna_pinyin_fluency.schema.yaml",
-      "sha256": "e616957b46d0b920c93937db67711c6aa3dd23a7249f8e22d79676bebedb4bc2",
-      "bytes": 527
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/luna_pinyin_simp.schema.yaml",
-      "sha256": "82d9a2b44fa207d4d49416d16af5d2fcab6b1604f4083c384372360c824ea919",
-      "bytes": 739
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/luna_pinyin_tw.schema.yaml",
-      "sha256": "a65ae62280bd907df84309c05df7ba27ac8fcaa88933bde5d969c4a4634875f4",
-      "bytes": 623
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/luna_quanpin.schema.yaml",
-      "sha256": "1d2bc8f0a62179f149f6449185ed787f761e8f53c304e5e11a78461b9a8d7999",
-      "bytes": 398
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/HKVariants.txt",
-      "sha256": "a5ea8ec2061f066bc7c2b4679ea32efb8e169b9b0ce3fb8d0ce6caed65d7df4f",
-      "bytes": 770
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/HKVariantsRev.txt",
-      "sha256": "1b9d1a6bae833245d547ba7299d53d99cb22ed22477241c6f5d16df1c0182404",
-      "bytes": 560
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/HKVariantsRevPhrases.txt",
-      "sha256": "5e9fdcd7c9e4cef05307ce24ebacf521bc785ad259cf4ef010337296327ed300",
-      "bytes": 2957
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/JPShinjitaiCharacters.txt",
-      "sha256": "243215a72d888d3ec940577bed3ef6e4ecd3e1aa5258efa2a32ca78a32038298",
-      "bytes": 334
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/JPShinjitaiPhrases.txt",
-      "sha256": "1a62c8d52306eb3be8896f86039b384eef881bb52f14251eefb25b546e4c5150",
-      "bytes": 2779
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/JPVariants.txt",
-      "sha256": "aef8a9d03ada7cd786a5ecf71ebfebb3e34d0520b60c072b2d5ed4564682a5a2",
-      "bytes": 3195
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/JPVariantsRev.txt",
-      "sha256": "3f79ca93c29571dae02aaf1cf7f949fa6165d268ad795259f6f7d4a1aaf7ba8c",
-      "bytes": 2968
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/STCharacters.txt",
-      "sha256": "9cedfb8bf13a220087103d9a96d9f56050c341c24a809cbce5c85c9045456557",
-      "bytes": 34615
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/STPhrases.txt",
-      "sha256": "1ce1869151530b6ea388ace1ae4efb3d51d1faa6e01c957f8d60313083a3969f",
-      "bytes": 1006868
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/TSCharacters.txt",
-      "sha256": "ad870b4feeb494cfa7b3b05242bd79af574b22f6b2bdeb89a1633e4b50ed0a3c",
-      "bytes": 34889
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/TSPhrases.txt",
-      "sha256": "54170de095c6d389d557d0d0b0e1a10033f397d4feca80aaa30a74a67836f43a",
-      "bytes": 5440
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/TWPhrases.txt",
-      "sha256": "34e0208f1167dfc8f52ab4560b0d262f4758363578ec4bfa928a863b310d435e",
-      "bytes": 10802
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/TWPhrasesRev.txt",
-      "sha256": "55640442ad60b686d75798306999dabede9794262255389dd0341250f1ac223a",
-      "bytes": 10844
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/TWVariants.txt",
-      "sha256": "89473e96e3f61e9bd3f2e303b9d88ac9caa61effb1faadcef94ff5e65b8ed54b",
-      "bytes": 562
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/TWVariantsRev.txt",
-      "sha256": "aed256cd515db700cbd96fae5d2158d6a98c9628ee51e14ac1e1c182f6041c90",
-      "bytes": 312
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/TWVariantsRevPhrases.txt",
-      "sha256": "6b58c0687af26b13cde81c1442dd6f570cc93f398c7ff361782244b47941ff43",
-      "bytes": 1335
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/hk2s.json",
-      "sha256": "eb651448d8b536d6131e53e254e8ca2c158c9ced50fd55ee88a76e606dd32efa",
-      "bytes": 644
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/hk2t.json",
-      "sha256": "1e5df53815d42a9ff5a1c6333b3987c072e27a27376d33f1864dc7b302751bb1",
-      "bytes": 451
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/jp2t.json",
-      "sha256": "3f9b091520ba0d55ecfe6fca719a672bb2691b1eb9b0c0a43a4aa4326b15fd9e",
-      "bytes": 540
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/s2hk.json",
-      "sha256": "3708e756ea01783e9cf6b3cce527580810b3d539b8c7fcc3594dd1517aa05bff",
-      "bytes": 507
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/s2t.json",
-      "sha256": "710bb970e406d9c0a3dd33c609248686cf1c5578d064b7b7fc89e70fbb9ea75d",
-      "bytes": 406
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/s2tw.json",
-      "sha256": "67ce1f5aa3d6b21ebb523084b40e66f80bec27bb2dc6b540d44dac2e27f7194e",
-      "bytes": 505
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/s2twp.json",
-      "sha256": "72d187574510542be608c862d5359d29480ee61f137082df8a06d74f7bcfc79c",
-      "bytes": 599
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/t2hk.json",
-      "sha256": "a8531beb7430fe1afed0294a893af529c7b7fd2ad41567b5daccb8399c8ef2f0",
-      "bytes": 304
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/t2jp.json",
-      "sha256": "4fb22429d63173715fec30524111ec141c0577b66c9f090513ea8bac4741ad77",
-      "bytes": 318
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/t2s.json",
-      "sha256": "3585fe92c75ade682e4bbe7528d98d7a311a7bb244064484e7876063e200ec37",
-      "bytes": 403
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/t2tw.json",
-      "sha256": "11495bf144cd932a9568810822a5af0fbba2db9c2e06a2bb2871583423fac24a",
-      "bytes": 302
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/tw2s.json",
-      "sha256": "fd3e758691a87c9246d081612021c7f9186ce7abe845cd4eff3e7326c300434d",
-      "bytes": 642
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/tw2sp.json",
-      "sha256": "d107837817e7704cec83a9ff7b876c289eb0ae752722c790c9bf967509c9eaa6",
-      "bytes": 728
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/opencc/tw2t.json",
-      "sha256": "046fbdf089388d11d51e5ac415e82564ff71b6e9add008cce7488e845d798c57",
-      "bytes": 449
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/pinyin.yaml",
-      "sha256": "22915339d6505d8911edd929b055145235eb4f66ee6d4dbdedb832e31be40c35",
-      "bytes": 4820
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/punctuation.yaml",
-      "sha256": "d6f89592149098f0a2d0ed3e5c83f49adb6226cdf1d967b0bc0d293f4e5c496a",
-      "bytes": 2107
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/stroke.dict.yaml",
-      "sha256": "db0b3459545f0299728e14271431b025b58ea530f4d5bf49b7a89dcaf2b9650b",
-      "bytes": 2219276
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/stroke.schema.yaml",
-      "sha256": "6f0bb7aec4eb243011c3958b891d6a719553847a93f20bf7fa820b9185525aa3",
-      "bytes": 3043
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/symbols.yaml",
-      "sha256": "f2d366c82120d46a4790ed37ca93b687f3c9001c555986a549ddeefb81038c55",
-      "bytes": 28356
     },
     {
       "path": "app/src/main/assets/licenses/English-dictionary-source.txt",
@@ -318,36 +73,6 @@
       "bytes": 11358
     },
     {
-      "path": "app/src/main/assets/licenses/jna.txt",
-      "sha256": "07c938b23950ab7d47a24ef35f9f5da3a05ae164278dc959ad6994135ed59ff1",
-      "bytes": 797
-    },
-    {
-      "path": "app/src/main/assets/licenses/luna-pinyin.txt",
-      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
-      "bytes": 7651
-    },
-    {
-      "path": "app/src/main/assets/licenses/opencc.txt",
-      "sha256": "b534e465949558eec2597b04f5092b5e161236a68dfbfd04d547592ac3964308",
-      "bytes": 9165
-    },
-    {
-      "path": "app/src/main/assets/licenses/rime-essay.txt",
-      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
-      "bytes": 7651
-    },
-    {
-      "path": "app/src/main/assets/licenses/rime.txt",
-      "sha256": "f67d27a6d2d586fcfed4b4c886a83747095396a39b6641e18e855086be2ec400",
-      "bytes": 1513
-    },
-    {
-      "path": "app/src/main/assets/licenses/trime-GPL-3.0.txt",
-      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
-      "bytes": 35147
-    },
-    {
       "path": "app/src/main/jniLibs/arm64-v8a/libjni_latinime.so",
       "sha256": "a97b09fd3de5395023df9fb4ddc2b1eef44162bd6e987b975897d74fc3ee7081",
       "bytes": 1347040
@@ -358,11 +83,6 @@
       "bytes": 5478432
     },
     {
-      "path": "app/src/main/jniLibs/arm64-v8a/librime_jni.so",
-      "sha256": "6e2543f874f247016d791c91ab82e53979157f217be80efc472c9537afaff75f",
-      "bytes": 5521416
-    },
-    {
       "path": "app/src/main/jniLibs/x86_64/libjni_latinime.so",
       "sha256": "6f85b8fcb378ce0e53bf6df12ec2ad69286c0e61bda21cb2eb565dcbeb2fd0d0",
       "bytes": 1339072
@@ -371,11 +91,6 @@
       "path": "app/src/main/jniLibs/x86_64/libmozc.so",
       "sha256": "04831587ad807ba1e26144ae8fb34c67d40e6f9193294500f680a1be7616b3ac",
       "bytes": 5642432
-    },
-    {
-      "path": "app/src/main/jniLibs/x86_64/librime_jni.so",
-      "sha256": "98869ae0866f4f5ea452f76cfaa0889b98bf9b11ac33a62d0534d43c14cb9128",
-      "bytes": 5516376
     },
     {
       "path": "app/libs/onnxruntime-android-1.23.2.aar",
@@ -438,37 +153,6 @@
       "bytes": 326866
     },
     {
-      "path": "app/src/main/assets/engines/rime/bopomofo.schema.yaml",
-      "sha256": "21301f17f799c4779516d69bb9d80a343c1cc36f06cdcb8607860c80394bb8cc",
-      "source": "rime-bopomofo @ 6085c9a38a4a728047862b33d67eee18aa86f3b9"
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/zhuyin.yaml",
-      "sha256": "77931ab77952fdb2535f8addebc0918453e0220a50ca176380971203f14c48be",
-      "source": "rime-bopomofo @ 6085c9a38a4a728047862b33d67eee18aa86f3b9"
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/terra_pinyin.dict.yaml",
-      "sha256": "2f881a239e09a61e5993e79257655f98f81c3789dc8aeea5f33477f710345b27",
-      "source": "rime-terra-pinyin @ 723e51bc266cf9464530c1ddedb856aa18e3da34"
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/bopomofo.custom.yaml",
-      "sha256": "e9386bd25556f5f4d9b9e0b9b0b3bef76bdf6797f69000fbc1c36ca8026bd35c",
-      "source": "IPA Board custom patch: learning/completion disabled"
-    },
-    {
-      "path": "app/src/main/assets/licenses/rime-bopomofo-LGPL-3.0.txt",
-      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
-      "source": "Rime Bopomofo license/source notice"
-    },
-    {
-      "path": "app/src/main/assets/licenses/rime-bopomofo-source.txt",
-      "sha256": "1f905f31599c6aa5e93435ec61cde4ee2baa48d0b5c4313fa95951501c3edd0d",
-      "source": "Rime Bopomofo and Terra Pinyin license/source notice",
-      "bytes": 1685
-    },
-    {
       "path": "app/src/main/assets/engines/ipa/bundled/classes.dex",
       "sha256": "b3992e6930ffc8c032353b452051101893993b921008cefb9ff49425ac7dbb0e",
       "bytes": 14496
@@ -497,18 +181,6 @@
       "path": "app/src/main/assets/licenses/IPA-Engine-THIRD_PARTY_NOTICES.json",
       "sha256": "d5594d4c8bea56c16abad4c6c99d31b357fd6d8efcad962638931221d0e34c52",
       "bytes": 14089
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/terra_pinyin.schema.yaml",
-      "sha256": "d3b5628abfabac615589e8cc7bf6bf2bf63c60d499136592495a21d992b5cc6d",
-      "bytes": 5056,
-      "source": "rime-terra-pinyin @ 723e51bc266cf9464530c1ddedb856aa18e3da34"
-    },
-    {
-      "path": "app/src/main/assets/engines/rime/terra_pinyin.custom.yaml",
-      "sha256": "b78a530546848f415d8e0182a1a0b623758fe2f67e16f7ad2666dd79d2e2d3b3",
-      "bytes": 218,
-      "source": "IPA Board custom patch: learning/completion disabled"
     },
     {
       "path": "app/src/main/assets/licenses/mozc/licenses/Abseil-20260107.1-AUTHORS.txt",
@@ -779,6 +451,384 @@
       "path": "tools/onnx-extensions/verifier-source.json",
       "sha256": "94eb164102a0941576187c01c035f055a6ce7e9de723113dcc91800e44ef8720",
       "bytes": 355
+    },
+    {
+      "path": "app/libs/ipa-rime-android-1.17.0-opencc-1.4.2.aar",
+      "sha256": "aa006bfd082f5862774b0d094be056c9ce3204ec914915279f32da0ff9d6d99e",
+      "bytes": 2696636,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/bopomofo.custom.yaml",
+      "sha256": "927cf1bf76c78980a869debab6ec00596f509f28213532d2d4ba26ce8891094b",
+      "bytes": 256,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/bopomofo.schema.yaml",
+      "sha256": "21301f17f799c4779516d69bb9d80a343c1cc36f06cdcb8607860c80394bb8cc",
+      "bytes": 6190,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/default.custom.yaml",
+      "sha256": "5bf80e54531633872fe0dc3881a7c7b977d31f6c2320abfeb0893f39fb6306c1",
+      "bytes": 226,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/default.yaml",
+      "sha256": "dd55653a991f9418eb425ee2112666f82e3e753c5ce3ed5702dd243041a45382",
+      "bytes": 1365,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/essay.txt",
+      "sha256": "196d508a9bb12fc6d711eed83f5ddc4d5c2d382d92d15b4e51175e4d3802cfab",
+      "bytes": 5887784,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/key_bindings.yaml",
+      "sha256": "5c484257cccbab899bc874dfeb9257ce7190c99fee3abc33321767c8dac56af9",
+      "bytes": 2954,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/luna_pinyin.custom.yaml",
+      "sha256": "db620abc8dda38d8bd6a06e18dfbf564aaecca43a759e4722f5912e42c11e3bf",
+      "bytes": 233,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/luna_pinyin.dict.yaml",
+      "sha256": "270b0c6879436d7b0b606aa684507ea7e173c62b6d5df3966804637872d520fd",
+      "bytes": 891247,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/luna_pinyin.schema.yaml",
+      "sha256": "df48caa2901ca04d79978af926c79b118b3e6e5b5cf97b9d8c9b9d67d748a744",
+      "bytes": 2077,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/s2t.json",
+      "sha256": "ec0f4b03f7a880b3424cb52edce4f0d8e59819486826a79679346082b3b662f6",
+      "bytes": 442,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/STCharacters.txt",
+      "sha256": "9cedfb8bf13a220087103d9a96d9f56050c341c24a809cbce5c85c9045456557",
+      "bytes": 34615,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/STPhrases.txt",
+      "sha256": "1ce1869151530b6ea388ace1ae4efb3d51d1faa6e01c957f8d60313083a3969f",
+      "bytes": 1006868,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/t2s.json",
+      "sha256": "86e322d56b278a6821b9d1444f7a448367de1246fdc7dcf30fb654184fc09c31",
+      "bytes": 442,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/TSCharacters.txt",
+      "sha256": "ad870b4feeb494cfa7b3b05242bd79af574b22f6b2bdeb89a1633e4b50ed0a3c",
+      "bytes": 34889,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/opencc/TSPhrases.txt",
+      "sha256": "54170de095c6d389d557d0d0b0e1a10033f397d4feca80aaa30a74a67836f43a",
+      "bytes": 5440,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/pinyin.yaml",
+      "sha256": "22915339d6505d8911edd929b055145235eb4f66ee6d4dbdedb832e31be40c35",
+      "bytes": 4820,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/punctuation.yaml",
+      "sha256": "d6f89592149098f0a2d0ed3e5c83f49adb6226cdf1d967b0bc0d293f4e5c496a",
+      "bytes": 2107,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/stroke.dict.yaml",
+      "sha256": "db0b3459545f0299728e14271431b025b58ea530f4d5bf49b7a89dcaf2b9650b",
+      "bytes": 2219276,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/stroke.schema.yaml",
+      "sha256": "6f0bb7aec4eb243011c3958b891d6a719553847a93f20bf7fa820b9185525aa3",
+      "bytes": 3043,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/symbols.yaml",
+      "sha256": "f2d366c82120d46a4790ed37ca93b687f3c9001c555986a549ddeefb81038c55",
+      "bytes": 28356,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/terra_pinyin.custom.yaml",
+      "sha256": "927cf1bf76c78980a869debab6ec00596f509f28213532d2d4ba26ce8891094b",
+      "bytes": 256,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/terra_pinyin.dict.yaml",
+      "sha256": "2f881a239e09a61e5993e79257655f98f81c3789dc8aeea5f33477f710345b27",
+      "bytes": 1799483,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/terra_pinyin.schema.yaml",
+      "sha256": "d3b5628abfabac615589e8cc7bf6bf2bf63c60d499136592495a21d992b5cc6d",
+      "bytes": 5056,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/engines/rime/zhuyin.yaml",
+      "sha256": "77931ab77952fdb2535f8addebc0918453e0220a50ca176380971203f14c48be",
+      "bytes": 1132,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/artifacts.json",
+      "sha256": "402ffd0d2467905683cb56ba00c066e18a8c0d57b5d02177ae2b87ad25ae8812",
+      "bytes": 14958,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/OpenCC/Darts-clone-COPYING.md",
+      "sha256": "c6ab19db56ed127201dfb05346ea702ab53c4e387f43eafc343a7f4c2f2ae91e",
+      "bytes": 1320,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/OpenCC/GoogleTest-1.15.0-LICENSE.txt",
+      "sha256": "9702de7e4117a8e2b20dafab11ffda58c198aede066406496bef670d40a22138",
+      "bytes": 1475,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/OpenCC/Marisa-0.3.1-COPYING.md",
+      "sha256": "edf58dab34c3dc239ba4ba2d5d3d844d8c5b442aa4dd1149fac81b2d8c6cb8d1",
+      "bytes": 2275,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/OpenCC/NDK-r29-NOTICE.toolchain.txt",
+      "sha256": "789714a9076571c580cf531bdcebec776a4d889c12c3c1108adafc6e4338710a",
+      "bytes": 799639,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/OpenCC/NDK-r29-NOTICE.txt",
+      "sha256": "faf0dc52cf6ce9ab09a04b0c074a378dd2565ee1ed9bc1179d83793bcdba012e",
+      "bytes": 516438,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/OpenCC/OpenCC-1.4.2-LICENSE.txt",
+      "sha256": "b534e465949558eec2597b04f5092b5e161236a68dfbfd04d547592ac3964308",
+      "bytes": 9165,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/OpenCC/RapidJSON-1.1.0-license.txt",
+      "sha256": "a140e5d46fe734a1c78f1a3c3ef207871dd75648be71fdda8e309b23ab8b1f32",
+      "bytes": 5152,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/OpenCC/README.md",
+      "sha256": "02b52808d28252b6a3aef7548b49407c33f94c3ab6709b3593eea3abdfc0a4a1",
+      "bytes": 1829,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/OpenCC/sources.json",
+      "sha256": "4615451135c59d3eb0523a7e43a567ea0a0ace5000fda3b74a854d5235bc3c73",
+      "bytes": 2905,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/resource-sources.lock.json",
+      "sha256": "15050533f82e860d386a3a8592f7d54bd108d607fc01243f0863e97989c54e4c",
+      "bytes": 15142,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/native/Boost-LICENSE_1_0.txt",
+      "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566",
+      "bytes": 1338,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/native/LevelDB-AUTHORS.txt",
+      "sha256": "75cccce858c06397a2736b5018b304a6fe50fce7148c7ea7fd532dd255d264b9",
+      "bytes": 293,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/native/LevelDB-LICENSE.txt",
+      "sha256": "ccc19f1da0798ed666609b65a5b44dd8b3abe6fc08b9c0592eb76e82e174db19",
+      "bytes": 1484,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/native/librime-Darts-COPYING.txt",
+      "sha256": "11bf6ca180d01e60656cd3cbe65cff95b738afe4ca5a8a66b9dd1ec594a41d2f",
+      "bytes": 1481,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/native/librime-LICENSE.txt",
+      "sha256": "f67d27a6d2d586fcfed4b4c886a83747095396a39b6641e18e855086be2ec400",
+      "bytes": 1513,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/native/UTF8-checked-NOTICE.txt",
+      "sha256": "ebd758544425cf8d60e3c3735807fddcd2bb82996df198547b034affbfb0d1fd",
+      "bytes": 1329,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/native/UTF8-core-NOTICE.txt",
+      "sha256": "1b45829b2934a146274162752708e2f3355aae05e13d78a2cf3a656540a553c1",
+      "bytes": 1324,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/native/UTF8-cpp17-NOTICE.txt",
+      "sha256": "23887e4a3ef24d8d7fd54f06bad675d730cd135ccbc12fa1f3dfb559844ac387",
+      "bytes": 1324,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/native/UTF8-h-NOTICE.txt",
+      "sha256": "1b45829b2934a146274162752708e2f3355aae05e13d78a2cf3a656540a553c1",
+      "bytes": 1324,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/native/UTF8-unchecked-NOTICE.txt",
+      "sha256": "1b45829b2934a146274162752708e2f3355aae05e13d78a2cf3a656540a553c1",
+      "bytes": 1324,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/native/X11-keysym-NOTICE.txt",
+      "sha256": "4beeb94f9530a4e30dcd37d6277a5d3824c140d090323c82c9ccd5e5d9e72a7c",
+      "bytes": 2281,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/native/X11-keysymdef-NOTICE.txt",
+      "sha256": "6bbf351a5d24daecee82f85e7cd6db377e43d6f309b259e1feb6cb8aeee3c529",
+      "bytes": 2279,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/native/yaml-cpp-Dragonbox-NOTICE.txt",
+      "sha256": "d5df5c966079f3000415e2841854060945148334dcb1457fca63d4ba011cc105",
+      "bytes": 532,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/native/yaml-cpp-LICENSE.txt",
+      "sha256": "aa6fcc27be034e41e21dd832f9175bfe694a48491d9e14ff0fa278e19ad14f1b",
+      "bytes": 1061,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/native-sources.json",
+      "sha256": "bfe1fad4f7b0537a7e4325704daa89a170871c6aabe8099a5da7c4f1fe2a56d3",
+      "bytes": 17404,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/README.md",
+      "sha256": "1ca8b85ec231db35c982a1bd7a7be16dfc4fb08c730eee07ddb46ee013a1eecf",
+      "bytes": 5264,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/resources/bopomofo-LICENSE.txt",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+      "bytes": 7651,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/resources/CC-BY-SA-3.0.txt",
+      "sha256": "3f941b3b89cf7b8370ceb83cc76d2120d471b58735d8ca60238a751a48d7f72f",
+      "bytes": 22240,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/resources/essay-LICENSE.txt",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+      "bytes": 7651,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/resources/GPL-3.0.txt",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "bytes": 35149,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/resources/luna-LICENSE.txt",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+      "bytes": 7651,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/resources/opencc-compat-LICENSE.txt",
+      "sha256": "b534e465949558eec2597b04f5092b5e161236a68dfbfd04d547592ac3964308",
+      "bytes": 9165,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/resources/prelude-LICENSE.txt",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+      "bytes": 7651,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/resources/README.md",
+      "sha256": "a1e480fa00f849f6420c09b8a5355c3f51db02ac6c005556bb8d6b62d1e32acb",
+      "bytes": 6708,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/resources/stroke-LICENSE.txt",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+      "bytes": 7651,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/Rime/resources/terra-LICENSE.txt",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+      "bytes": 7651,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/src/main/assets/licenses/rime-upstream/sources.lock.json",
+      "sha256": "58b9a4950ccc53917a89ac71604a6496f58b0ae66a6990ca8203b8e6e2e51a47",
+      "bytes": 1772,
+      "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
     }
   ],
   "sourceBuilds": [

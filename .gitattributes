@@ -10,3 +10,8 @@ tools/mozc/*.json -text -whitespace
 # Keep the source-built Extensions notices and pinned build records byte-exact.
 app/src/main/assets/licenses/onnx-extensions/** -text -whitespace
 tools/onnx-extensions/** -text -whitespace
+
+# Rime official resources, notices and build records retain reviewed byte hashes.
+app/src/main/assets/engines/rime/** -text -whitespace
+app/src/main/assets/licenses/rime-upstream/** -text -whitespace
+tools/rime/** -text -whitespace

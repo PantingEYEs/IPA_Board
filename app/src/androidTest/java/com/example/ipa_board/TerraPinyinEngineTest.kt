@@ -127,23 +127,21 @@ class TerraPinyinEngineTest {
         }
     }
 
-    @Test fun nativeBatchEnumerationReadsOnceAndLeavesInputCaretAndHighlightUnchanged() {
+    @Test fun nativeBatchEnumerationReadsOnceAndLeavesNoPriorComposition() {
         engine.configure(policy())
-        val batch = RimeBatchReader(fixture.context)
-        var reads = 0
+        val before = fixture.queries.calls.size
         val raw = "ni<hao<shi\\jie\\"
-        val results = engine.queryWithReader(raw) { session, input ->
-            reads++
-            val before = fixture.native.state(session)
-            batch.read(session, input).also {
-                assertTrue("Read real native candidates", it.isNotEmpty())
-                assertEquals("Enumerating candidates must be read-only", before, fixture.native.state(session))
-            }
-        }
-        assertEquals("One batch read per spelling, never per-candidate replay", 1, reads)
+        val results = engine.query(raw)
+        val call = fixture.queries.calls.drop(before).single()
+        assertEquals("terra_pinyin", call.schema)
+        assertEquals(RimePinyinInput(PinyinScheme.TERRA).encode(raw), call.input)
+        val packet = requireNotNull(call.packet)
+        assertTrue("Read real native candidates", RimeCandidateBatch.decode(packet, call.input.length).isNotEmpty())
         assertTrue(results.any { it.consumption == null })
         assertTrue(results.any { it.consumption != null })
+        engine.query("ma<")
         assertEquals(results, engine.query(raw))
+        assertArrayEquals(packet, fixture.queries.calls.last().packet)
     }
 
     @Test fun wrappedProcessFailuresPropagateUnchangedWithoutPermanentlyDisablingTerra() {
@@ -153,9 +151,8 @@ class TerraPinyinEngineTest {
                 DiagnosticIssue(DiagnosticComponent.RIME, DiagnosticStage.QUERY, kind),
                 IllegalStateException("Synthetic process-wide failure"),
             )
-            val thrown = assertThrows(DiagnosticStageException::class.java) {
-                engine.queryWithReader("ma<") { _, _ -> throw failure }
-            }
+            fixture.queries.failNextQuery = failure
+            val thrown = assertThrows(DiagnosticStageException::class.java) { engine.query("ma<") }
             assertSame("Process failures must retain their original diagnostic wrapper", failure, thrown)
             assertTrue("A process failure must not cache Terra as an unavailable schema",
                 fullTexts(query("ni<hao<")).contains("你好"))

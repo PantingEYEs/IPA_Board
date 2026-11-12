@@ -17,11 +17,79 @@ import com.example.ipa_board.ime.EngineStatus
 import com.example.ipa_board.ime.EngineVersionLookup
 import com.example.ipa_board.ime.EngineVersionSource
 import com.example.ipa_board.ime.MozcBundle
+import com.example.ipa_board.ime.RimeBundle
+import com.example.ipa_board.ime.PinyinScheme
+import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
 
 class EngineManagementTest {
+    @Test fun chineseRowsKeepPackagedIdentityWhenUpstreamMetadataChanges() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val packaged = JSONObject(context.assets.open("licenses/rime-upstream/artifacts.json")
+            .bufferedReader().use { it.readText() })
+        val features = setOf(EngineFeature.CHINESE_CONVERSION, EngineFeature.SCRIPT_CONVERSION,
+            EngineFeature.CHINESE_PREDICTION)
+        val rows = EngineCatalog.configurable().filter { it.feature in features }
+        val originalLoader = EngineVersionLookup.metadataLoaderOverride
+        EngineVersionLookup.metadataLoaderOverride = { source ->
+            if (source.revisionMetadata) """{"sha":"1234567890abcdef1234567890abcdef12345678"}"""
+            else """{"tag_name":"v-future","draft":false,"prerelease":false}"""
+        }
+        fun assertCurrent(root: View) {
+            rows.forEach { row ->
+                val current = root.findViewWithTag<TextView>("engine-current:${row.name}").text.toString()
+                assertTrue(current.contains("IPA_Engine chinese ${RimeBundle.BUILD_REVISION.take(12)}"))
+                assertFalse(current.contains("Trime", ignoreCase = true))
+                assertFalse(current.contains("v-future"))
+                assertFalse(current.contains("1234567890ab"))
+                if (row.feature != EngineFeature.CHINESE_PREDICTION) {
+                    assertTrue(current.contains("OpenCC ${packaged.getString("openccVersion")}"))
+                    assertTrue(current.contains("build ${packaged.getString("buildId").take(12)}"))
+                }
+                if (row.feature == EngineFeature.CHINESE_CONVERSION)
+                    assertTrue(current.contains("librime ${packaged.getString("librimeVersion")}"))
+            }
+            PinyinScheme.entries.forEach { scheme ->
+                assertNotNull("Existing Pinyin scheme control disappeared",
+                    root.findViewWithTag<View>("pinyin-scheme:${scheme.schemaId}"))
+            }
+        }
+        try {
+            ActivityScenario.launch(EngineManagementActivity::class.java).use { scenario ->
+                scenario.onActivity { activity ->
+                    val root = activity.findViewById<View>(R.id.engine_management_root)
+                    assertCurrent(root)
+                    listOf("syllable", "script_conversion", "prediction").forEach {
+                        root.findViewWithTag<View>("category:$it").performClick()
+                    }
+                }
+                val deadline = android.os.SystemClock.elapsedRealtime() + 5_000
+                var latestReceived = false
+                do {
+                    scenario.onActivity { activity ->
+                        val root = activity.findViewById<View>(R.id.engine_management_root)
+                        latestReceived = rows.all { row ->
+                            val latest = root.findViewWithTag<TextView>("engine-latest:${row.name}").text
+                            latest.contains("IPA chinese source: revision 1234567890ab") &&
+                                when (row.feature) {
+                                    EngineFeature.CHINESE_CONVERSION -> latest.contains("librime upstream: v-future")
+                                    EngineFeature.SCRIPT_CONVERSION -> latest.contains("OpenCC upstream: v-future")
+                                    else -> true
+                                }
+                        }
+                        assertCurrent(root)
+                    }
+                    if (!latestReceived) android.os.SystemClock.sleep(20)
+                } while (!latestReceived && android.os.SystemClock.elapsedRealtime() < deadline)
+                assertTrue("Public metadata must not replace installed runtime/resource identity", latestReceived)
+                scenario.recreate()
+                scenario.onActivity { assertCurrent(it.findViewById(R.id.engine_management_root)) }
+            }
+        } finally { EngineVersionLookup.metadataLoaderOverride = originalLoader }
+    }
+
     @Test fun semanticRowKeepsTheBundledExtensionsIdentityAfterMetadataRefresh() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val notice = context.assets.open("licenses/onnx-extensions/SOURCE.txt").bufferedReader().use { it.readText() }
@@ -30,7 +98,7 @@ class EngineManagementTest {
         val row = EngineCatalog.configurable().single { it.feature == EngineFeature.SEMANTIC }
         val originalLoader = EngineVersionLookup.metadataLoaderOverride
         EngineVersionLookup.metadataLoaderOverride = { source ->
-            if (source == EngineVersionSource.MOZC || source == EngineVersionSource.E5)
+            if (source.revisionMetadata)
                 """{"sha":"1234567890abcdef1234567890abcdef12345678"}"""
             else """{"tag_name":"v-future","draft":false,"prerelease":false}"""
         }
@@ -70,7 +138,7 @@ class EngineManagementTest {
     @Test fun mozcRowsKeepBundledIdentityWhenLatestUpstreamChanges() {
         val originalLoader = EngineVersionLookup.metadataLoaderOverride
         EngineVersionLookup.metadataLoaderOverride = { source ->
-            if (source == EngineVersionSource.MOZC || source == EngineVersionSource.E5)
+            if (source.revisionMetadata)
                 """{"sha":"1234567890abcdef1234567890abcdef12345678"}"""
             else """{"tag_name":"v-test","draft":false,"prerelease":false}"""
         }
