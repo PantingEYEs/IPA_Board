@@ -328,7 +328,9 @@ class IpaBoardService : InputMethodService() {
         Toast.makeText(this, if (composition.inlineEnabled) "预编辑：内联" else "预编辑：非内联", Toast.LENGTH_SHORT).show()
     }
     private fun toggleRemoteKeyboard() {
-        val result = remoteKeyboardMode.toggle()
+        applyRemoteKeyboardResult(remoteKeyboardMode.toggle())
+    }
+    private fun applyRemoteKeyboardResult(result: RemoteKeyboardMode.Result) {
         // DIAGNOSTICS: removable fixed-code reporting; never log the saved engine choices.
         if (result == RemoteKeyboardMode.Result.STORAGE_FAILED) {
             AppDiagnostics.signal(DiagnosticComponent.IME, DiagnosticStage.SAVE, DiagnosticKind.IO)
@@ -980,8 +982,12 @@ class IpaBoardService : InputMethodService() {
             }
         }
     }
+    private val bluetoothRemoteEditorMode = BluetoothRemoteEditorMode()
+
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
+        bluetoothRemoteEditorMode.enter(attribute?.packageName, packageName,
+            attribute?.privateImeOptions, remoteKeyboardMode)?.let(::applyRemoteKeyboardResult)
         calculatorSession.reset()
         AppDiagnostics.trace(DiagnosticComponent.IME, DiagnosticStage.START_INPUT)
         inputController.reset()

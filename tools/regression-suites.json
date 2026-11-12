@@ -3,6 +3,15 @@
   "package": "com.example.ipa_board",
   "runner": "com.example.ipa_board.RegressionTestRunner",
   "suites": {
+    "bluetooth-remote": {
+      "classes": [
+        "com.example.ipa_board.BluetoothRemoteEngineModeTest",
+        "com.example.ipa_board.BluetoothRemoteInputTest",
+        "com.example.ipa_board.BluetoothKeyboardUiTest",
+        "com.example.ipa_board.RemoteKeyboardModeTest",
+        "com.example.ipa_board.RemoteKeyboardEnginePolicyTest"
+      ]
+    },
     "smoke": {
       "classes": [
         "com.example.ipa_board.CompositionControllerTest",
@@ -14,6 +23,7 @@
     },
     "platform": {
       "classes": [
+        "com.example.ipa_board.BluetoothRemoteEngineModeTest",
         "com.example.ipa_board.CompositionControllerTest",
         "com.example.ipa_board.KeyboardInputControllerTest",
         "com.example.ipa_board.KeyboardConfigurationTest",
@@ -57,6 +67,8 @@
     },
     "ui": {
       "classes": [
+        "com.example.ipa_board.BluetoothRemoteInputTest",
+        "com.example.ipa_board.BluetoothKeyboardUiTest",
         "com.example.ipa_board.ContextRankingSettingsTest",
         "com.example.ipa_board.EngineControlsTest",
         "com.example.ipa_board.EngineManagementTest",
@@ -113,6 +125,9 @@
     },
     "full": {
       "classes": [
+        "com.example.ipa_board.BluetoothRemoteEngineModeTest",
+        "com.example.ipa_board.BluetoothRemoteInputTest",
+        "com.example.ipa_board.BluetoothKeyboardUiTest",
         "com.example.ipa_board.CompositionControllerTest",
         "com.example.ipa_board.KeyboardInputControllerTest",
         "com.example.ipa_board.KeyboardConfigurationTest",

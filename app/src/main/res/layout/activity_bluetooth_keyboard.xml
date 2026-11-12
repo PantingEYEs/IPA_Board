@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/bluetooth_keyboard_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical" android:padding="16dp">
+        <ImageButton
+            android:id="@+id/bluetooth_keyboard_back"
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:layout_marginEnd="12dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="@string/bluetooth_keyboard_back" />
+        <TextView
+            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:text="@string/bluetooth_keyboard_title"
+            android:textSize="@dimen/management_title_size" android:textStyle="bold"
+            android:textColor="@color/management_text" />
+    </LinearLayout>
+
+    <ScrollView
+        android:id="@+id/bluetooth_keyboard_scroll"
+        android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+        android:fillViewport="true" android:clipToPadding="false">
+        <LinearLayout
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:paddingHorizontal="16dp" android:paddingBottom="24dp">
+            <TextView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="@string/bluetooth_keyboard_connection"
+                android:textColor="@color/management_text" android:textSize="@dimen/management_section_size" />
+            <TextView
+                android:id="@+id/bluetooth_keyboard_status"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:paddingVertical="8dp" android:accessibilityLiveRegion="polite"
+                android:textColor="@color/management_text" android:textSize="@dimen/management_body_size" />
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button
+                    android:id="@+id/bluetooth_keyboard_start" style="@style/ManagementButton"
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:minHeight="48dp" android:layout_marginEnd="4dp"
+                    android:text="@string/bluetooth_keyboard_start" />
+                <Button
+                    android:id="@+id/bluetooth_keyboard_disconnect" style="@style/ManagementButton"
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:minHeight="48dp" android:layout_marginStart="4dp"
+                    android:text="@string/bluetooth_keyboard_disconnect" />
+            </LinearLayout>
+            <TextView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:labelFor="@id/bluetooth_keyboard_hosts" android:paddingTop="8dp"
+                android:text="@string/bluetooth_keyboard_paired_label"
+                android:textColor="@color/management_text_secondary" android:textSize="@dimen/management_caption_size" />
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical">
+                <Spinner
+                    android:id="@+id/bluetooth_keyboard_hosts"
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:minHeight="48dp" android:spinnerMode="dropdown" />
+                <Button
+                    android:id="@+id/bluetooth_keyboard_refresh" style="@style/ManagementButton"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content" android:minHeight="48dp"
+                    android:text="@string/bluetooth_keyboard_refresh" />
+            </LinearLayout>
+            <Button
+                android:id="@+id/bluetooth_keyboard_connect" style="@style/ManagementButton"
+                android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp"
+                android:text="@string/bluetooth_keyboard_connect" />
+            <Button
+                android:id="@+id/bluetooth_keyboard_discoverable" style="@style/ManagementButton"
+                android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp"
+                android:text="@string/bluetooth_keyboard_discoverable" />
+            <TextView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="@string/bluetooth_keyboard_pairing_help"
+                android:textColor="@color/management_text_secondary" android:textSize="@dimen/management_caption_size" />
+
+            <TextView
+                android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="20dp"
+                android:text="@string/bluetooth_keyboard_input_title" android:labelFor="@id/bluetooth_keyboard_editor"
+                android:textColor="@color/management_text" android:textSize="@dimen/management_section_size" />
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/bluetooth_keyboard_immediate"
+                android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp"
+                android:text="@string/bluetooth_keyboard_immediate"
+                android:textColor="@color/management_text" android:textSize="@dimen/management_body_size" />
+            <TextView
+                android:id="@+id/bluetooth_keyboard_mode_help"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textColor="@color/management_text_secondary" android:textSize="@dimen/management_caption_size" />
+            <com.example.ipa_board.bluetooth.RemoteKeyboardEditText
+                android:id="@+id/bluetooth_keyboard_editor"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginVertical="12dp" android:minHeight="112dp" android:padding="12dp"
+                android:gravity="top|start" android:inputType="textCapSentences|textMultiLine"
+                android:imeOptions="flagNoExtractUi" android:maxLines="8"
+                android:backgroundTint="@color/management_text_secondary"
+                android:textColor="@color/management_text" android:textColorHint="@color/management_text_secondary"
+                android:textSize="@dimen/management_body_size" android:hint="@string/bluetooth_keyboard_draft_hint"
+                android:importantForAutofill="no" />
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button
+                    android:id="@+id/bluetooth_keyboard_send" style="@style/ManagementButton"
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:minHeight="48dp" android:layout_marginEnd="4dp"
+                    android:text="@string/bluetooth_keyboard_send" />
+                <Button
+                    android:id="@+id/bluetooth_keyboard_clear" style="@style/ManagementButton"
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:minHeight="48dp" android:layout_marginStart="4dp"
+                    android:text="@string/bluetooth_keyboard_clear" />
+            </LinearLayout>
+            <TextView
+                android:id="@+id/bluetooth_keyboard_feedback"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:paddingVertical="8dp" android:accessibilityLiveRegion="polite"
+                android:textColor="@color/management_text_secondary" android:textSize="@dimen/management_caption_size" />
+            <TextView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="@string/bluetooth_keyboard_mapping_help"
+                android:textColor="@color/management_text_secondary" android:textSize="@dimen/management_caption_size" />
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button
+                    android:id="@+id/bluetooth_keyboard_show_ime" style="@style/ManagementButton"
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:minHeight="48dp" android:layout_marginEnd="4dp"
+                    android:text="@string/bluetooth_keyboard_show_ime" />
+                <Button
+                    android:id="@+id/bluetooth_keyboard_choose_ime" style="@style/ManagementButton"
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:minHeight="48dp" android:layout_marginStart="4dp"
+                    android:text="@string/bluetooth_keyboard_choose_ime" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="16dp"
+                android:text="@string/bluetooth_keyboard_modifiers_title"
+                android:textColor="@color/management_text" android:textSize="@dimen/management_section_size" />
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <CheckBox android:id="@+id/bluetooth_keyboard_ctrl"
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:minHeight="48dp" android:saveEnabled="false" android:text="@string/bluetooth_keyboard_ctrl"
+                    android:textColor="@color/management_text" />
+                <CheckBox android:id="@+id/bluetooth_keyboard_alt"
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:minHeight="48dp" android:saveEnabled="false" android:text="@string/bluetooth_keyboard_alt"
+                    android:textColor="@color/management_text" />
+                <CheckBox android:id="@+id/bluetooth_keyboard_shift"
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:minHeight="48dp" android:saveEnabled="false" android:text="@string/bluetooth_keyboard_shift"
+                    android:textColor="@color/management_text" />
+                <CheckBox android:id="@+id/bluetooth_keyboard_command"
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:minHeight="48dp" android:saveEnabled="false" android:text="@string/bluetooth_keyboard_command"
+                    android:textColor="@color/management_text" />
+            </LinearLayout>
+            <TextView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="@string/bluetooth_keyboard_modifiers_help"
+                android:textColor="@color/management_text_secondary" android:textSize="@dimen/management_caption_size" />
+            <Button
+                android:id="@+id/bluetooth_keyboard_control_keys" style="@style/ManagementButton"
+                android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp"
+                android:text="@string/bluetooth_keyboard_control_keys" />
+            <TextView
+                android:id="@+id/bluetooth_keyboard_leds"
+                android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingVertical="8dp"
+                android:textColor="@color/management_text_secondary" android:textSize="@dimen/management_caption_size" />
+            <TextView
+                android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="8dp"
+                android:text="@string/bluetooth_keyboard_background_help"
+                android:textColor="@color/management_text_secondary" android:textSize="@dimen/management_caption_size" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
