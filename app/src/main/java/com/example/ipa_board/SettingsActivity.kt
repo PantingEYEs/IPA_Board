@@ -10,13 +10,14 @@ import com.example.ipa_board.kaomoji.KaomojiManagerActivity
 
 /**
  * Main Activity screen titled "IPA Board Settings".
- * Serves as the primary launcher screen with 6 entries:
+ * Serves as the primary launcher screen with 7 entries:
  * 1. Keyboard
  * 2. Shortcut
  * 3. Emoji
  * 4. 顔文字
  * 5. Clipboard
  * 6. Engine
+ * 7. Bluetooth keyboard
  */
 class SettingsActivity : Activity() {
 
@@ -31,7 +32,8 @@ class SettingsActivity : Activity() {
             R.id.icon_entry_emoji to KeyAction.EMOJI.keyLabel,
             R.id.icon_entry_kaomoji to KeyAction.KAOMOJI.keyLabel,
             R.id.icon_entry_clipboard to KeyAction.CLIPBOARD.keyLabel,
-            R.id.icon_entry_engine to "⚙"
+            R.id.icon_entry_engine to "⚙",
+            R.id.icon_entry_bluetooth to "⌁"
         )
         entrySymbols.forEach { (id, symbol) ->
             // Request text presentation for symbols that also have an emoji variant.
@@ -86,6 +88,9 @@ class SettingsActivity : Activity() {
 
         findViewById<View>(R.id.btn_entry_clipboard).setOnClickListener {
             startActivity(Intent(this, ClipboardManagerActivity::class.java))
+        }
+        findViewById<View>(R.id.btn_entry_bluetooth).setOnClickListener {
+            startActivity(Intent(this, com.example.ipa_board.bluetooth.BluetoothKeyboardActivity::class.java))
         }
     }
 }
