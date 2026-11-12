@@ -29,14 +29,20 @@
 
 package com.google.android.apps.inputmethod.libs.mozc.session;
 
-/** JNI ABI matches Libre Japanese Input v0.1.2. Only used in :mozc process. */
+/** Official Mozc JNI with IPA_Engine's compatibility entry. Only used in :mozc process. */
 public final class MozcJNI {
   private static boolean loaded;
-  public static synchronized void load(String profile, String data) {
-    if (loaded) return;
-    System.loadLibrary("mozc");
-    initialize();
-    if (!onPostLoad(profile, data)) throw new IllegalStateException("Mozc initialization failed");
+  public static synchronized void load(String profile, String data, String expectedDataVersion) {
+    if (!loaded) {
+      System.loadLibrary("mozc");
+      initialize();
+      if (!onPostLoad(profile, data)) throw new IllegalStateException("Mozc initialization failed");
+    }
+    // onPostLoad may succeed with upstream's minimal fallback engine. Do not report that as
+    // the packaged OSS dictionary being ready, or silently accept an incompatible dataset.
+    if (!expectedDataVersion.equals(getDataVersion())) {
+      throw new IllegalStateException("Mozc data version mismatch");
+    }
     loaded = true;
   }
   private static synchronized native void initialize();

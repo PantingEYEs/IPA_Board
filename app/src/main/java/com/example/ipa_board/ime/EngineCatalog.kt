@@ -24,7 +24,8 @@ object EngineCatalog {
         .filter { it.feature != null }.distinctBy { it.feature }
 
     private const val RIME_VERSION = "librime 1.17.0 · source: Trime 3.3.12 · rev 33e781402501"
-    private const val MOZC_VERSION = "Source: Libre Japanese Input 0.1.2 · Mozc rev ddd9730b0683"
+    private val MOZC_VERSION = "Google Mozc rev ${MozcBundle.UPSTREAM_REVISION.take(12)} · " +
+        "OSS data ${MozcBundle.DATA_VERSION} · IPA_Engine build ${MozcBundle.BUILD_REVISION.take(12)}"
     private const val ENGLISH_VERSION = "Source: HeliBoard 4.1 · rev 9f5bb635c2e8 · en_US dictionary 54"
 
     fun categories(appVersion: String): List<EngineCategory> = listOf(
@@ -36,7 +37,9 @@ object EngineCatalog {
         )),
         EngineCategory("syllable", "Syllable Engines", listOf(
             EngineInfo("Rime · Pinyin & Zhuyin (Chinese)", "$RIME_VERSION · Terra Pinyin 0.30 · Luna Pinyin 0.26 · Bopomofo 3.1", detail = "Choose a Pinyin scheme below. Terra Pinyin supports syllable-final tone symbols and omitted tones. Spelling correction is schema-defined, with no independent toggle. Zhuyin keeps its separate tone-aware input rules.", feature = EngineFeature.CHINESE_CONVERSION, offBehavior = "Off: omit Pinyin and Zhuyin conversion candidates; literal input and Chinese prediction stay available.", versionSources = listOf(EngineVersionSource.RIME, EngineVersionSource.TRIME)),
-            EngineInfo("Mozc (Japanese)", MOZC_VERSION, feature = EngineFeature.JAPANESE_CONVERSION, offBehavior = "Off: Japanese conversion candidates are omitted; literal input and prediction stay available.", versionSources = listOf(EngineVersionSource.LIBRE_JAPANESE))
+            EngineInfo("Mozc (Japanese)", MOZC_VERSION,
+                detail = "Built from Google Mozc with its paired OSS dictionary. Conversion uses temporary sessions without saved history. Latest checks show upstream source revisions, not installable bundle updates.",
+                feature = EngineFeature.JAPANESE_CONVERSION, offBehavior = "Off: Japanese conversion candidates are omitted; literal input and prediction stay available.", versionSources = listOf(EngineVersionSource.MOZC))
         )),
         EngineCategory("completion", "Completion Engines", listOf(
             EngineInfo("LatinIME · English suggestions", ENGLISH_VERSION,
@@ -63,7 +66,7 @@ object EngineCatalog {
             EngineInfo("Rime corpus · Chinese phrase continuation", "$RIME_VERSION · essay corpus",
                 detail = "Read-only phrase suffixes and frequent-word fallback; not an arbitrary next-word language model.", feature = EngineFeature.CHINESE_PREDICTION, offBehavior = "Off: no Chinese phrase continuations; Chinese conversion is controlled separately.", versionSources = listOf(EngineVersionSource.TRIME)),
             EngineInfo("Mozc · Japanese next-word suggestions", MOZC_VERSION,
-                detail = "Native zero-query suggestions from transient Japanese context; no saved history.", feature = EngineFeature.JAPANESE_PREDICTION, offBehavior = "Off: no Japanese next-word candidates; Japanese conversion is controlled separately.", versionSources = listOf(EngineVersionSource.LIBRE_JAPANESE))
+                detail = "Native zero-query suggestions from transient Japanese context and the paired OSS dictionary; no saved history. Latest checks show upstream source revisions, not installable bundle updates.", feature = EngineFeature.JAPANESE_PREDICTION, offBehavior = "Off: no Japanese next-word candidates; Japanese conversion is controlled separately.", versionSources = listOf(EngineVersionSource.MOZC))
         )),
         EngineCategory("english_correction", "English Spelling Correction Engines", listOf(
             EngineInfo("LatinIME · English spelling correction", ENGLISH_VERSION,

@@ -4,7 +4,7 @@
 
 当前开发版本：**0.0.4-dev**，`versionCode = 4`，开发分支为 `0.0.4-dev`。最新正式版本为 **v0.0.3**；版本说明见 [v0.0.3 Release Notes](docs/releases/RELEASE_NOTES_0.0.3.md) 和 [更新日志](CHANGELOG.md)，正式安装包以 [GitHub Releases](https://github.com/PantingEYEs/IPA_Board/releases) 为准。
 
-0.0.4 计划成为首个不再按 GPL-3.0 整体发行的版本，具体后续协议在依赖与接入代码的许可核验完成后敲定。Rime/OpenCC、Mozc、ONNX Runtime Extensions 将从各自官方源码构建；LatinIME 从 HeliBoard 取得并独立构建适用 Apache-2.0 的代码；OpenBoard 英文词表继续使用现成的 `main_en-US.dict`，不自行编译。这些第三方运行资源将改为应用内下载，不随正式发布 APK 提供；Rime/OpenCC 构建与桥接不使用 Trime 工具，Mozc 和 Extensions 同时修复 ELF 段对齐。上述迁移尚未完成，当前开发版仍包含既有资源，详见 [0.0.4 开发计划](docs/0.0.4-development-plan.md)。
+0.0.4 计划成为首个不再按 GPL-3.0 整体发行的版本，具体后续协议在依赖与接入代码的许可核验完成后敲定。Rime/OpenCC、Mozc、ONNX Runtime Extensions 将从各自官方源码构建；LatinIME 从 HeliBoard 取得并独立构建适用 Apache-2.0 的代码；OpenBoard 英文词表继续使用现成的 `main_en-US.dict`，不自行编译。这些第三方运行资源将改为应用内下载，不随正式发布 APK 提供；Rime/OpenCC 构建与桥接不使用 Trime 工具，Mozc 和 Extensions 同时修复 ELF 段对齐。当前开发分支已接入官方源码构建的 Mozc 与配套 OSS 词典；其余构建迁移、资源拆包与协议变更仍未完成，运行资源暂仍内置。详见 [Mozc 接入说明](docs/mozc-upstream.md) 和 [0.0.4 开发计划](docs/0.0.4-development-plan.md)。
 
 0.0.4 开发版已加入 Shortcut 配置导入／导出、默认编辑快捷键与可绑定的撤销／重做、页组文件夹导入／导出及更新后的初始化预设、地球拼音和三态全半角互换。连续光标、长按队列与 Rime 批量查询优化已加入开发版；IPA Engine 与配套词典继续内置，现有 UTF-16 退格行为保留。
 
@@ -53,7 +53,7 @@ Shift 第一次点击启用临时大写（`Shift •`），再次点击锁定大
 - 点击候选上屏，右侧按钮展开候选；空格选择首选词，英文追加空格。Enter 原样结束组合，再次按下执行编辑器动作。
 - 候选按钮最小宽度随键盘按键宽度调整。切页保留组合文本，工具面板的 Return 或系统返回键返回键盘。
 
-主页 **Engine → Engine Management** 提供各项输入能力的独立开关和关闭后的回退说明；全部候选引擎关闭时仍可原样上屏。展开类目会尝试并列显示当前版本与官方最新版本，现有 Rime、Mozc、LatinIME 与 E5 暂不提供手动替换。
+主页 **Engine → Engine Management** 提供各项输入能力的独立开关和关闭后的回退说明；全部候选引擎关闭时仍可原样上屏。展开类目会尝试并列显示当前版本与官方最新来源信息；Mozc 显示 Google 源码修订与配套 OSS 数据版本，现有 Rime、Mozc、LatinIME 与 E5 暂不提供手动替换。
 
 **Syllable Engines → Rime → Pinyin scheme** 可选择朙月拼音或地球拼音（Terra Pinyin）；当前默认仍为朙月拼音。地球拼音用音节末尾的 `-`、`/`、`<`、`\` 输入一至四声，例如 `ni<hao<`，也可省略声调。可选的 `;`、`,`、`.` 声调替代键默认关闭，开启后会影响中文候选对这些标点的解释。切换方案或替代键保留待输入原文和光标，只更新候选；配置独立于页级引擎绑定及 Remote Keyboard Mode。地球拼音和注音不依赖朙月拼音资源或会话，所选方案失败时不自动改用其他方案；详见 [地球拼音](docs/terra-pinyin.md)。
 
@@ -139,7 +139,7 @@ python3 tools/regression.py run --suite full --serial DEVICE_SERIAL --no-build
 
 **设备回归前必须备份 IPA Board 软件与私有数据，结束后恢复、校验并删除备份。** 所有安装、instrumentation 和输入法切换检查均通过上述保护工具执行；恢复失败时保留备份并先恢复。套件选择、备份范围、恢复入口和验证记录见 [测试流程](docs/testing.md)。
 
-Mozc 与语义分词 Extensions 原生库为 4KB 对齐，尚未验证 16KB 页设备兼容性。既有 debug 回归结果不代表正式签名 release 或其他设备已通过。
+自行构建的 Mozc 两种 ABI 已采用 16KB ELF 对齐；语义分词 Extensions 0.13.0 仍为 4KB 对齐，不能据此宣称完整 APK 支持 16KB 页设备。Mozc 的独立构建验证与本分支接入验证须分别解释，见 [接入边界](docs/mozc-upstream.md#16kb-与验证边界)及[测试记录](docs/testing.md)。既有 debug 回归结果不代表正式签名 release 或其他设备已通过。
 
 预输入目前按 UTF-16 单元退格，可能留下半个 Emoji 代理对；按用户选择保留这一行为，不纳入 0.0.4 稳定性修复。部分回归中的输入法窗口等待超时仍待调查。API 31 诊断中，Engine Management 和 Dashboard 仍有较新系统接口调用导致的崩溃，API 26 与鸿蒙实机未验证。放宽安装门槛产生的既有 136 项 `NewApi` 错误已登记为 Lint 开发基线，新增问题仍会报告；基线通过或编译成功不代表低版本兼容。
 

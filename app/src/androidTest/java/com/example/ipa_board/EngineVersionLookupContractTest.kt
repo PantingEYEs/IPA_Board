@@ -20,6 +20,34 @@ import java.util.concurrent.atomic.AtomicReference
 class EngineVersionLookupContractTest {
     private val source = EngineVersionSource.HELIBOARD
 
+    @Test fun mozcUsesUpstreamCommitMetadataWithoutRequiringAReleaseTag() {
+        val revision = "1234567890abcdef1234567890abcdef12345678"
+        val lookup = EngineVersionLookup({ requested ->
+            assertEquals(EngineVersionSource.MOZC, requested)
+            """{"sha":"$revision","commit":{"message":"Offline upstream fixture"}}"""
+        }, { 0L }, EngineVersionLookup.Cache())
+        try {
+            assertEquals(listOf("Mozc upstream: revision 1234567890ab"), result(lookup, EngineVersionSource.MOZC))
+        } finally { lookup.close() }
+    }
+
+    @Test fun malformedMozcCommitMetadataIsUnavailableAndCanRecover() {
+        val clock = AtomicLong(0)
+        val loads = AtomicInteger()
+        val lookup = EngineVersionLookup({
+            if (loads.incrementAndGet() == 1) """{"sha":"not-a-full-commit"}"""
+            else """{"sha":"abcdef1234567890abcdef1234567890abcdef12"}"""
+        }, clock::get, EngineVersionLookup.Cache())
+        try {
+            assertEquals(listOf("Mozc upstream: unavailable"), result(lookup, EngineVersionSource.MOZC))
+            clock.set(29_999)
+            assertEquals(listOf("Mozc upstream: unavailable"), result(lookup, EngineVersionSource.MOZC))
+            assertEquals(1, loads.get())
+            clock.set(30_000)
+            assertEquals(listOf("Mozc upstream: revision abcdef123456"), result(lookup, EngineVersionSource.MOZC))
+        } finally { lookup.close() }
+    }
+
     @Test fun successfulMetadataIsSharedForFiveMinutesAndThenRefetched() {
         val clock = AtomicLong(0)
         val loads = AtomicInteger()
@@ -137,10 +165,10 @@ class EngineVersionLookupContractTest {
         }
     }
 
-    private fun result(lookup: EngineVersionLookup): List<String> {
+    private fun result(lookup: EngineVersionLookup, requested: EngineVersionSource = source): List<String> {
         val arrived = CountDownLatch(1)
         val value = AtomicReference<List<String>>()
-        lookup.query(listOf(source)) { result ->
+        lookup.query(listOf(requested)) { result ->
             value.set(result)
             arrived.countDown()
         }

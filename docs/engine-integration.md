@@ -8,7 +8,7 @@
 
 | 组件 | 精确来源 | 本项目接入方式 |
 | --- | --- | --- |
-| Mozc JNI + mozc.data | [Libre Japanese Input v0.1.2](https://github.com/elizagamedev/android-libre-japanese-input/tree/v0.1.2)，其 Mozc revision 为 `ddd9730b068387631e3b4d212314ef0ed93befe0` | 从原始 APK 取出 arm64-v8a/x86_64 的 libmozc.so 和 mozc.data，修改上游 Java JNI 加载器以移除前端依赖；JNI 方法签名保持原样 |
+| Mozc JNI + mozc.data | [Google Mozc `a4541df29db443b49f81cf54665873b68fde9efa`](https://github.com/google/mozc/tree/a4541df29db443b49f81cf54665873b68fde9efa)，[独立构建提交 `76a6129`](https://github.com/PantingEYEs/IPA_Engine/tree/76a612924530188bce6fa1c770b1e2e096e27ed8) | 官方源码构建的 arm64-v8a/x86_64 运行库与配套 OSS `24.11.oss` 词典；兼容 JNI 入口、内容哈希部署代际及预测请求适配见 [Mozc 接入说明](mozc-upstream.md) |
 | Rime + OpenCC | [Trime v3.3.12](https://github.com/osfans/trime/tree/v3.3.12)，librime submodule `33e78140250125871856cdc5b42ddc6a5fcd3cd4` | 取对应 ABI 的 librime_jni.so，经 JNA 调用公开 C API、OpenCC 和项目自建候选批量桥接，不启动 Trime Java 前端 |
 | 中文资源 | 上述 Trime APK 的 assets/shared | 保留拼音、词典、OpenCC 数据；本项目修改 t2s.json 使用文本词典，并增加禁用学习的 schema patch |
 | LatinIME 英文核心与词库 | [HeliBoard 4.1，revision `9f5bb635c2e8609dcd95dc7506c0c58fba82a52c`](https://github.com/HeliBorg/HeliBoard/tree/9f5bb635c2e8609dcd95dc7506c0c58fba82a52c) | 从官方 APK 原样提取两个 ABI 的 libjni_latinime.so 与 main_en-US.dict；保留四个 JNI 注册类的方法签名，使用本项目的最小只读适配器，替换 easy_en |
@@ -16,11 +16,11 @@
 | E5 与 ONNX Runtime | 固定 E5 small 模型 revision、ONNX Runtime 1.23.2 / Extensions 0.13.0 | 模型分块、分词图、校准数据和 AAR 随源码保存；详见 [语义排序](context-ranking.md) |
 | IPA_Engine | 内置 v0.0.1-dev，发布提交 `53eed9518f932934a28aceb4e03a453d545f80b8` | ARM64 DEX/JNI 与预编译压缩词典，独立 `:ipa` 服务；版本及更新合同见 [IPA 资源更新](ipa-updates.md) |
 
-Engine Management 展示已接入的输入功能及版本，也单独标记计划项，不代表瞬时原生加载状态。LatinIME 英文补全、拼写纠错与短上下文下一词预测已接入，个人学习仍属后续计划。已打包的 librime 版本为 1.17.0：x86_64 二进制的 `RimeGetVersion()` 返回该字符串；arm64 库同样包含 1.17.0 版本字符串。下述 1.14.0 是适配器采用的 C API 表定义来源，不是已打包引擎版本。Mozc 使用固定源码 revision 与 Libre Japanese Input 来源版本；OpenCC 的独立版本未在当前锁定资源中确认，界面明确标注来源为 Trime 3.3.12。方案/词典版本来自资源声明，内置排序、计算和验证码规则模块随应用版本显示。
+Engine Management 展示已接入的输入功能及版本，也单独标记计划项，不代表瞬时原生加载状态。LatinIME 英文补全、拼写纠错与短上下文下一词预测已接入，个人学习仍属后续计划。已打包的 librime 版本为 1.17.0：x86_64 二进制的 `RimeGetVersion()` 返回该字符串；arm64 库同样包含 1.17.0 版本字符串。下述 1.14.0 是适配器采用的 C API 表定义来源，不是已打包引擎版本。Mozc 显示 Google 官方源码 revision 与配套 OSS 数据版本，不再以第三方输入法应用版本代表引擎版本；OpenCC 的独立版本未在当前锁定资源中确认，界面明确标注来源为 Trime 3.3.12。方案/词典版本来自资源声明，内置排序、计算和验证码规则模块随应用版本显示。
 
 语义排序设置接口为 `ContextRankingSettings`：使用现有 `ipa_board_prefs` 的 `semantic_context_enabled` 布尔值，默认 false，每侧上下文读取上限 256 个 UTF-16 单元。Engine Management 的 Multilingual E5 开关是此能力的唯一开关，并提供延迟提示。关闭时不绑定语义服务、不部署或加载模型；关闭已启用的开关会取消请求、解绑并释放模型。普通候选始终先显示。详见 [实验性上下文语义排序](context-ranking.md)。
 
-Rime function table顺序来自 librime 1.14.0 的 rime_api.h。适配器限定 64 位 ABI，并在访问函数前检查表大小。Mozc 的小型 wire reader 对应上述 revision 的 commands.proto / candidates.proto，支持该协议使用的 group、嵌套消息、未知字段跳过及输入长度限制。
+Rime function table顺序来自 librime 1.14.0 的 rime_api.h。适配器限定 64 位 ABI，并在访问函数前检查表大小。Mozc 的小型 wire reader 对应当前 Google revision 的 commands.proto / candidates.proto，支持该协议使用的 group、嵌套消息、未知字段跳过及输入长度限制。新版续写请求同时设置 `zero_query_suggestion` 与 `mixed_conversion`；历史协议及旧部署目录只保留于[归档](archive/mozc-libre-integration.md)。
 
 Rime 的原生候选可能只覆盖输入前缀。适配器现在只输入一次，通过自建的只读 C++ 批量桥接取得候选文本、原生输入起止字节位置与已有前缀分段，同时返回完整候选与连续覆盖输入前缀的部分候选，不再逐候选重放或实际选词。部分候选通过精确重新编码将原生字节边界映射回原始拼音／注音范围；不存在可靠边界时不生成该部分候选。已产生的前缀输出会保留；无有效提交输出的编码丢弃仍回退原样输入，保留非法注音声调保护。桥接与现有 Rime 共用同一运行时，原始二进制不变，不使用高亮或提交预览。原生 ABI、头文件、构建依赖与锁定要求见 [桥接说明](../app/src/main/cpp/README.md)。
 
@@ -62,11 +62,13 @@ python3 tools/regression.py run --suite full --serial DEVICE_SERIAL --no-build
 - 首次 Rime 部署需编译词典，界面保持可用并显示加载状态；后续复用部署结果。
 - 候选当前为有界列表：Rime 检查前 40 个原生候选，Mozc 最多 60 个，LatinIME 最多 18 个。展开显示这一批结果，尚无滚动到末尾继续向引擎分页。
 - 排序采用来源内排名、原文匹配、具体 bigram 关联与候选类型等启发式特征，另有可选的实验性语义重排；不是经过跨语言语料校准的概率。尚无持久化个性学习，也没有无分隔整串跨语言分词。
-- Rime 的两个二进制为 16KB ELF 对齐；当前 Mozc 上游发布库和 ONNX Runtime Extensions 0.13.0 AAR 中的原生库为 **4KB 对齐**。既有设备验证不等于 16KB 页设备兼容验证；面向此类设备发布前，应按上游 source revision 重编译 Mozc 与 Extensions 并验证。不要通过修改 ELF 头伪造兼容性。
+- Rime 与当前自行构建的 Mozc 两种 ABI 均为 16KB ELF 对齐；ONNX Runtime Extensions 0.13.0 AAR 中的原生库仍为 **4KB 对齐**。Mozc 独立构建的静态与实际 16KB 验证不证明完整应用兼容；本分支接入结果另见 [Mozc 验证边界](mozc-upstream.md#16kb-与验证边界)和[测试记录](testing.md)。Extensions 需在独立任务中重建并验证，不能通过修改 ELF 头伪造兼容性。
 - 当前使用 Trime 发布的组合 JNI 库，其中包含 GPL 代码，不能仅将其视为 BSD 的 librime。许可证文本和原始声明在 app/src/main/assets/licenses。对外分发需按实际组合依赖提供相应源码/许可材料；若要求宽松许可发行，需独立构建纯 librime/OpenCC 并替换该二进制。
-- HeliBoard 发布核心及适配的上游声明包含 Apache-2.0 与 GPL-3.0；两份许可证已保存，官方源码归档的 SHA-256 与固定 revision 已记录。未包含其图标或外部手势库。LatinIME 两个 ABI 的 ELF LOAD 对齐均为 16KB；这不改变 Mozc 的上述兼容限制。
+- HeliBoard 发布核心及适配的上游声明包含 Apache-2.0 与 GPL-3.0；两份许可证已保存，官方源码归档的 SHA-256 与固定 revision 已记录。未包含其图标或外部手势库。LatinIME 两个 ABI 的 ELF LOAD 对齐均为 16KB；这不改变完整应用仍受 Extensions 及未执行设备配置限制的事实。
 
-上游原生构建说明：[Trime 源码](https://github.com/osfans/trime/tree/v3.3.12)、[Libre Japanese Input 构建说明](https://github.com/elizagamedev/android-libre-japanese-input/tree/v0.1.2#building-the-mozc-jni-library-and-dataset)。
+上游原生构建说明：[Trime 源码](https://github.com/osfans/trime/tree/v3.3.12)、[Mozc 固定源码构建](https://github.com/PantingEYEs/IPA_Engine/tree/76a612924530188bce6fa1c770b1e2e096e27ed8)。当前 Mozc 完整许可及实际构建依赖声明随 APK 保存在 `assets/licenses/mozc/`。
+
+以下有日期的旧验证章节保留当时使用旧引擎的事实，不是 #50 新构建的验收记录。旧来源详情已[归档](archive/mozc-libre-integration.md)。
 
 ## 英文升级验证记录（2026-10-02）
 
@@ -103,7 +105,7 @@ Engine Management 的功能开关以 `EngineFeature` 为准，当前共 14 项�
 
 关闭英文补全保留纠错，反之亦然；过滤发生在片段候选组合之前。关闭简化不生成 Rime/OpenCC 的简体候选，但中文词组查询仍可进行内部简转繁上下文归一化，IPA 词典直接返回的目标文字不属于 OpenCC 转换。关闭评分采用稳定来源顺序和去重；关闭分段后，各引擎只查询自己可接受的完整编码，不再拆分混有其他字符的输入，仍保留原样提交路径。所有候选关闭不会丢弃预输入。计算和本地短信解析均有独立门控，拼音纠错是 Rime 方案规则的一部分，当前未实现独立切换。
 
-普通引擎条目在展开类目时读取固定官方 GitHub Releases/Hugging Face 模型元数据，显示当前版本及最新来源版本/模型修订，不提供 Rime/Mozc/LatinIME/E5 的下载或替换。内置/尚未集成条目明确显示无独立发行版或未集成。连接、读取均设 5 秒超时，响应限制 1 MiB，并在后台解析；成功缓存 5 分钟，失败缓存 30 秒。关闭页面时丢弃回调，限时 HTTPS 请求自行在后台结束，避免中断套接字拖慢主线程重建。
+普通引擎条目在展开类目时读取固定官方 GitHub Releases/Hugging Face 模型元数据；Mozc 查询 Google 官方 `master` 源码提交，不再查询 Libre Japanese Input 的发行版。界面区分当前打包版本与最新来源版本、源码提交或模型修订，不提供 Rime/Mozc/LatinIME/E5 的下载或替换。内置/尚未集成条目明确显示无独立发行版或未集成。连接、读取均设 5 秒超时，响应限制 1 MiB，并在后台解析；成功缓存 5 分钟，失败缓存 30 秒。关闭页面时丢弃回调，限时 HTTPS 请求自行在后台结束，避免中断套接字拖慢主线程重建。
 
 IPA 资源管理页通过 GitHub Releases 及顶层 `client.json` 检查、独立下载引擎／词典；默认屏蔽预发布，可在资源页开启 Allow Pre-release updates，关闭不回退已安装版本。版本筛选、清单格式及失败回退见 [IPA 更新接口](ipa-updates.md)。
 

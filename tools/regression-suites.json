@@ -3,6 +3,22 @@
   "package": "com.example.ipa_board",
   "runner": "com.example.ipa_board.RegressionTestRunner",
   "suites": {
+    "mozc-upstream": {
+      "classes": [
+        "com.example.ipa_board.MozcUpstreamRuntimeTest",
+        "com.example.ipa_board.MultilingualEngineTest",
+        "com.example.ipa_board.SegmentedCompositionTest",
+        "com.example.ipa_board.EngineControlsTest",
+        "com.example.ipa_board.EngineManagementTest",
+        "com.example.ipa_board.EngineVersionLookupContractTest",
+        "com.example.ipa_board.EngineSettingsContractTest"
+      ]
+    },
+    "mozc-runtime": {
+      "classes": [
+        "com.example.ipa_board.MozcUpstreamRuntimeTest"
+      ]
+    },
     "bluetooth-remote": {
       "classes": [
         "com.example.ipa_board.BluetoothRemoteEngineModeTest",
@@ -54,6 +70,7 @@
     },
     "engines": {
       "classes": [
+        "com.example.ipa_board.MozcUpstreamRuntimeTest",
         "com.example.ipa_board.MultilingualEngineTest",
         "com.example.ipa_board.ZhuyinEngineTest",
         "com.example.ipa_board.IpaEngineRuntimeTest",
@@ -125,6 +142,7 @@
     },
     "full": {
       "classes": [
+        "com.example.ipa_board.MozcUpstreamRuntimeTest",
         "com.example.ipa_board.BluetoothRemoteEngineModeTest",
         "com.example.ipa_board.BluetoothRemoteInputTest",
         "com.example.ipa_board.BluetoothKeyboardUiTest",

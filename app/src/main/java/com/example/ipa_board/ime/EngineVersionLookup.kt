@@ -15,7 +15,7 @@ import java.util.concurrent.RejectedExecutionException
 enum class EngineVersionSource(val label: String, val endpoint: String) {
     RIME("librime", "https://api.github.com/repos/rime/librime/releases/latest"),
     TRIME("Trime source", "https://api.github.com/repos/osfans/trime/releases/latest"),
-    LIBRE_JAPANESE("Libre Japanese Input source", "https://api.github.com/repos/elizagamedev/android-libre-japanese-input/releases/latest"),
+    MOZC("Mozc upstream", "https://api.github.com/repos/google/mozc/commits/master"),
     HELIBOARD("HeliBoard source", "https://api.github.com/repos/HeliBorg/HeliBoard/releases/latest"),
     E5("E5 model", "https://huggingface.co/api/models/intfloat/multilingual-e5-small"),
     ONNX_RUNTIME("ONNX Runtime", "https://api.github.com/repos/microsoft/onnxruntime/releases/latest")
@@ -115,7 +115,7 @@ internal class EngineVersionLookup(
 
         internal fun parse(source: EngineVersionSource, body: String): String {
             val json = JSONObject(body)
-            return if (source == EngineVersionSource.E5) {
+            return if (source == EngineVersionSource.E5 || source == EngineVersionSource.MOZC) {
                 val sha = json.getString("sha")
                 require(sha.matches(Regex("[a-fA-F0-9]{40}")))
                 "revision ${sha.take(12)}"

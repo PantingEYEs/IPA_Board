@@ -355,7 +355,10 @@ class EngineManagementActivity : Activity() {
             textSize = 14f
             setTextColor(Color.rgb(187, 187, 187))
         }
-        versionRow.addView(caption(versionText).apply { setPadding(0, 0, dp(8), 0) },
+        versionRow.addView(caption(versionText).apply {
+            tag = "engine-current:${engine.name}"
+            setPadding(0, 0, dp(8), 0)
+        },
             LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         val latest = caption(getString(when {
             engine.status == EngineStatus.PLANNED -> R.string.engine_latest_not_integrated
