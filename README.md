@@ -6,7 +6,7 @@
 
 0.0.4 计划成为首个不再按 GPL-3.0 整体发行的版本，具体后续协议在依赖与接入代码的许可核验完成后敲定。官方源码构建的 [Mozc 与配套 OSS 词典](docs/mozc-upstream.md)、[SentencePiece 专用 ONNX Runtime Extensions](docs/onnx-extensions-upstream.md)已完成接入；#51 经 [PR #59](https://github.com/PantingEYEs/IPA_Board/pull/59) 合入 `0.0.4-dev`。ONNX Runtime 主库、E5 模型与排序规则保持不变。
 
-本分支正在接入 [Rime/OpenCC 官方构建与桥接迁移 #49](docs/rime-upstream.md)：固定 chinese 构建采用 librime 1.17.0／OpenCC 1.4.2，保留既有中文方案与混排合同。后续工作为 [HeliBoard LatinIME 独立构建 #52](https://github.com/PantingEYEs/IPA_Board/issues/52)、[第三方资源下载与安装 #53](https://github.com/PantingEYEs/IPA_Board/issues/53)和[来源／许可核验 #54](https://github.com/PantingEYEs/IPA_Board/issues/54)。当前 Rime/OpenCC 接入不再使用 Trime 组合库、JNA 或外置候选桥接；LatinIME 按实际采用的源码核验许可。OpenBoard 英文词表继续使用现成的 `main_en-US.dict`，不自行编译。运行资源目前仍内置；第三方资源拆包、客户端下载及项目协议变更尚未完成，IPA Engine 与配套词典继续内置。详见 [0.0.4 开发计划](docs/0.0.4-development-plan.md)。
+[Rime/OpenCC 官方构建与桥接迁移 #49](docs/rime-upstream.md) 已通过 [PR #60](https://github.com/PantingEYEs/IPA_Board/pull/60) 合入 `0.0.4-dev` 并关闭，维护者实测未发现使用问题。固定 `chinese@073aabe` 构建采用 librime 1.17.0／OpenCC 1.4.2，保留既有中文方案与混排合同。后续工作为 [HeliBoard LatinIME 独立构建 #52](https://github.com/PantingEYEs/IPA_Board/issues/52)、[第三方资源下载与安装 #53](https://github.com/PantingEYEs/IPA_Board/issues/53)和[来源／许可核验 #54](https://github.com/PantingEYEs/IPA_Board/issues/54)。当前 Rime/OpenCC 接入不再使用 Trime 组合库、JNA 或外置候选桥接；LatinIME 按实际采用的源码核验许可。OpenBoard 英文词表继续使用现成的 `main_en-US.dict`，不自行编译。运行资源目前仍内置；第三方资源拆包、客户端下载及项目协议变更尚未完成，IPA Engine 与配套词典继续内置。详见 [0.0.4 开发计划](docs/0.0.4-development-plan.md)。
 
 0.0.4 开发版已加入 Shortcut 配置导入／导出与替代文字、默认编辑快捷键与可绑定的撤销／重做、页组文件夹导入／导出及更新后的初始化预设、地球拼音、可绑定的预编辑模式切换和三态全半角互换。连续光标、长按队列与 Rime 批量查询优化已加入开发版，现有 UTF-16 退格行为保留。
 
@@ -141,7 +141,7 @@ python3 tools/regression.py run --suite full --serial DEVICE_SERIAL --no-build
 
 **设备回归前必须备份 IPA Board 软件与私有数据，结束后恢复、校验并删除备份。** 上述自动回归中的安装、instrumentation 和输入法切换检查均通过保护工具执行；恢复失败时保留备份并先恢复。套件选择、备份范围、恢复入口和验证记录见 [测试流程](docs/testing.md)。
 
-当前 debug 应用与测试 APK 的全部 **19+1 个原生条目**通过 16KB ELF 加载段检查，两份 APK 通过 16KB 打包对齐检查；#51 在 **API 36／x86_64／真实 16384 字节页**进程中禁用兼容模式、保留全部原生依赖，专项 **38/38 通过**。源码构建与应用接入结果分别记录，见 [Mozc 接入边界](docs/mozc-upstream.md#16kb-与验证边界)、[Extensions 接入边界](docs/onnx-extensions-upstream.md#16kb-与验证边界)及[测试记录](docs/testing.md)。此结果不代表正式签名 release、AAB 或 ARM64 真机运行已验证。
+当前 debug 应用与测试 APK 共 **15+1 个原生条目**通过 16KB ELF LOAD／RELRO 检查，两份 APK 通过 16KB 打包对齐检查。#49 在 **API 36／x86_64／真实 16384 字节页**、禁用兼容模式并保留全部正常原生依赖的环境中完成 **105/105 项设备专项**；48 项相关 JVM、80 项工具测试通过，并补做 3 项迁移及软件／私有数据备份恢复往返验证。维护者已实测预览版并报告使用无问题。实际范围见 [Rime/OpenCC 接入说明](docs/rime-upstream.md)、[Mozc 接入边界](docs/mozc-upstream.md#16kb-与验证边界)、[Extensions 接入边界](docs/onnx-extensions-upstream.md#16kb-与验证边界)及[测试记录](docs/testing.md)。未重复全量或 4KB 回归，人工反馈不代表自动 ARM64、其他 API、完整编辑器矩阵或正式 release／AAB 均已验证。
 
 预输入目前按 UTF-16 单元退格，可能留下半个 Emoji 代理对；按用户选择保留这一行为，不纳入 0.0.4 稳定性修复。部分回归中的输入法窗口等待超时仍待调查。API 31 诊断中，Engine Management 和 Dashboard 仍有较新系统接口调用导致的崩溃，API 26 与鸿蒙实机未验证。放宽安装门槛产生的既有 `NewApi` 错误已登记为 Lint 开发基线，当前匹配情况见测试记录，新增问题仍会报告；基线通过或编译成功不代表低版本兼容。
 

@@ -4,6 +4,12 @@
 
 Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划](docs/0.0.4-development-plan.md)。
 
+- 官方源码构建 Rime／OpenCC 已通过 [PR #60](https://github.com/PantingEYEs/IPA_Board/pull/60) 合入 `0.0.4-dev`（2026-11-11，merge commit `7e699e2`），[#49](https://github.com/PantingEYEs/IPA_Board/issues/49) 六项验收完成并关闭。使用 `IPA_Engine/chinese@073aabe` 的 librime 1.17.0／OpenCC 1.4.2 和 24 份官方兼容资源；维护者实测预览版后报告使用无问题。
+
+- 移除 Trime 组合二进制、JNA、旧函数表及独立 C++／Boost 候选桥接，以同一构建内的 JNI 保留批量候选、精确前缀消费、朙月／地球拼音、声调、注音、简繁、替代文字、无学习和多语言混排行为。运行时核对 ABI、候选包和完整构建身份；按构建身份部署新资源，保留旧私有目录和用户配置。Engine Management 区分官方运行库、兼容数据与集成构建；旧来源说明和计时报表入口归档。第三方原始许可继续保留，#52、#53、#54 及整体协议迁移仍待完成，详见 [Rime/OpenCC 接入说明](docs/rime-upstream.md)。
+
+- 验证：80 项工具、48 项相关 JVM、编译、既有基线下的 lint、资源校验通过；严格 API 36／x86_64／16KB 设备专项 **105/105** 通过，另补做迁移 **3/3** 与软件／私有数据备份恢复往返验证。应用及测试包共 **15+1 个原生条目**、两份 APK 的 16KB ELF／ZIP 检查通过，原状态恢复校验后删除备份。预览版保留数据更新并经维护者验收。未重跑全量或 4KB；人工反馈不作为自动 ARM64、其他 API、完整编辑器矩阵或 release／AAB 验证，详见[测试记录](docs/testing.md#2026-11-11-官方源码-rimeopencc-接入49)。
+
 - 官方源码构建 ONNX Runtime Extensions 已通过 [PR #59](https://github.com/PantingEYEs/IPA_Board/pull/59) 合入 `0.0.4-dev`（2026-11-11，merge commit `de4d167`），[#51](https://github.com/PantingEYEs/IPA_Board/issues/51) 已核对六项验收并关闭。按维护者决定，运行验收范围调整为严格 16KB，原普通页／4KB 验收条款已明确移除，不记作本轮验证通过。
 
 - 两种 ABI 的旧 Maven Extensions AAR 替换为 `IPA_Engine/ranking@dd6f7fb` 的固定产物，基于官方 v0.13.0／`9d5638b0b1f2` 源码构建现有分词图所需的 SentencePiece 扩展。ONNX Runtime 1.23.2、E5 模型、分词图和校准数据保持不变；E5 仍默认关闭，保留取消、过期结果拒绝与普通候选回退，没有增加排序算法或宣称效果提升。Engine Management 显示实际 Extensions 构建信息；来源锁、许可及离线校验同步更新，旧 AAR 移除、旧来源资料归档。详见 [Extensions 接入说明](docs/onnx-extensions-upstream.md)。
@@ -68,14 +74,14 @@ Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划]
 - Rime 继续使用一次输入的原生批量桥接，将前缀覆盖精确映射至拼音／注音编码；Mozc 使用原生首段读音与输入前缀对应，不按候选文字长度推算消耗范围。范围、来源和选择标识随候选跨进程传递并参与去重，过期／非法选择被拒绝；英文、IPA 和含符号混输本期仍采用整段转换。
 - 分段验证：229 项 JVM、61 项工具测试、debug／AndroidTest 编译、资源及套件校验、Lint 通过（289 条警告与既有 NewApi 基线保留）。API 35／ARM64 独立模拟器专项 6 类 49/49 通过，覆盖真实 IME 候选 IPC、前缀删除、范围保留及拒绝接口回退；各轮软件与私有数据恢复校验通过，备份已删除。维护者确认功能试用通过；未执行完整设备回归、其他 API／ABI 或签名 release 验证，详见[测试记录](docs/testing.md)。
 - 新增[自适应按键区域开发计划](docs/adaptive-key-regions-development-plan.md)，整理加权广义 Voronoi 区域、按页学习与经验值、共享绘制／命中几何状态、前置依赖和待定边界；仅为后续规划，尚未实装。
-- 更新 0.0.4 开发计划、README 与文档索引：明确 Rime/OpenCC、Mozc、ONNX Runtime Extensions 的官方源码构建、HeliBoard 中 LatinIME 授权子集的独立构建、现成 OpenBoard 英文词表与应用内资源下载方案，以及待许可核验后敲定后续协议的发布目标。这些仍是开发计划，当前尚未完成构建链替换、拆包或许可证迁移。
+- 更新 0.0.4 开发计划、README 与文档索引：明确 Rime/OpenCC、Mozc、ONNX Runtime Extensions 的官方源码构建、HeliBoard 中 LatinIME 授权子集的独立构建、现成 OpenBoard 英文词表与应用内资源下载方案，以及待许可核验后敲定后续协议的发布目标。该次文档更新时尚未完成构建链替换、拆包或许可证迁移；后续进展见本版本较新的记录。
 - 剪贴板隐藏期间监听已通过 [PR #32](https://github.com/PantingEYEs/IPA_Board/pull/32) 合入 `0.0.4-dev`（2026-10-27，merge commit `148431e`）。默认开启的开关更名为 **Sync clipboard**，沿用原设置键；服务创建后即监听，隐藏键盘不再注销。保存开关立即生效，关闭后保留键盘可见期间的监听和面板读取；服务销毁时停止监听并忽略排队回调，打开键盘时仍补读当前内容并保留可选耗时日志。
 - 此变更通过持续记录减少隐藏键盘期间复制内容遗漏，不会从系统补齐全部历史；无法追回服务未运行期间已被覆盖的内容，也不保证极短间隔复制零遗漏。Samsung Keyboard 的具体记录机制尚未核实，原始“最新内容也缺失”的偶发故障仍待实机调查；[Issue #15](https://github.com/PantingEYEs/IPA_Board/issues/15) 保持开启。
 - 本次验证：226 项 JVM、61 项工具测试、debug/测试包编译、测试登记及引擎资源校验通过；Lint 无新增错误，保留 289 条警告及既有 NewApi 基线。API 35/ARM64 独立模拟器剪贴板专项 22/22 通过，软件与私有数据恢复往返及最终恢复校验成功，备份已删除。合成事件覆盖隐藏期间连续两条均保存、打开不重复、开关及销毁后停止读取；未测试 One UI 实际后台投递、原始偶发故障、其他 API/ABI 或签名 release，详见[验证记录](docs/testing.md)。
 - Rime 中文候选查询优化已通过 [PR #31](https://github.com/PantingEYEs/IPA_Board/pull/31) 合入 `0.0.4-dev`（2026-10-27，merge commit `e1285e7`）；维护者试用反馈输入更快，并确认关闭 Issue #16。候选仍按各引擎回复分批发布，尚未以受控录屏证明所有场景的突变都已消除。
 - 新增原生候选批量桥接，复用现有 Rime 运行时，在每次只输入一遍编码后读取候选文本与输入起止位置，移除逐候选清空、重放和实际选词。保留前序分段和已经产生的前缀输出、完整输入覆盖校验、原始顺序、40 项扫描范围、简繁转换及非法注音声调回退；不引入高亮或提交预览。前置拼音引号按维护者确认，统一使用单次真实输入生成的方向。
 - 同一 API 35/ARM64 模拟器运行时、每个输入 20 对预热并交替顺序的完整适配器查询，中位数：`yes` 4.5713→0.6521ms（7.01 倍）、`shide` 6.9768→0.4908ms（14.22 倍）、`soudesu` 9.5147→0.3396ms（28.02 倍）；每对样本验证候选一致。这些结果仅代表所测热查询，不能等同于冷启动、实体设备或屏幕显示提速。
-- 新增 `candidate-timing` 与 `rime-batch` 保护套件，输出各阶段、各请求的 CSV/JSONL 和耗时统计，覆盖排队、初始化、引擎查询、IPC、混排与视图处理，并保留测试侧旧重放路径作性能和结果对照。普通应用查询默认不启用计时，不记录私人输入。构建新增 NDK `28.0.13004108`、CMake `3.22.1` 及锁定的 Rime/Boost 头文件；原 Rime 二进制不变，新增桥接支持两个 ABI，ELF load alignment 为 16KB。详见[桥接说明](app/src/main/cpp/README.md)。
+- 新增 `candidate-timing` 与 `rime-batch` 保护套件，输出各阶段、各请求的 CSV/JSONL 和耗时统计，覆盖排队、初始化、引擎查询、IPC、混排与视图处理，并保留测试侧旧重放路径作性能和结果对照。普通应用查询默认不启用计时，不记录私人输入。构建新增 NDK `28.0.13004108`、CMake `3.22.1` 及锁定的 Rime/Boost 头文件；原 Rime 二进制不变，新增桥接支持两个 ABI，ELF load alignment 为 16KB。详见[当时的桥接说明（归档）](docs/archive/rime-trime-integration.md)。
 - 按维护者确认，将既有 136 项 `NewApi` 错误登记为 Lint 开发基线。`lintDebug` 通过，289 条其他警告保留；新增 API 越级调用仍会报错并阻断检查。最低安装声明 26、最低适配 API 35 及实际兼容性范围不变。
 - 本次验证：222 项 JVM、61 项工具测试、原生依赖哈希和测试登记校验通过；两个 ABI 的 debug 与测试包编译通过，API 35/ARM64 最终专项 26/26 通过。各轮恢复并校验原软件与私有数据后删除备份；前缀处理的早期失败记录保留。维护者已反馈主观体验改善，受控 One UI 录屏、x86_64 设备运行、其他 API 和签名 release 仍未验证。详见[Rime 批量接口验证记录](docs/testing.md#2026-10-27-rime-原生批量候选与配对测速16)。
 - Clipboard Management 的 Save Settings 按钮改用与管理页一致的灰色样式。
