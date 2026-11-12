@@ -5,18 +5,71 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.appcompat.widget.SwitchCompat
 import com.example.ipa_board.diagnostics.AppDiagnostics
 import com.example.ipa_board.diagnostics.DebugDiagnosticsSettings
 import com.example.ipa_board.ime.EngineCatalog
+import com.example.ipa_board.ime.EngineFeature
 import com.example.ipa_board.ime.EngineStatus
+import com.example.ipa_board.ime.EngineVersionLookup
+import com.example.ipa_board.ime.EngineVersionSource
+import com.example.ipa_board.ime.MozcBundle
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
 
 class EngineManagementTest {
+    @Test fun mozcRowsKeepBundledIdentityWhenLatestUpstreamChanges() {
+        val originalLoader = EngineVersionLookup.metadataLoaderOverride
+        EngineVersionLookup.metadataLoaderOverride = { source ->
+            if (source == EngineVersionSource.MOZC || source == EngineVersionSource.E5)
+                """{"sha":"1234567890abcdef1234567890abcdef12345678"}"""
+            else """{"tag_name":"v-test","draft":false,"prerelease":false}"""
+        }
+        val rows = EngineCatalog.categories("test").flatMap { it.engines }.filter {
+            it.feature == EngineFeature.JAPANESE_CONVERSION || it.feature == EngineFeature.JAPANESE_PREDICTION
+        }
+        fun assertCurrent(root: View) {
+            rows.forEach { row ->
+                val current = root.findViewWithTag<TextView>("engine-current:${row.name}").text.toString()
+                assertTrue(current.contains("Google Mozc rev ${MozcBundle.UPSTREAM_REVISION.take(12)}"))
+                assertTrue(current.contains("OSS data ${MozcBundle.DATA_VERSION}"))
+                assertTrue(current.contains("IPA_Engine build ${MozcBundle.BUILD_REVISION.take(12)}"))
+                assertFalse(current.contains("Libre Japanese Input"))
+                assertFalse("Latest upstream metadata replaced the bundled identity", current.contains("1234567890ab"))
+            }
+        }
+        try {
+            ActivityScenario.launch(EngineManagementActivity::class.java).use { scenario ->
+                scenario.onActivity { activity ->
+                    val root = activity.findViewById<View>(R.id.engine_management_root)
+                    assertCurrent(root)
+                    root.findViewWithTag<View>("category:syllable").performClick()
+                    root.findViewWithTag<View>("category:prediction").performClick()
+                }
+                val deadline = android.os.SystemClock.elapsedRealtime() + 5_000
+                var latestReceived = false
+                do {
+                    scenario.onActivity { activity ->
+                        val root = activity.findViewById<View>(R.id.engine_management_root)
+                        latestReceived = rows.all {
+                            root.findViewWithTag<TextView>("engine-latest:${it.name}").text
+                                .contains("Mozc upstream: revision 1234567890ab")
+                        }
+                        assertCurrent(root)
+                    }
+                    if (!latestReceived) android.os.SystemClock.sleep(20)
+                } while (!latestReceived && android.os.SystemClock.elapsedRealtime() < deadline)
+                assertTrue("The official Mozc commit metadata did not reach both rows", latestReceived)
+                scenario.recreate()
+                scenario.onActivity { activity -> assertCurrent(activity.findViewById(R.id.engine_management_root)) }
+            }
+        } finally { EngineVersionLookup.metadataLoaderOverride = originalLoader }
+    }
+
     @Test fun diagnosticsSwitchStartsOffSavesClicksAndSurvivesActivityRecreation() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val preferences = DebugDiagnosticsSettings.preferences(context)

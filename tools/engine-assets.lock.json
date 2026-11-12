@@ -1,11 +1,6 @@
 {
   "archives": [
     {
-      "file": "mozc.apk",
-      "url": "https://github.com/elizagamedev/android-libre-japanese-input/releases/download/v0.1.2/app-release.apk",
-      "sha256": "6b946fc78d333055027eebc92c9b28f3e4c55c539306c979158e7043ac5aa55b"
-    },
-    {
       "file": "trime-arm64.apk",
       "url": "https://github.com/osfans/trime/releases/download/v3.3.12/com.osfans.trime-v3.3.12-0-ge09ac711-arm64-v8a-release.apk",
       "sha256": "c727d509cbae8ba6a6b3616f57ea299d46bb13072812342811d03aea0bc3cb98"
@@ -72,8 +67,8 @@
     },
     {
       "path": "app/src/main/assets/engines/mozc.data",
-      "sha256": "a905f88e772bafd4b070cebfe66fbb061fab04496f22166fd37875aa34713ccd",
-      "bytes": 20489885
+      "sha256": "26d8d5391e37dba926df23e6f01e90158dd755af111712ce84f065a700a852b5",
+      "bytes": 18955930
     },
     {
       "path": "app/src/main/assets/engines/rime/default.custom.yaml",
@@ -332,16 +327,6 @@
       "bytes": 7651
     },
     {
-      "path": "app/src/main/assets/licenses/mozc-credits.html",
-      "sha256": "25d6ecc9ee462302ef810cccfbd59218e582f1cde5351787d31b0cd20129a995",
-      "bytes": 41175
-    },
-    {
-      "path": "app/src/main/assets/licenses/mozc.txt",
-      "sha256": "44cdd923b91ea9199293abecc2762c70c87dbf1e581c027a94c416368d1a648c",
-      "bytes": 5734
-    },
-    {
       "path": "app/src/main/assets/licenses/opencc.txt",
       "sha256": "b534e465949558eec2597b04f5092b5e161236a68dfbfd04d547592ac3964308",
       "bytes": 9165
@@ -368,8 +353,8 @@
     },
     {
       "path": "app/src/main/jniLibs/arm64-v8a/libmozc.so",
-      "sha256": "07dfa8131d8f0081baa771c771eea7198886860deab3ecff4ccd151fdf2eec2f",
-      "bytes": 14739336
+      "sha256": "d7cc97611b162e1577dc419811bc4a39b72a9af0be4f380b68597519e64d9b12",
+      "bytes": 5478432
     },
     {
       "path": "app/src/main/jniLibs/arm64-v8a/librime_jni.so",
@@ -383,8 +368,8 @@
     },
     {
       "path": "app/src/main/jniLibs/x86_64/libmozc.so",
-      "sha256": "225729497d0f32fbd567517c8a88a51e8f028e1febd0df6788fbad1c688785ad",
-      "bytes": 13677848
+      "sha256": "04831587ad807ba1e26144ae8fb34c67d40e6f9193294500f680a1be7616b3ac",
+      "bytes": 5642432
     },
     {
       "path": "app/src/main/jniLibs/x86_64/librime_jni.so",
@@ -538,6 +523,190 @@
       "sha256": "b78a530546848f415d8e0182a1a0b623758fe2f67e16f7ad2666dd79d2e2d3b3",
       "bytes": 218,
       "source": "IPA Board custom patch: learning/completion disabled"
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/Abseil-20260107.1-AUTHORS.txt",
+      "sha256": "1fd39030c119b4c97014f59e0ad0ed65f23475bbdf55a52740f31eb82b34b4ee",
+      "bytes": 295
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/Abseil-20260107.1-LICENSE.txt",
+      "sha256": "c79a7fea0e3cac04cd43f20e7b648e5a0ff8fa5344e644b0ee09ca1162b62747",
+      "bytes": 11361
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/evidence/abseil-cpp-resolved-MODULE.bazel.txt",
+      "sha256": "e33b3801443f5fd64465262084534115db76363df13d2168a42bbfacc747be81",
+      "bytes": 1376
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/evidence/arm64-v8a-distribution-elf-dynamic.txt",
+      "sha256": "5b64359099dc44087c07a7f4e4801abe1677c7f439a482e314bbf4a41a30d97c",
+      "bytes": 1386
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/evidence/arm64-v8a-elf-dynamic.txt",
+      "sha256": "5b64359099dc44087c07a7f4e4801abe1677c7f439a482e314bbf4a41a30d97c",
+      "bytes": 1386
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/evidence/arm64-v8a-link-driver-expanded.json",
+      "sha256": "5b56f10cf87acd97f04789e044623fc0a71ea00edf335e470b6a49d133adc02d",
+      "bytes": 53421
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/evidence/arm64-v8a-link.params",
+      "sha256": "6611ad93f1b67cab7fb6a65fc6b097e72b45551b84590f9184de024c9e3bc7e4",
+      "bytes": 47880
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/evidence/dependency-audit.json",
+      "sha256": "2e21659ac2f3d5c3ad3e55d07a8113acbdc27dd6d9498eb0415b9f7578175bc0",
+      "bytes": 11542
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/evidence/module-lock-runtime-records.json",
+      "sha256": "2db9f18942f86dc3a657c7c0dcba4c4ed82c1117db6b38906c668254779e8dbe",
+      "bytes": 5934
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/evidence/protobuf-resolved-MODULE.bazel.txt",
+      "sha256": "41b4bf342b86021f7be1ee912cd140ef300fe527c4949b435f037cda74677f90",
+      "bytes": 13085
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/evidence/README.md",
+      "sha256": "7f6e06f74bfe0653fcee4347f7185a6683cb9671994d91bc656349e5ec8ce001",
+      "bytes": 1371
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/evidence/SHA256SUMS",
+      "sha256": "bfc689aa118773a7cdb405480d60bc7e3ddb2c2c760c71b8e09b161e7cf1513a",
+      "bytes": 1326
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/evidence/x86_64-distribution-elf-dynamic.txt",
+      "sha256": "5aee2536f0c3aa4d2c9c22f08353b4c8d8e30920b873025b26a4dabc49d9379a",
+      "bytes": 1386
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/evidence/x86_64-elf-dynamic.txt",
+      "sha256": "5aee2536f0c3aa4d2c9c22f08353b4c8d8e30920b873025b26a4dabc49d9379a",
+      "bytes": 1386
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/evidence/x86_64-link-driver-expanded.json",
+      "sha256": "3247d694c18caf1160940885827920d52ffc7eb5a3ce8bf544dc06f1d86b61e0",
+      "bytes": 52183
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/evidence/x86_64-link.params",
+      "sha256": "9b9aba87e5b742c2ef675bb27c49be1d85bae793c1846a0861dc07731a17a447",
+      "bytes": 46702
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/evidence/zlib-resolved-MODULE.bazel.txt",
+      "sha256": "eec517b5bbe5492629466e11dae908d043364302283de25581e3eb944326c4ca",
+      "bytes": 237
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/Japanese-Usage-Dictionary-2025-01-25-LICENSE.txt",
+      "sha256": "91e74c9b189a60a3f5ba13b4aa28f87f25ee9252a64d547784e72752d089631a",
+      "bytes": 1337
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/Mozc-engine-and-data-NOTICES.txt",
+      "sha256": "72871f3b08bfffc821674412db079003fa2ac7f8469cb2baba3e0b40dd5938df",
+      "bytes": 7870
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/Mozc-LICENSE.txt",
+      "sha256": "44cdd923b91ea9199293abecc2762c70c87dbf1e581c027a94c416368d1a648c",
+      "bytes": 5734
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/NDK-r29-NOTICE.toolchain.txt",
+      "sha256": "789714a9076571c580cf531bdcebec776a4d889c12c3c1108adafc6e4338710a",
+      "bytes": 799639
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/NDK-r29-NOTICE.txt",
+      "sha256": "faf0dc52cf6ce9ab09a04b0c074a378dd2565ee1ed9bc1179d83793bcdba012e",
+      "bytes": 516438
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/Protobuf-34.1-LICENSE.txt",
+      "sha256": "6e5e117324afd944dcf67f36cf329843bc1a92229a8cd9bb573d7a83130fea7d",
+      "bytes": 1732
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/Protobuf-34.1-utf8_range-LICENSE.txt",
+      "sha256": "02de69b64fc36d9e938f418e52723e42f0b2b226d58a9cb3c8dcbdf7059f5074",
+      "bytes": 1091
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/README.md",
+      "sha256": "75b375c338e12e152d3729ca3db2487b1dc8dab91df5c2c59b434cecde21cb5c",
+      "bytes": 1361
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/reference/mozc-credits-en.html",
+      "sha256": "dd7c566382204f448040095e5d3c2f2b5199a1b85d44f427ceb94277dc04af50",
+      "bytes": 34395
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/reference/mozc-dictionary-oss-README.txt",
+      "sha256": "6b1de66bc6fa30e0b45dc45b8c8f6c57bd78aff923c261a3efffac8eb86f7bac",
+      "bytes": 5750
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/reference/ndk-r29-source.properties",
+      "sha256": "716f3518a923198cfab037abb32dc3f1b1f7e9a9dcdcda6b66be5906215d2658",
+      "bytes": 107
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/sources.json",
+      "sha256": "b7b9089d59b17aac505a0d2624f9461305832e3d5751d84b7e71643950169d81",
+      "bytes": 5724
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/licenses/zlib-1.3.1-LICENSE.txt",
+      "sha256": "845efc77857d485d91fb3e0b884aaa929368c717ae8186b66fe1ed2495753243",
+      "bytes": 1002
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/sources.lock.json",
+      "sha256": "77d8c405f54baf3c0e9b73e0a1977b9950234e0156c46ee585a64d557b67fd51",
+      "bytes": 1468
+    },
+    {
+      "path": "app/src/main/assets/licenses/mozc/THIRD_PARTY_NOTICES.md",
+      "sha256": "1a952061dca57f2b87abcc4b07a9851fb7868dc39c1cfac8c2c6b2a132c27d9e",
+      "bytes": 12147
+    },
+    {
+      "path": "tools/mozc/artifacts.json",
+      "sha256": "34fde690991c5be45414e661ee728692fda664023914136991b33d3deabb4112",
+      "bytes": 4097
+    },
+    {
+      "path": "tools/mozc/sources.lock.json",
+      "sha256": "77d8c405f54baf3c0e9b73e0a1977b9950234e0156c46ee585a64d557b67fd51",
+      "bytes": 1468
+    }
+  ],
+  "sourceBuilds": [
+    {
+      "component": "Mozc",
+      "upstream_repository": "https://github.com/google/mozc.git",
+      "upstream_revision": "a4541df29db443b49f81cf54665873b68fde9efa",
+      "build_repository": "https://github.com/PantingEYEs/IPA_Engine.git",
+      "build_branch": "japanese",
+      "build_revision": "76a612924530188bce6fa1c770b1e2e096e27ed8",
+      "source_lock": "tools/mozc/sources.lock.json",
+      "artifact_manifest": "tools/mozc/artifacts.json",
+      "data_version": "24.11.oss",
+      "notices": "app/src/main/assets/licenses/mozc/THIRD_PARTY_NOTICES.md"
     }
   ]
 }

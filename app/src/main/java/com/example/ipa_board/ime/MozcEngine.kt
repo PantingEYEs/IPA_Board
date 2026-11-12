@@ -6,31 +6,20 @@ import com.google.android.apps.inputmethod.libs.mozc.session.MozcJNI
 import com.example.ipa_board.ime.ProtoWire.blob
 import com.example.ipa_board.ime.ProtoWire.value
 import com.example.ipa_board.ime.ProtoWire.text
-import java.io.File
 
 internal class MozcEngine(context: Context) : QueryEngine {
     private val n = ProtoWire::number
     private val m = ProtoWire::message
     init {
         // DIAGNOSTICS: isolate bundled data deployment from native runtime initialization.
-        val dir = AppDiagnostics.atStage(DiagnosticComponent.MOZC, DiagnosticStage.ASSETS) {
-            File(context.noBackupFilesDir, "mozc-v0.1.2").apply {
-                check(mkdirs() || isDirectory)
-                val data = File(this, "mozc.data")
-                if (!data.exists()) {
-                    val temp = File(this, "mozc.data.tmp")
-                    context.assets.open("engines/mozc.data").use { input -> temp.outputStream().use { input.copyTo(it) } }
-                    // DIAGNOSTICS: identify a failed atomic publication without logging private paths.
-                    AppDiagnostics.atStage(DiagnosticComponent.MOZC, DiagnosticStage.PUBLISH) {
-                        check(temp.renameTo(data))
-                    }
-                }
+        val data = AppDiagnostics.atStage(DiagnosticComponent.MOZC, DiagnosticStage.ASSETS) {
+            MozcDataInstaller(MozcBundle.DATA_SHA256, MozcBundle.DATA_SIZE).install(context.noBackupFilesDir) {
+                context.assets.open("engines/mozc.data")
             }
         }
-        val data = File(dir, "mozc.data")
         // DIAGNOSTICS: JNI owns library loading and runtime setup as one initialization operation.
         AppDiagnostics.atStage(DiagnosticComponent.MOZC, DiagnosticStage.INITIALIZE) {
-            MozcJNI.load(dir.absolutePath, data.absolutePath)
+            MozcJNI.load(data.parentFile!!.absolutePath, data.absolutePath, MozcBundle.DATA_VERSION)
         }
         // DIAGNOSTICS: report initialization protocol failures, never command bytes or input text.
         AppDiagnostics.atStage(DiagnosticComponent.MOZC, DiagnosticStage.INITIALIZE) {
@@ -97,7 +86,9 @@ internal class MozcEngine(context: Context) : QueryEngine {
         // The pinned mobile protocol exposes zero-query suggestions after a commit. Reconstruct
         // only transient session context by reverse-converting the nearby Japanese phrase.
         // Incognito remains enabled; this commit is internal and never sent to the editor.
-        send(n(1, 17) + n(2, id) + m(9, n(1, 1))) // SET_REQUEST: zero_query_suggestion=true
+        // Current upstream dispatches dictionary continuation through mixed_conversion.
+        // Keep this request local to prediction; ordinary conversion retains its existing mode.
+        send(n(1, 17) + n(2, id) + m(9, n(1, 1) + n(2, 1))) // SET_REQUEST: zero-query mobile prediction
         send(n(1, 5) + n(2, id) + m(4, n(1, 22) + n(3, 1))) // TURN_ON_IME: Hiragana
         val reverse = send(n(1, 5) + n(2, id) + m(4, n(1, 8) + m(4, previous.toByteArray(Charsets.UTF_8))) + surrounding)
         if (reverse.blob(5).isEmpty()) return emptyList()
