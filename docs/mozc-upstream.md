@@ -39,7 +39,7 @@ Engine Management 显示官方源码修订和 OSS 数据版本，不再将 Libre
 
 固定构建清单记录两个 ABI 的全部 `PT_LOAD` 段按 16384 字节对齐，并检查偏移／地址同余、JNI 导出及动态依赖。仅依赖 Android 系统的 `liblog.so`、`libc.so`、`libm.so`、`libdl.so`；C++ 运行时静态链接，不另行引入 `libc++_shared.so`。链接基线 API 26 不等于 API 26 应用行为已验证。
 
-独立构建仓库曾在关闭页大小兼容模式的 API 36／x86_64 模拟器上运行 6 项真实 16KB Mozc 专项，但当时使用隔离的 IPA Board 副本，并排除了旧 ONNX Runtime Extensions；该结果不代替本分支接入后的验证，也不证明完整应用的 16KB 兼容。当前 Extensions 0.13.0 仍有独立的 4KB 对齐问题，完整应用的发布限制必须继续保留。
+独立构建仓库曾在关闭页大小兼容模式的 API 36／x86_64 模拟器上运行 6 项真实 16KB Mozc 专项，但当时使用隔离的 IPA Board 副本，并排除了旧 ONNX Runtime Extensions；该结果不代替本分支接入后的验证，也不证明完整应用的 16KB 兼容。#51 已用 16KB 对齐的 SentencePiece 专用源码构建替换旧 Extensions，当前来源及验证边界见 [Extensions 接入说明](onnx-extensions-upstream.md)。上述历史排除仅描述当时的 Mozc 测试环境，不是当前打包方案。
 
 本分支的实际主机检查、日文转换／续写／分段、多语言混排与设备恢复结果统一记录在[测试记录](testing.md)。不得把静态 ELF 检查、4KB 运行、16KB 运行或不同 ABI 的结果互相替代。自动设备检查必须使用受保护的回归入口，不能直接安装或运行 instrumentation。
 

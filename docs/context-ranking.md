@@ -8,9 +8,11 @@ Engine Management 的 **Multilingual E5 · Semantic context ranking** 是语义�
 
 LatinIME 继续使用前词 bigram，并读取候选与后词的 bigram；相对独立词概率存在实际提升时，才给具体候选加分。Mozc 使用锁定协议的 `Input.context=6`、`preceding_text=1`、`following_text=2`。Rime 保持完整编码转换，其候选同样进入语义重排。原先“前文有英文就给所有英文候选加分”的规则已删除。
 
-模型为 [Multilingual E5 small](https://huggingface.co/intfloat/multilingual-e5-small/tree/614241f622f53c4eeff9890bdc4f31cfecc418b3)，revision `614241f622f53c4eeff9890bdc4f31cfecc418b3`，使用上游 `model_qint8_avx512_vnni.onnx`，118,346,824 字节。该名称是量化预设，图使用通用 CPU 运算，不是 x86 机器码。Android 运行库固定为 ONNX Runtime 1.23.2 和 Extensions 0.13.0，AAR 随源码保存。
+模型为 [Multilingual E5 small](https://huggingface.co/intfloat/multilingual-e5-small/tree/614241f622f53c4eeff9890bdc4f31cfecc418b3)，revision `614241f622f53c4eeff9890bdc4f31cfecc418b3`，使用上游 `model_qint8_avx512_vnni.onnx`，118,346,824 字节。该名称是量化预设，图使用通用 CPU 运算，不是 x86 机器码。ONNX Runtime 主库保留官方 Android 1.23.2 AAR；Extensions 改为官方 v0.13.0 源码构建的 `onnxruntime-extensions-android-0.13.0-ipa-e5-16kb.aar`，固定于 IPA Engine `ranking` 提交 `dd6f7fb09530a6e0daff5ac8d5987d855a76142e`。两份 AAR 随源码保存，详见 [Extensions 接入说明](onnx-extensions-upstream.md)。
 
 分词使用原模型的 XLM-R SentencePiece 规则及 fairseq token 编号，通过原生 SentencePiece custom op 执行，未自研近似分词器。模型、图、校准向量和运行库的 SHA-256 均锁定。模型分成三个不超过 40 MiB 的资源块，首次使用在 noBackupFilesDir 校验、合并并原子替换；构建无需网络。
+
+当前 `tokenizer.onnx` 只有一个 `ai.onnx.contrib::SentencepieceTokenizer` 自定义算子；E5 模型的 1630 个节点全部属于标准 ONNX 域，由未裁剪的 ONNX Runtime 主库执行。因此 Extensions 只启用 SentencePiece 分词／解码即可覆盖现有图，附带的 `SentencepieceDecoder` 当前未使用。图像、音频等其他 Extensions 算子未打包；更换模型或分词图时需重新检查所需算子，不能把本专用包视为完整 Extensions 发行版。此次替换不改变模型权重、分词图、fairseq 编号、校准向量、池化或排序规则，也不要求清理已部署的相同模型及用户配置。
 
 E5 原始相似度带有明显共同语言偏差，不能直接作为输入概率。用中英日各 24 个固定、对应的广泛概念取中心向量，按最近中心减去基线并重新归一化，减弱这种偏差。上下文和候选均使用 `query:` 前缀及 attention-mask 均值池化。生成工具为 `tools/build_semantic_tokenizer.py`，校准不使用用户文本。前后两侧各保留最多 30 个 token，避免长前文完全挤掉后文。
 
@@ -33,6 +35,12 @@ python3 tools/verify_engine_assets.py
 ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug --offline --console=plain
 python3 tools/regression.py run --suite semantic --serial DEVICE_SERIAL --no-build
 ```
+
+#51 的验收目标为真实 16KB 页进程；静态 ELF 检查、APK 内对齐与实际推理分别确认，不把 4KB 支持追加为本轮条件。独立 `ranking` 构建曾在隔离的 IPA Board 副本完成真实模型兼容验证；该结果与当前工作树接入结果分别记录，后者以[测试记录](testing.md)为准。
+
+### 历史验证记录
+
+以下为迁移前使用旧 Extensions Maven 原包的有日期记录，只说明当时版本和环境；其中的“尚未验证”保留历史含义，不代替 #51 新构建的验收范围。
 
 ARM64 API 35 只读模拟器上，默认关闭不绑定语义服务、真实模型的光标前/后文查询、候选外部编辑后的失效检查已通过。固定示例 `I would like to drink` 更关联 `coffee`，后文 `coffee` 使较低基础排名的 `coffee` 居首，同时保留中日候选。首次部署、加载及两次五词查询合计约 1.36 秒；这个单次记录不是性能 P95，也不代表所有设备或所有输入的语义质量。
 

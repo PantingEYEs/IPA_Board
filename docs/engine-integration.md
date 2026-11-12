@@ -13,12 +13,13 @@
 | 中文资源 | 上述 Trime APK 的 assets/shared | 保留拼音、词典、OpenCC 数据；本项目修改 t2s.json 使用文本词典，并增加禁用学习的 schema patch |
 | LatinIME 英文核心与词库 | [HeliBoard 4.1，revision `9f5bb635c2e8609dcd95dc7506c0c58fba82a52c`](https://github.com/HeliBorg/HeliBoard/tree/9f5bb635c2e8609dcd95dc7506c0c58fba82a52c) | 从官方 APK 原样提取两个 ABI 的 libjni_latinime.so 与 main_en-US.dict；保留四个 JNI 注册类的方法签名，使用本项目的最小只读适配器，替换 easy_en |
 | JNA | [5.17.0](https://github.com/java-native-access/jna/tree/5.17.0) | 原始 Android AAR；ABI 过滤只保留 arm64-v8a/x86_64 |
-| E5 与 ONNX Runtime | 固定 E5 small 模型 revision、ONNX Runtime 1.23.2 / Extensions 0.13.0 | 模型分块、分词图、校准数据和 AAR 随源码保存；详见 [语义排序](context-ranking.md) |
+| E5 与 ONNX Runtime 主库 | 固定 E5 small 模型 revision、ONNX Runtime 1.23.2 官方 Android AAR | 模型分块、分词图、校准数据与主库保持原版；详见 [语义排序](context-ranking.md) |
+| ONNX Runtime Extensions | [微软 v0.13.0 源码 `9d5638b`](https://github.com/microsoft/onnxruntime-extensions/tree/9d5638b0b1f28ed2ca9ef589d5ec3ea86f859432)，[IPA Engine `ranking` 构建 `dd6f7fb`](https://github.com/PantingEYEs/IPA_Engine/tree/dd6f7fb09530a6e0daff5ac8d5987d855a76142e) | 使用 SentencePiece 专用、两 ABI 16KB 对齐的完整 AAR，替换旧 Maven 原包；来源、算子范围与验证边界见 [接入说明](onnx-extensions-upstream.md) |
 | IPA_Engine | 内置 v0.0.1-dev，发布提交 `53eed9518f932934a28aceb4e03a453d545f80b8` | ARM64 DEX/JNI 与预编译压缩词典，独立 `:ipa` 服务；版本及更新合同见 [IPA 资源更新](ipa-updates.md) |
 
 Engine Management 展示已接入的输入功能及版本，也单独标记计划项，不代表瞬时原生加载状态。LatinIME 英文补全、拼写纠错与短上下文下一词预测已接入，个人学习仍属后续计划。已打包的 librime 版本为 1.17.0：x86_64 二进制的 `RimeGetVersion()` 返回该字符串；arm64 库同样包含 1.17.0 版本字符串。下述 1.14.0 是适配器采用的 C API 表定义来源，不是已打包引擎版本。Mozc 显示 Google 官方源码 revision 与配套 OSS 数据版本，不再以第三方输入法应用版本代表引擎版本；OpenCC 的独立版本未在当前锁定资源中确认，界面明确标注来源为 Trime 3.3.12。方案/词典版本来自资源声明，内置排序、计算和验证码规则模块随应用版本显示。
 
-语义排序设置接口为 `ContextRankingSettings`：使用现有 `ipa_board_prefs` 的 `semantic_context_enabled` 布尔值，默认 false，每侧上下文读取上限 256 个 UTF-16 单元。Engine Management 的 Multilingual E5 开关是此能力的唯一开关，并提供延迟提示。关闭时不绑定语义服务、不部署或加载模型；关闭已启用的开关会取消请求、解绑并释放模型。普通候选始终先显示。详见 [实验性上下文语义排序](context-ranking.md)。
+语义排序设置接口为 `ContextRankingSettings`：使用现有 `ipa_board_prefs` 的 `semantic_context_enabled` 布尔值，默认 false，每侧上下文读取上限 256 个 UTF-16 单元。Engine Management 的 Multilingual E5 开关是此能力的唯一开关，并提供延迟提示；来源信息分别标明 E5 模型修订、ONNX Runtime 主库版本和 Extensions 的官方源码／IPA Engine 构建，不把专用扩展包称为新模型或完整算子发行版。关闭时不绑定语义服务、不部署或加载模型；关闭已启用的开关会取消请求、解绑并释放模型。普通候选始终先显示。详见 [实验性上下文语义排序](context-ranking.md)。
 
 Rime function table顺序来自 librime 1.14.0 的 rime_api.h。适配器限定 64 位 ABI，并在访问函数前检查表大小。Mozc 的小型 wire reader 对应当前 Google revision 的 commands.proto / candidates.proto，支持该协议使用的 group、嵌套消息、未知字段跳过及输入长度限制。新版续写请求同时设置 `zero_query_suggestion` 与 `mixed_conversion`；历史协议及旧部署目录只保留于[归档](archive/mozc-libre-integration.md)。
 
@@ -62,13 +63,13 @@ python3 tools/regression.py run --suite full --serial DEVICE_SERIAL --no-build
 - 首次 Rime 部署需编译词典，界面保持可用并显示加载状态；后续复用部署结果。
 - 候选当前为有界列表：Rime 检查前 40 个原生候选，Mozc 最多 60 个，LatinIME 最多 18 个。展开显示这一批结果，尚无滚动到末尾继续向引擎分页。
 - 排序采用来源内排名、原文匹配、具体 bigram 关联与候选类型等启发式特征，另有可选的实验性语义重排；不是经过跨语言语料校准的概率。尚无持久化个性学习，也没有无分隔整串跨语言分词。
-- Rime 与当前自行构建的 Mozc 两种 ABI 均为 16KB ELF 对齐；ONNX Runtime Extensions 0.13.0 AAR 中的原生库仍为 **4KB 对齐**。Mozc 独立构建的静态与实际 16KB 验证不证明完整应用兼容；本分支接入结果另见 [Mozc 验证边界](mozc-upstream.md#16kb-与验证边界)和[测试记录](testing.md)。Extensions 需在独立任务中重建并验证，不能通过修改 ELF 头伪造兼容性。
+- Rime、当前自行构建的 Mozc 及 SentencePiece 专用 Extensions 两种 ABI 均为 16KB ELF 对齐。Extensions 来自官方源码重编译，原 ONNX Runtime 1.23.2 主库保持不变；#51 以真实 16KB 页环境为验收目标。静态检查、独立构建与当前应用接入分别验证，见 [Mozc 验证边界](mozc-upstream.md#16kb-与验证边界)、[Extensions 验证边界](onnx-extensions-upstream.md#16kb-与验证边界)和[测试记录](testing.md)。
 - 当前使用 Trime 发布的组合 JNI 库，其中包含 GPL 代码，不能仅将其视为 BSD 的 librime。许可证文本和原始声明在 app/src/main/assets/licenses。对外分发需按实际组合依赖提供相应源码/许可材料；若要求宽松许可发行，需独立构建纯 librime/OpenCC 并替换该二进制。
-- HeliBoard 发布核心及适配的上游声明包含 Apache-2.0 与 GPL-3.0；两份许可证已保存，官方源码归档的 SHA-256 与固定 revision 已记录。未包含其图标或外部手势库。LatinIME 两个 ABI 的 ELF LOAD 对齐均为 16KB；这不改变完整应用仍受 Extensions 及未执行设备配置限制的事实。
+- HeliBoard 发布核心及适配的上游声明包含 Apache-2.0 与 GPL-3.0；两份许可证已保存，官方源码归档的 SHA-256 与固定 revision 已记录。未包含其图标或外部手势库。LatinIME 两个 ABI 的 ELF LOAD 对齐均为 16KB；各库的静态对齐仍不能代替完整应用在目标设备配置上的运行验证。
 
-上游原生构建说明：[Trime 源码](https://github.com/osfans/trime/tree/v3.3.12)、[Mozc 固定源码构建](https://github.com/PantingEYEs/IPA_Engine/tree/76a612924530188bce6fa1c770b1e2e096e27ed8)。当前 Mozc 完整许可及实际构建依赖声明随 APK 保存在 `assets/licenses/mozc/`。
+上游原生构建说明：[Trime 源码](https://github.com/osfans/trime/tree/v3.3.12)、[Mozc 固定源码构建](https://github.com/PantingEYEs/IPA_Engine/tree/76a612924530188bce6fa1c770b1e2e096e27ed8)、[Extensions 固定源码构建](https://github.com/PantingEYEs/IPA_Engine/tree/dd6f7fb09530a6e0daff5ac8d5987d855a76142e)。当前 Mozc 完整许可及实际构建依赖声明随 APK 保存在 `assets/licenses/mozc/`；Extensions 的许可原文与精确来源保存在 `assets/licenses/onnx-extensions/` 及新 AAR 中，详见 [Extensions 许可与归档](onnx-extensions-upstream.md#许可与旧资料处理)。
 
-以下有日期的旧验证章节保留当时使用旧引擎的事实，不是 #50 新构建的验收记录。旧来源详情已[归档](archive/mozc-libre-integration.md)。
+以下有日期的旧验证章节保留当时使用旧引擎的事实，不是 #50／#51 新构建的验收记录。旧 [Mozc 来源](archive/mozc-libre-integration.md)与 [Extensions 来源](archive/onnx-extensions-maven-integration.md)已分别归档。
 
 ## 英文升级验证记录（2026-10-02）
 

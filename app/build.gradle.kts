@@ -68,7 +68,7 @@ tasks.configureEach {
 
 dependencies {
     implementation(files("libs/jna-5.17.0.aar"))
-    implementation(files("libs/onnxruntime-android-1.23.2.aar", "libs/onnxruntime-extensions-android-0.13.0.aar"))
+    implementation(files("libs/onnxruntime-android-1.23.2.aar", "libs/onnxruntime-extensions-android-0.13.0-ipa-e5-16kb.aar"))
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
     implementation(libs.material)

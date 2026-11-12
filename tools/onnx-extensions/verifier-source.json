@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/PantingEYEs/IPA_Engine",
+  "branch": "ranking",
+  "commit": "dd6f7fb09530a6e0daff5ac8d5987d855a76142e",
+  "path": "scripts/verify_artifacts.py",
+  "sha256": "d263d76730293b1c9b4fa7e0073f95a4ce2cc8b011189c117cd398ec3f69f7c9",
+  "method": "Unmodified byte-for-byte copy; imported by tools/verify_onnx_extensions.py"
+}

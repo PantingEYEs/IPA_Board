@@ -10,6 +10,7 @@
 | [更新日志](../CHANGELOG.md) | 开发中及已发布版本的变更 |
 | [引擎接入与来源](engine-integration.md) | 已接入引擎、固定资源、开关、生命周期与限制 |
 | [Mozc 官方源码接入](mozc-upstream.md) | 固定构建、OSS 词典、迁移与 16KB 验证边界 |
+| [ONNX Runtime Extensions 官方源码接入](onnx-extensions-upstream.md) | SentencePiece 专用构建、E5 兼容资源、许可与 16KB 验证边界 |
 | [地球拼音](terra-pinyin.md) | 方案选择、声调键、预编辑切换及独立部署 |
 | [全半角互换](character-width.md) | 单次／锁定模式、选区操作、候选与字符边界 |
 | [App 内蓝牙键盘](bluetooth-remote-keyboard.md) | 系统输入法、两种发送模式、连接生命周期与标准按键范围 |
@@ -43,4 +44,5 @@
 - [0.0.2 开发计划与历史测试审计](archive/0.0.2-development-plan.md)
 - [早期多语言混输设计](archive/ime-multilingual-plan.md)：包含已变更或未实现的设想，不作为现行接口规范。
 - [旧 Mozc APK 接入来源](archive/mozc-libre-integration.md)：#50 迁移前的 Libre Japanese Input 来源、哈希与部署行为，不再作为当前资源入口。
+- [旧 Extensions Maven 接入来源](archive/onnx-extensions-maven-integration.md)：#51 迁移前的 0.13.0 原包、哈希及 4KB 对齐限制，不再作为当前分词运行库来源。
 - [0.0.1 Git 拓扑修复记录](archive/git-topology-repair-plan.md)：保留历史引用，不作为当前操作指南。

@@ -6,7 +6,9 @@ import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.ipa_board.ime.*
+import org.junit.After
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.util.concurrent.CountDownLatch
@@ -16,6 +18,33 @@ import java.util.concurrent.TimeUnit
 class SemanticContextIntegrationTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
+
+    // The coordinator waits for every enabled native backend. IPA is ARM64-only;
+    // keep the EN/ZH/JA backends enabled when testing semantic integration on x86.
+    private var changedIpaPreference = false
+    private var hadIpaPreference = false
+    private var previousIpaPreference = true
+
+    @Before fun configureSupportedNativeBackends() {
+        if (System.getProperty("os.arch") in listOf("aarch64", "arm64")) return
+        instrumentation.runOnMainSync {
+            val preferences = EngineSettings.preferences(context)
+            hadIpaPreference = preferences.contains(EngineFeature.IPA_CONVERSION.key)
+            previousIpaPreference = EngineSettings.enabled(context, EngineFeature.IPA_CONVERSION)
+            changedIpaPreference = true
+            assertTrue(preferences.edit().putBoolean(EngineFeature.IPA_CONVERSION.key, false).commit())
+        }
+    }
+
+    @After fun restoreNativeBackendPreference() {
+        if (!changedIpaPreference) return
+        instrumentation.runOnMainSync {
+            assertTrue(EngineSettings.preferences(context).edit().apply {
+                if (hadIpaPreference) putBoolean(EngineFeature.IPA_CONVERSION.key, previousIpaPreference)
+                else remove(EngineFeature.IPA_CONVERSION.key)
+            }.commit())
+        }
+    }
 
     @Test fun optOutDoesNotDeployOrBindSemanticModel() {
         val prefs = ContextRankingSettings.preferences(context)

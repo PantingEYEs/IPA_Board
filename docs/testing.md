@@ -200,6 +200,27 @@ python3 tools/regression.py run --suite status-menus --serial DEVICE_SERIAL --no
 
 测试只操作自有编辑器及合成页组、颜文字，窗口定位限于本进程；仍须通过备份恢复入口。菜单局部改动优先运行此专项，按影响范围补充验证，不要求每一步重复全量设备回归。
 
+## ONNX Runtime Extensions 专项
+
+先完成相关 JVM、工具测试、引擎资源校验、debug／AndroidTest 构建与 lint，再选择专用的真实 16KB 页模拟器，通过保护入口执行：
+
+```sh
+python3 tools/regression.py run --suite onnx-extensions --serial DEVICE_SERIAL --no-build
+```
+
+#51 仅以 16KB 页环境作为本轮验收目标，不默认追加 4KB 或全量回归。记录实际测试进程的页大小、架构和 API；严格验收还需核对编译后清单禁用页大小兼容模式、两份 APK 的 ZIP 对齐，以及实际打包 ELF 的 LOAD／RELRO。静态检查通过或模拟器镜像名称不能代替进程报告 `16384`。不得为通过此专项排除 Extensions 或其他原生库。固定构建与不变模型资源见 [Extensions 接入说明](onnx-extensions-upstream.md)。
+
+`OnnxExtensionsCompatibilityTest` 是本仓库永久登记于 `semantic`／`full` 的八项设备用例，覆盖以下合同：
+
+- 真实 JNI 注册入口、模型／分词资源身份和进程信息；缺少自定义算子注册时，真实分词图应明确失败。
+- 17 组多语言、Unicode、空白和长输入的分词结果与固定旧包基线逐 token 一致；真实 E5 的中英日及后文查询对照 22 个已捕获分数，绝对误差不超过 `0.0001`。
+- 立即／中途取消不返回部分结果，后续正常查询仍可用；空上下文保持中性，长前文不挤掉后文影响。
+- 语义服务绑定失败保留完整普通候选；使用测试自有目录制造部署阻塞和损坏模型，检查明确失败阶段及恢复后的正常推理。
+
+`semantic` 同时保留四项既有 `SemanticContextIntegrationTest`，检查默认关闭、真实服务与中英日候选保留、实时关闭及过期结果拒绝、两侧编辑器快照。`onnx-extensions` 再复用 `MultilingualEngineTest`、`EngineManagementTest`、`EngineVersionLookupContractTest`、`EngineSettingsContractTest`，覆盖原生混排与管理配置；当前为六类 38 项，具体登记以套件清单为准。x86 测试夹具仅按实际进程架构关闭不受支持的 ARM64-only IPA 后端，仍执行 Rime、Mozc、LatinIME 和 E5，不改变应用打包内容。
+
+固定旧包基线只包含合成输入，来自独立 `ranking` 构建的兼容验证；不得采集用户输入作为测试基线。独立构建曾执行的 12 项与本仓库本轮 38 项分开记账，不因共用基线就沿用旧通过结论。所有临时状态仍在测试内恢复，并由外层工具完成软件与私有数据备份、回滚校验及备份删除。
+
 ## 套件及选择依据
 
 清单由 [regression-suites.json](../tools/regression-suites.json) 管理。所有包含测试的设备类必须登记；`full` 是各主套件的并集，`smoke` 是其中的快速子集。校验禁止遗漏、重复归属和不存在的类。增加类时同步更新清单，不用手工维护总用例数。
@@ -212,7 +233,8 @@ python3 tools/regression.py run --suite status-menus --serial DEVICE_SERIAL --no
 | `engines` | 实际 Rime/LatinIME/Mozc/注音：转换、简繁、纠错、混输、上下文预测、启停与回退 | 引擎适配、词库、native 依赖或候选逻辑变更 |
 | `ui` | 设置/管理页、编辑器、清空撤销、长按滑动、候选尺寸/展开、灰色控件、窗口及页面分组 | 界面/资源/触摸逻辑变更 |
 | `e2e` | 系统 IME 窗口中用真实按键输入、选择候选、切页/展开/返回、Emoji 提交 | IME/组合输入/页面导航变更及发布前 |
-| `semantic` | 真实 E5 模型加载、光标前后文、失效结果拒绝、实时关闭/降级 | 语义模型、排序、协调器生命周期变更 |
+| `semantic` | 真实 Extensions 分词／JNI、E5 模型加载与固定输出对照、光标前后文、失效结果拒绝、实时关闭/降级 | 分词运行库、语义模型、排序、协调器生命周期变更 |
+| `onnx-extensions` | 复用 semantic 与原生多语言、管理页、版本及设置合同，验证源码构建 Extensions 的应用接入 | Extensions AAR、来源信息或相关资源／加载接口变更 |
 | `full` | 以上所有设备主套件 | 集成前、升级引擎/词库后、发布前 |
 
 IPA 接入增加 `ipa` 套件，覆盖离线下载事务、哈希/路径拒绝、引擎与词典独立切换、失败保留旧资源、真实 DEX/JNI 多语言候选及管理页异步生命周期。三个类分别登记于 platform、engines、ui，并纳入 full；真实引擎用例仅支持当前 ARM64 包，其他 ABI 的跳过必须单独报告。
@@ -288,7 +310,7 @@ Shift / Caps Lock 指示由 `KeyboardWindowTest`（ui/full）验证真实控制�
 | --- | --- |
 | 普通文本、多行、密码、数字及无 composing 的编辑器 | 正确上屏/删除/光标；密码等受限框不读取上下文、不显示旧候选。使用测试编辑器及合成文字。 |
 | API 35 与目标 API 36；ARM64 与 x86_64 | 真实引擎/模型加载及窗口行为。未执行的平台单独标为待验。 |
-| 16KB 页设备 | native 依赖真实加载验证；资源哈希或 ELF 对齐检查不等于运行通过。现有 Mozc/Extensions 对齐限制见引擎文档。 |
+| 16KB 页设备 | native 依赖真实加载验证；资源哈希、ELF／ZIP 对齐检查不等于运行通过。[Mozc](mozc-upstream.md#16kb-与验证边界)与 [Extensions](onnx-extensions-upstream.md#16kb-与验证边界)分别记录构建和应用接入边界，未执行的平台不能互相替代。 |
 | 更新安装及旧配置 | 新旧 APK 升级、原布局/长按/页组/开关/颜文字及 Emoji 目录保留；回滚后原 APK 与数据恢复。正式签名 release 单独验证，debug 通过不代表 release 通过。 |
 | 短信本地检测/Android autofill、系统剪贴板与网络 Emoji 更新 | 合成来源、权限拒绝、误匹配、敏感内容、离线/损坏下载；SMS OTP 引擎与自动复制双开关、本地与 autofill 模式互斥、拒绝权限不重复复制。执行前需确认范围并补对应隔离/恢复能力，不使用真实短信和私人剪贴板。 |
 
@@ -937,3 +959,14 @@ yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyiiii
 - 核对 **1180 项构建输入**与当前工作树一致。最终预览包恢复完整正常依赖，包含两个 ABI 的配套 Mozc 与词典、新许可，并保留正常 ONNX Extensions；未混入严格测试构建的排除设置。按维护者要求保留数据更新独立包 `com.example.ipa_board.preview`，版本 `0.0.4-dev-issue50-preview`。新旧签名一致，安装后 APK SHA-256 为 `3c7bc89e41502ddb8d91c6f3d7513ed23a34ac8553d540d231e5eaf834558694`；预览版 UID、原版安装元数据及默认输入法保持不变。没有卸载、清数据或主动启动输入法；ARM64 真机上的新引擎运行与体验留待维护者实测。改动尚未提交，未关闭 Issue。
 
 后续同类验证入口为 `python3 tools/regression.py run --suite mozc-upstream --serial DEVICE_SERIAL --no-build`；仅复验运行合同时使用 `--suite mozc-runtime`。仍须先完成对应主机检查，不能直接安装或运行 instrumentation。严格 16KB 测试的依赖隔离属于本次专用构建说明，不应偷偷改变普通 APK 的功能范围。
+
+## 2026-11-11：#51 官方源码构建 ONNX Runtime Extensions 接入
+
+- 在 GitHub 创建的 `51-maintenance-build-onnx-runtime-extensions-with-16-kb-page-compatibility` 分支接入 IPA_Engine `ranking@dd6f7fb` 的固定 AAR，基础提交为 `a2e3bc8`。Extensions 官方源码固定为 v0.13.0／`9d5638b0b1f28ed2ca9ef589d5ec3ea86f859432`；只启用现有分词图所需的 SentencePiece 扩展，ONNX Runtime 1.23.2 主库、完整 E5 权重、分词图与校准向量保持不变。固定产物、许可及旧来源归档见 [Extensions 接入说明](onnx-extensions-upstream.md)。本记录是当前应用接入后的专项，不把独立构建仓库此前的 12 项通过结果当作本轮结果。
+- 主机专项 **13 项工具测试、34 项 JVM 全部通过**。JVM 包括候选排序 4、查询策略 6、英文上下文边界 3、英文上下文 2、混排分段 12、分段消费 3、引擎运行状态 4，0 失败／错误／跳过。debug 与 AndroidTest 构建、套件登记、引擎资源哈希和 E5 重组校验通过。Lint 通过，保留 **296 条警告**、**129 项既有基线错误过滤**及 **7 项不再匹配的旧基线条目**，未修改基线。
+- 两种 ABI 的四份 Extensions 原生库及 AAR 内容通过固定校验器检查，核对实际产物哈希、16KB LOAD／RELRO、JNI 导出及系统动态依赖。实际 debug APK 中 **19 个**原生条目、测试 APK 中 **1 个** ELF 全部通过 16KB 检查；两份 APK 均通过 `zipalign -c -P 16 4`。编译后清单确认 `pageSizeCompat=disabled`。本次保留所有正常原生依赖，没有沿用 #50 严格测试中排除旧 Extensions 的临时设置。
+- 在专用 **Android 16／API 36／x86_64** 模拟器执行 `onnx-extensions`，报告 `8ad2add8-8cf5-458c-9c82-e3e458c1fd90`：六类 **38/38 通过、0 失败、0 跳过**，`success=true`、`restored=true`。测试进程报告真实页大小 **16384 字节**和实际架构 `x86_64`，不使用兼容模式运行作为通过依据。
+- 本仓库新增的八项永久运行用例通过，包含真实 JNI 注册、分词与 E5 分数对照、取消与缓存恢复、空／长上下文、不可用服务的候选回退、受控部署与模型失败后的恢复。**17 组 token 全部与旧包基线一致**；**22 个 E5 分数**均在 `0.0001` 绝对误差阈值内，本轮采集的最大绝对差为 **`3.78955841706663e-09`**。既有语义集成、原生中英日混排、Engine Management 来源展示及版本／配置合同一并通过。
+- 核对 **1227 项 app／tools／Gradle 构建输入**与当前工作树一致；隔离的严格测试副本只在应用清单增加 `pageSizeCompat=disabled`，没有修改正常依赖或语义产品逻辑。分词、分数与环境证据来自本轮固定合成输入，未采集用户输入或私人配置。
+- 全程通过 `tools/regression.py run` 完成原软件与私有数据备份、恢复和校验；备份已删除，结束后的待恢复列表为空，专用模拟器及独立 ADB 已关闭。没有额外执行可选往返演练，`roundtrip_verified=false` 保留原义。自动回归未操作日用手机，也未运行 4KB、全量设备回归或 ARM64 真机专项；其他 API／ABI、正式签名 release 及广泛编辑器／语料仍未据此标为通过。
+- 专项结束后，按维护者本次授权保留数据持续更新独立包 `com.example.ipa_board.preview`，版本为 `0.0.4-dev-issue51-preview`。安装前核对新旧证书相同，安装后 APK SHA-256 为 `29180a27e47830d97f1c46709241be77ea1f931e8102acc0cf274950fc66ec1b`，与本次产物一致；预览版 UID、原版安装元数据及默认输入法均保持不变。没有卸载、清数据、主动启动应用或切换输入法。预览包内 19 个原生条目逐项与严格测试包哈希一致，16KB ZIP 对齐通过，清单恢复正常配置；独立包名等预览配置仅存在于被忽略的构建副本。此项持久更新不替代上述受保护回归，ARM64 真机运行与体验留待维护者手工实测。改动尚未提交，未关闭 Issue。

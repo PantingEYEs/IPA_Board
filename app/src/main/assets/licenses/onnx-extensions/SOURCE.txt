@@ -1,0 +1,11 @@
+ONNX Runtime Extensions 0.13.0, SPM-only Android build for IPA Board E5
+Upstream: https://github.com/microsoft/onnxruntime-extensions/tree/9d5638b0b1f28ed2ca9ef589d5ec3ea86f859432
+Build: https://github.com/PantingEYEs/IPA_Engine/tree/dd6f7fb09530a6e0daff5ac8d5987d855a76142e
+Build branch: ranking
+Artifact: onnxruntime-extensions-android-0.13.0-ipa-e5-16kb.aar
+SHA-256: 20620659f2695dc5e36cca7f339e64c606f36413b9a42c144eac0aace73cecc6
+ABIs: arm64-v8a, x86_64; Android NDK r29; 16KB ELF alignment
+Required custom operator: ai.onnx.contrib::SentencepieceTokenizer
+Java/JNI symbol-name correction only; tokenizer operator implementation unchanged.
+ONNX Runtime Android 1.23.2 and existing E5 resources are retained separately.
+See sources.json for byte-exact notices and resolved component provenance.

@@ -51,8 +51,8 @@ object EngineCatalog {
         EngineCategory("ranking", "Candidate Ranking Engines", listOf(
             EngineInfo("IPA Board · CandidateRanker", "Built-in · IPA Board $appVersion",
                 detail = "Input-compatible multilingual ranking with dictionary associations; no surrounding-language bonus.", feature = EngineFeature.RANKING, offBehavior = "Off: preserve engine source order and remove duplicates. Semantic ranking is controlled separately."),
-            EngineInfo("Multilingual E5 · Semantic context ranking", "e5-small · int8 · rev 614241f622f5 · ONNX Runtime 1.23.2",
-                detail = "Experimental, opt-in offline reranking with both sides of the cursor; preserves language diversity.", feature = EngineFeature.SEMANTIC, offBehavior = "Off: use ordinary candidates without semantic inference.", versionSources = listOf(EngineVersionSource.E5, EngineVersionSource.ONNX_RUNTIME))
+            EngineInfo("Multilingual E5 · Semantic context ranking", "e5-small · int8 · rev 614241f622f5 · ONNX Runtime 1.23.2 · Extensions 0.13.0 · IPA build dd6f7fb",
+                detail = "Experimental, opt-in offline reranking with both sides of the cursor; preserves language diversity. Source-built SentencePiece tokenizer.", feature = EngineFeature.SEMANTIC, offBehavior = "Off: use ordinary candidates without semantic inference.", versionSources = listOf(EngineVersionSource.E5, EngineVersionSource.ONNX_RUNTIME))
         )),
         EngineCategory("calculation", "Calculation Engines", listOf(
             EngineInfo("IPA Board · CalculatorEvaluator", "Built-in · IPA Board $appVersion", feature = EngineFeature.CALCULATOR, offBehavior = "Off: omit calculation results; expressions can still be entered literally.")
