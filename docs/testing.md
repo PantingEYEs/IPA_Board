@@ -141,19 +141,23 @@ JVM 使用两份独立构造的小型 v2／v3 格式样本，说明见 `app/src/
 
 完成主机检查后，运行 `python3 tools/regression.py run --suite segmented-composition --serial DEVICE_SERIAL --no-build`。该套件经过同样的备份／恢复流程，覆盖真实 Rime 拼音／注音与 Mozc 首段范围、完整候选、预输入光标与退格、拒绝编辑接口的回退、过期结果，以及真实 IME 候选 IPC 和前缀删除。全部编辑器文本均为测试拥有的合成数据。
 
-`ImeTestDriver.select` 默认继续要求整段上屏；分段用例必须明确传入 `expectedComposingStart`，断言仅剩余后缀待输入。旧的“任何移动光标都结束预输入”断言已改为 #38 的保留与编辑合同。Rime 旧路径对照只比较完整覆盖候选，新增分段候选另行验证，不将候选数量增加误报为旧路径不一致。
+`ImeTestDriver.select` 默认继续要求整段上屏；分段用例必须明确传入 `expectedComposingStart`，断言仅剩余后缀待输入。旧的“任何移动光标都结束预输入”断言已改为 #38 的保留与编辑合同。Rime 完整与分段候选分别验证精确覆盖范围；当前不再运行旧重放路径对照。
 
-## Rime 批量接口与重放路径对照
+## 官方源码 Rime／OpenCC 专项
 
-安装 NDK `28.0.13004108` 与 CMake `3.22.1` 后，按上面的离线主机检查构建两个 ABI 的桥接与 debug/AndroidTest APK，再执行：
+先运行 `python3 tools/verify_rime.py`、相关 JVM／工具测试、套件校验、debug／AndroidTest 构建与 lint。正常应用构建直接使用锁定的双 ABI AAR，不再需要编译独立候选桥接或安装旧 NDK／CMake。源码、构建身份和资源来源见 [Rime 接入说明](rime-upstream.md)。
 
 ```sh
-python3 tools/regression.py run --suite rime-batch --serial DEVICE_SERIAL --no-build
+python3 tools/regression.py run --suite rime-upstream --serial DEVICE_SERIAL --no-build
 ```
 
-该套件包含 `RimeBatchTest`、现有多语言与注音合同及 `CandidateTimingTest`。测试侧保留优化前的逐候选重放作为参考，不进入生产路径。结果对照覆盖拼音、注音、声调、分隔符、简繁开关、部分候选、非法 session、原生输入不一致与读取后状态保持。前置拼音引号经维护者确认，按单次真实输入的方向统一保留，不要求复现旧重放路径逐候选切换引号的副作用。
+仅定位资源升级与旧配置保护时，可选择 `rime-migration` 的 3 项迁移检查。改动回归工具后仍按执行步骤加 `--verify-roundtrip` 验证备份恢复，不必重跑整个引擎专项。
 
-同一真实 Rime 运行时下，对 `yes`、`shide`、`soudesu` 各预热两条路径，随后各测 20 对完整适配器查询，交替先后顺序并断言候选一致。输出 `rime-batch-timing.jsonl`、CSV 和汇总 JSON；汇总给出中位数、p95 与配对中位数加速比。只有匹配轮次且数量一致的样本才计算加速比；候选正文一致性由设备断言负责，数量相同本身不证明结果一致。不设固定速度通过门槛，数据不代表实体设备或冷启动性能。完整候选流水线数据仍输出到 `candidate-timing-*`，设备备份与恢复规则保持不变。
+专项使用实际新 JNI 和现有候选流水线，覆盖朙月／地球拼音、地球声调、注音、简繁转换、完整与部分消费、已有前缀、查询后状态释放、无学习、旧配置与方案迁移、缺失资源隔离及多语言混排。精确输入范围由同一源码构建的原生候选一次读取；不再保留旧指针函数表或逐候选重放作为可执行参考，也不以固定候选排名代替语言能力断言。
+
+`rime-batch` 仍可单独检查批量候选行为；完整流水线性能继续使用 `candidate-timing`。旧 JNA／批量桥接 A/B 报告解析器仅归档在 `tools/archive/rime_legacy_timing.py`，不再被当前回归入口调用。下文历史报告只说明对应旧版本，不代表新构建提速比例。
+
+本轮以专用 API 36／x86_64 的真实 16KB 页环境验收，禁用页大小兼容模式并核对实际进程页大小；同时静态验证 arm64-v8a 与 x86_64 ELF、配套 JNI／构建身份、词典和许可哈希、APK ZIP 对齐。静态 ARM64 校验不能写成真机运行通过。所有设备操作仍执行外部备份、恢复校验和删除备份，不在日用手机运行自动回归。
 
 ## 全半角三态专项
 
@@ -970,3 +974,16 @@ yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyiiii
 - 核对 **1227 项 app／tools／Gradle 构建输入**与当前工作树一致；隔离的严格测试副本只在应用清单增加 `pageSizeCompat=disabled`，没有修改正常依赖或语义产品逻辑。分词、分数与环境证据来自本轮固定合成输入，未采集用户输入或私人配置。
 - 全程通过 `tools/regression.py run` 完成原软件与私有数据备份、恢复和校验；备份已删除，结束后的待恢复列表为空，专用模拟器及独立 ADB 已关闭。没有额外执行可选往返演练，`roundtrip_verified=false` 保留原义。自动回归未操作日用手机，也未运行 4KB、全量设备回归或 ARM64 真机专项；其他 API／ABI、正式签名 release 及广泛编辑器／语料仍未据此标为通过。
 - 专项结束后，按维护者本次授权保留数据持续更新独立包 `com.example.ipa_board.preview`，版本为 `0.0.4-dev-issue51-preview`。安装前核对新旧证书相同，安装后 APK SHA-256 为 `29180a27e47830d97f1c46709241be77ea1f931e8102acc0cf274950fc66ec1b`，与本次产物一致；预览版 UID、原版安装元数据及默认输入法均保持不变。没有卸载、清数据、主动启动应用或切换输入法。预览包内 19 个原生条目逐项与严格测试包哈希一致，16KB ZIP 对齐通过，清单恢复正常配置；独立包名等预览配置仅存在于被忽略的构建副本。此项持久更新不替代上述受保护回归，ARM64 真机运行与体验留待维护者手工实测。改动尚未提交，未关闭 Issue。
+
+## 2026-11-11 官方源码 Rime／OpenCC 接入（#49）
+
+基于 `51072bf` 的 #49 未提交工作树，使用 IPA_Engine `chinese` 固定提交 `073aabe899fdcbdd195e2e9199fb25c43a574f47` 的 librime 1.17.0／OpenCC 1.4.2 AAR、24 份官方兼容资源及配套 notices。完整 native build ID 为 `08a2c62169dfdbea884ac4a3210ead026d1552a43149e5d196f8584e36ab7665`。移除 Trime 组合二进制、JNA、旧 Kotlin 函数表与独立 C++／Boost 候选桥接；原始构建说明与旧 A/B 报告解析入口归档。新部署代际保留旧私有目录，不初始化用户配置。
+
+- 主机：Linux 上 **80 项工具测试**、**48 项相关 JVM 测试**通过；新增 Rime 验证覆盖真实 ELF 布局／导出检查、构建身份、配套 Java 接口、资源与通知、旧 JNA／库残留。审阅后增加 debug source set 残留反例，相关 6 项补跑通过。套件登记、144 项引擎资源哈希及语义模型重组通过；debug／AndroidTest 构建和 lint 成功。Lint 报告 296 项警告、129 项既有错误由原基线过滤，另 7 项原基线已不再匹配；本轮未改写基线。工具测试依赖 POSIX，最终结果以 Linux 执行为准。
+- 严格 16KB：专用 API 36／x86_64 只读模拟器，运行时实际页大小 `16384`，native identity 与随包记录一致；严格测试副本的编译清单禁用页大小兼容模式。正式包全部 **15 个原生条目**及测试包 1 个原生测试资源完成 ELF LOAD／RELRO 检查，两包均通过 `zipalign -c -P 16 4`；未排除其他引擎以规避验证。
+- 保护入口执行 `rime-upstream`，报告 `9723edc5-c886-43f5-8b56-fa7cfe7efb94`：**17 类 105/105 通过**，零失败、零跳过。包括 15 项真实 JNI／资源合同、3 项迁移与缓存修复、现有批量候选、朙月／地球拼音与声调、注音、简繁、部分消费和原文后缀、无学习、失效句柄、Unicode／参数错误、故障隔离、多语言混排、替代文字、配置／页面绑定及 Engine Management 版本展示和离线回退。
+- 迁移样例仅使用测试自有旧目录及合成配置，核对拼音方案／替代声调、Shortcut、页面绑定、未知未来配置、旧引擎文件逐项不变。缺少方案仍保留原文、拒绝过期结果且其他方案可用；缺失／空 OpenCC 文件或损坏注册配置不能被旧 `.ready` 掩盖。没有读取真实用户输入、剪贴板或其他应用文本。
+- `success=true`、`restored=true`；原 APK 与私有数据恢复并校验后删除备份，最终待恢复列表为空，专用模拟器及其独立 ADB 服务已关闭。由于旧计时报表入口归档涉及回归脚本，另通过 `rime-migration --verify-roundtrip` 补做往返演练：报告 `85a57564-8ae9-418b-9d1e-8495f0e9e914`，合成 APK／CE+DE 数据备份恢复往返验证成功，迁移 3/3 再次通过，`roundtrip_verified=true`、`restored=true`，内外层备份均删除。未重复完整引擎专项、全量设备回归或 Android 4KB 页验证。ARM64 完成静态双 ABI 检查，其真机运行和体验由维护者实测；其他 API、release/AAB 和完整编辑器矩阵未验证。
+- 核对 **568 项有效构建输入**与工作树一致，仅严格测试清单有预期差异。按本次授权保留数据持续更新独立包 `com.example.ipa_board.preview`，版本 `0.0.4-dev-issue49-preview`。新旧签名一致，预览包 15 个原生条目逐项匹配已测包，24 份 Rime 资源逐字节匹配固定来源，旧库及旧专项通知不再打包；正常清单和 16KB ZIP 对齐通过。安装后 APK SHA-256 为 `824ce53f819b208863b4937f93df3e781f01e7a389ad2f237ad79c60dd196401`，预览版 UID、原版安装元数据及默认输入法保持不变。未卸载、清数据、主动启动应用或切换输入法。改动未提交，Issue 保持开放。
+
+- 收尾验收：维护者对 `0.0.4-dev-issue49-preview` 实测后报告“使用上没有任何问题”，授权完成 #49 并合并。该反馈作为真实设备人工使用结果记录，不外推为其他 ABI/API、编辑器或 release/AAB 的完整验证矩阵。收尾复核 568 项构建输入与已通过专项的副本逐字节一致，仅补充文档；未重复全量测试。

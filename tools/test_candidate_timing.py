@@ -8,6 +8,7 @@ import unittest
 from contextlib import redirect_stdout
 
 import candidate_timing as timing
+from archive import rime_legacy_timing as legacy_timing
 
 
 def event(stage, start=1_000_000, end=None, engine="ALL", count=0, outcome="ok", request=1, revision=1, expected="EN,ZH"):
@@ -90,8 +91,8 @@ class RimeBatchTimingReportTest(unittest.TestCase):
 
     def export(self, rows):
         with tempfile.TemporaryDirectory() as directory, redirect_stdout(io.StringIO()):
-            output = "\n".join(timing.RIME_PREFIX + json.dumps(r) for r in rows)
-            return timing.export_rime_batch_report(output, Path(directory))
+            output = "\n".join(legacy_timing.RIME_PREFIX + json.dumps(r) for r in rows)
+            return legacy_timing.export_rime_batch_report(output, Path(directory))
 
     def test_comparison_uses_matched_rounds_and_keeps_counts(self):
         row = self.export(self.rows())["cases"][0]
@@ -112,4 +113,4 @@ class RimeBatchTimingReportTest(unittest.TestCase):
             self.export([self.rows()[0], self.rows()[0]])
 
     def test_unrelated_output_does_not_create_report(self):
-        self.assertIsNone(timing.export_rime_batch_report("OK (1 test)", Path("unused")))
+        self.assertIsNone(legacy_timing.export_rime_batch_report("OK (1 test)", Path("unused")))

@@ -184,14 +184,15 @@ class SegmentedCompositionTest {
     }
 
     @Test fun nativeChineseAndZhuyinCandidatesCarryActualPrefixCoverage() {
-        val engine = RimeEngine(instrumentation.targetContext)
-        for ((raw, text, remaining) in listOf(Triple("nihaoshijie", "你好", "shijie"),
-            Triple("ㄋㄧˇㄏㄠˇㄕˋㄐㄧㄝˋ", "你好", "ㄕˋㄐㄧㄝˋ"))) {
-            val results = engine.query(raw)
-            val candidate = results.firstOrNull { it.text == text && it.consumption != null }
-            assertNotNull("Missing partial Chinese candidate: $raw; $results", candidate)
-            assertEquals(remaining, raw.drop(candidate!!.consumption!!.end))
-            assertTrue(results.any { it.consumption == null })
+        RimeOwnedFixture(PinyinScheme.entries.toSet()).use { fixture ->
+            for ((raw, text, remaining) in listOf(Triple("nihaoshijie", "你好", "shijie"),
+                Triple("ㄋㄧˇㄏㄠˇㄕˋㄐㄧㄝˋ", "你好", "ㄕˋㄐㄧㄝˋ"))) {
+                val results = fixture.engine.query(raw)
+                val candidate = results.firstOrNull { it.text == text && it.consumption != null }
+                assertNotNull("Missing partial Chinese candidate: $raw; $results", candidate)
+                assertEquals(remaining, raw.drop(candidate!!.consumption!!.end))
+                assertTrue(results.any { it.consumption == null })
+            }
         }
     }
 

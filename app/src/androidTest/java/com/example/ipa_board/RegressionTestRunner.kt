@@ -19,7 +19,7 @@ class RegressionTestRunner : AndroidJUnitRunner() {
         // UI regression must exercise version presentation without depending on
         // public endpoints. Lookup contract tests use their own injected loaders.
         EngineVersionLookup.metadataLoaderOverride = { source ->
-            if (source == EngineVersionSource.E5 || source == EngineVersionSource.MOZC) {
+            if (source.revisionMetadata) {
                 """{"sha":"0000000000000000000000000000000000000000"}"""
             } else {
                 """{"tag_name":"v-test","draft":false,"prerelease":false}"""
