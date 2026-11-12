@@ -4,11 +4,13 @@
 
 当前开发版本：**0.0.4-dev**，`versionCode = 4`，开发分支为 `0.0.4-dev`。最新正式版本为 **v0.0.3**；版本说明见 [v0.0.3 Release Notes](docs/releases/RELEASE_NOTES_0.0.3.md) 和 [更新日志](CHANGELOG.md)，正式安装包以 [GitHub Releases](https://github.com/PantingEYEs/IPA_Board/releases) 为准。
 
-0.0.4 计划成为首个不再按 GPL-3.0 整体发行的版本，具体后续协议在依赖与接入代码的许可核验完成后敲定。Rime/OpenCC、Mozc、ONNX Runtime Extensions 从各自官方源码构建；LatinIME 从 HeliBoard 取得并独立构建适用 Apache-2.0 的代码；OpenBoard 英文词表继续使用现成的 `main_en-US.dict`，不自行编译。这些第三方运行资源将改为应用内下载，不随正式发布 APK 提供；Rime/OpenCC 构建与桥接不使用 Trime 工具。当前开发分支已接入官方源码构建的 Mozc、配套 OSS 词典及 16KB 对齐的 SentencePiece 专用 Extensions；ONNX Runtime 主库与 E5 模型保持原版。Rime/OpenCC 与 LatinIME 构建迁移、资源拆包及协议变更仍未完成，运行资源暂仍内置。详见 [Mozc 接入说明](docs/mozc-upstream.md)、[Extensions 接入说明](docs/onnx-extensions-upstream.md) 和 [0.0.4 开发计划](docs/0.0.4-development-plan.md)。
+0.0.4 计划成为首个不再按 GPL-3.0 整体发行的版本，具体后续协议在依赖与接入代码的许可核验完成后敲定。官方源码构建的 [Mozc 与配套 OSS 词典](docs/mozc-upstream.md)、[SentencePiece 专用 ONNX Runtime Extensions](docs/onnx-extensions-upstream.md)已完成接入；#51 经 [PR #59](https://github.com/PantingEYEs/IPA_Board/pull/59) 合入 `0.0.4-dev`。ONNX Runtime 主库、E5 模型与排序规则保持不变。
 
-0.0.4 开发版已加入 Shortcut 配置导入／导出、默认编辑快捷键与可绑定的撤销／重做、页组文件夹导入／导出及更新后的初始化预设、地球拼音和三态全半角互换。连续光标、长按队列与 Rime 批量查询优化已加入开发版；IPA Engine 与配套词典继续内置，现有 UTF-16 退格行为保留。
+后续工作为 [Rime/OpenCC 官方构建与桥接迁移 #49](https://github.com/PantingEYEs/IPA_Board/issues/49)、[HeliBoard LatinIME 独立构建 #52](https://github.com/PantingEYEs/IPA_Board/issues/52)、[第三方资源下载与安装 #53](https://github.com/PantingEYEs/IPA_Board/issues/53)和[来源／许可核验 #54](https://github.com/PantingEYEs/IPA_Board/issues/54)。Rime/OpenCC 将不再使用 Trime 构建和桥接工具；LatinIME 按实际采用的源码核验许可。OpenBoard 英文词表继续使用现成的 `main_en-US.dict`，不自行编译。运行资源目前仍内置；第三方资源拆包、客户端下载及项目协议变更尚未完成，IPA Engine 与配套词典继续内置。详见 [0.0.4 开发计划](docs/0.0.4-development-plan.md)。
 
-App 内蓝牙键盘首版已获维护者“基本功能实测可用”的反馈，按首版范围收尾；体验问题继续收集，具体兼容与异常场景仍有待逐项验证。后续目标包括 About、宽屏 Stretch/Split 和基础输入稳定性。
+0.0.4 开发版已加入 Shortcut 配置导入／导出与替代文字、默认编辑快捷键与可绑定的撤销／重做、页组文件夹导入／导出及更新后的初始化预设、地球拼音、可绑定的预编辑模式切换和三态全半角互换。连续光标、长按队列与 Rime 批量查询优化已加入开发版，现有 UTF-16 退格行为保留。
+
+App 内蓝牙键盘 #35 已按首版范围收尾，维护者反馈基本功能实测可用；体验问题继续收集，具体兼容与异常场景仍有待逐项验证。#4 的输入法服务入口、Wi-Fi 和完整文字／剪贴板传输继续延期。后续界面任务包括 [About #55](https://github.com/PantingEYEs/IPA_Board/issues/55)和[逐键盘页 Split #34](https://github.com/PantingEYEs/IPA_Board/issues/34)；Stretch 不在 #34 的已确认范围内。
 
 0.0.3 修复同一输入框重新打开键盘时无候选的问题，加入 Popup 多功能操作、按页引擎绑定、可编辑多功能栏、科学计算、只读引擎仪表盘、日志管理与 Remote Keyboard Mode（Phase 1），改进 Emoji 浏览，并提供 IPA 预置键盘和实验性 IPA 引擎。开发周期的交付范围与后续目标见 [归档计划](docs/archive/0.0.3-development-plan.md)。
 
@@ -79,7 +81,7 @@ Shift 第一次点击启用临时大写（`Shift •`），再次点击锁定大
 
 **预编辑模式** 可绑定到任意按键的短按、长按、滑动、Popup、Shift/Ctrl 快捷键或多功能栏。默认内联；切为非内联后，原文和光标显示在紧贴键盘左侧和整体上沿的紧凑直角浮窗内，背景与文字跟随当前键盘配色，无描边、阴影或额外间隔，不增加键盘高度；文字采用 16sp，压缩上下留白且不预留固定最小宽度；短文本按内容扩宽，达到可用宽度后横向滚动跟随光标。选词、按 Enter 或点击浮窗才写入输入框。再次按绑定入口切回内联，所选模式在重启后保留，不覆盖已有布局绑定。
 
-切换模式会先原样确认当前预编辑；非内联的左右键、退格和分段余码只修改键盘内的缓冲。移到其他宿主位置、改变宿主选区或结束输入会话会取消未确认缓冲，避免写入新位置。现有 64 个 UTF-16 单元的缓冲上限仍适用：超过上限时先原样确认前一段。密码与非文本输入框继续直接输入。该选项提供 [#37](https://github.com/PantingEYEs/IPA_Board/issues/37) 的可选绕行方式，尚未验证 Gemini／One UI 实际兼容性。
+切换模式会先原样确认当前预编辑；非内联的左右键、退格和分段余码只修改键盘内的缓冲。移到其他宿主位置、改变宿主选区或结束输入会话会取消未确认缓冲，避免写入新位置。现有 64 个 UTF-16 单元的缓冲上限仍适用：超过上限时先原样确认前一段。密码与非文本输入框继续直接输入。[#17](https://github.com/PantingEYEs/IPA_Board/issues/17)与 [#37](https://github.com/PantingEYEs/IPA_Board/issues/37)已按非内联绕行方案收尾，不表示内联缺陷已修复；Gemini／One UI 实际兼容性仍未验证。
 
 **◩ 全半角互换** 默认关闭，保留键盘配置原本的字形。点击依次切换 **关闭 → 单次 → 锁定 → 关闭**：单次只互换下一个完整字符，锁定持续处理后续输入，不因上屏或移动光标关闭。已有预编辑保持原样；有选区时仅在关闭→单次时转换整个选区，第二次只锁定。候选按引擎原文提交，剪贴板粘贴保持原文；详见[全半角互换](docs/character-width.md)。
 
@@ -137,10 +139,10 @@ python3 tools/regression.py validate
 python3 tools/regression.py run --suite full --serial DEVICE_SERIAL --no-build
 ```
 
-**设备回归前必须备份 IPA Board 软件与私有数据，结束后恢复、校验并删除备份。** 所有安装、instrumentation 和输入法切换检查均通过上述保护工具执行；恢复失败时保留备份并先恢复。套件选择、备份范围、恢复入口和验证记录见 [测试流程](docs/testing.md)。
+**设备回归前必须备份 IPA Board 软件与私有数据，结束后恢复、校验并删除备份。** 上述自动回归中的安装、instrumentation 和输入法切换检查均通过保护工具执行；恢复失败时保留备份并先恢复。套件选择、备份范围、恢复入口和验证记录见 [测试流程](docs/testing.md)。
 
-自行构建的 Mozc 与 SentencePiece 专用 Extensions 两种 ABI 均采用 16KB ELF 对齐。静态对齐、独立构建验证与本分支接入验证分别记录，见 [Mozc 接入边界](docs/mozc-upstream.md#16kb-与验证边界)、[Extensions 接入边界](docs/onnx-extensions-upstream.md#16kb-与验证边界)及[测试记录](docs/testing.md)。#51 以真实 16KB 页环境为验收目标；既有 debug 回归结果不代表正式签名 release 或未执行设备配置已通过。
+当前 debug 应用与测试 APK 的全部 **19+1 个原生条目**通过 16KB ELF 加载段检查，两份 APK 通过 16KB 打包对齐检查；#51 在 **API 36／x86_64／真实 16384 字节页**进程中禁用兼容模式、保留全部原生依赖，专项 **38/38 通过**。源码构建与应用接入结果分别记录，见 [Mozc 接入边界](docs/mozc-upstream.md#16kb-与验证边界)、[Extensions 接入边界](docs/onnx-extensions-upstream.md#16kb-与验证边界)及[测试记录](docs/testing.md)。此结果不代表正式签名 release、AAB 或 ARM64 真机运行已验证。
 
-预输入目前按 UTF-16 单元退格，可能留下半个 Emoji 代理对；按用户选择保留这一行为，不纳入 0.0.4 稳定性修复。部分回归中的输入法窗口等待超时仍待调查。API 31 诊断中，Engine Management 和 Dashboard 仍有较新系统接口调用导致的崩溃，API 26 与鸿蒙实机未验证。放宽安装门槛产生的既有 136 项 `NewApi` 错误已登记为 Lint 开发基线，新增问题仍会报告；基线通过或编译成功不代表低版本兼容。
+预输入目前按 UTF-16 单元退格，可能留下半个 Emoji 代理对；按用户选择保留这一行为，不纳入 0.0.4 稳定性修复。部分回归中的输入法窗口等待超时仍待调查。API 31 诊断中，Engine Management 和 Dashboard 仍有较新系统接口调用导致的崩溃，API 26 与鸿蒙实机未验证。放宽安装门槛产生的既有 `NewApi` 错误已登记为 Lint 开发基线，当前匹配情况见测试记录，新增问题仍会报告；基线通过或编译成功不代表低版本兼容。
 
 各专题说明与历史记录见 [文档索引](docs/README.md)。

@@ -4,6 +4,12 @@
 
 Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划](docs/0.0.4-development-plan.md)。
 
+- 官方源码构建 ONNX Runtime Extensions 已通过 [PR #59](https://github.com/PantingEYEs/IPA_Board/pull/59) 合入 `0.0.4-dev`（2026-11-11，merge commit `de4d167`），[#51](https://github.com/PantingEYEs/IPA_Board/issues/51) 已核对六项验收并关闭。按维护者决定，运行验收范围调整为严格 16KB，原普通页／4KB 验收条款已明确移除，不记作本轮验证通过。
+
+- 两种 ABI 的旧 Maven Extensions AAR 替换为 `IPA_Engine/ranking@dd6f7fb` 的固定产物，基于官方 v0.13.0／`9d5638b0b1f2` 源码构建现有分词图所需的 SentencePiece 扩展。ONNX Runtime 1.23.2、E5 模型、分词图和校准数据保持不变；E5 仍默认关闭，保留取消、过期结果拒绝与普通候选回退，没有增加排序算法或宣称效果提升。Engine Management 显示实际 Extensions 构建信息；来源锁、许可及离线校验同步更新，旧 AAR 移除、旧来源资料归档。详见 [Extensions 接入说明](docs/onnx-extensions-upstream.md)。
+
+- 验证：13 项工具测试、34 项专项 JVM、debug／AndroidTest 编译、144 项资源哈希及模型重组检查通过；Lint 在未修改的既有基线下通过。API 36／x86_64／真实 16384 字节页、关闭兼容模式的专项 **38/38 通过**，覆盖实际分词、E5、多语言混排、失败回退及引擎管理；17 组 token 与旧基线一致，22 个语义分数在规定误差内。软件与私有数据恢复校验完成，备份已删除。完整 debug APK 的 19 个原生条目及测试包 1 个 ELF 全部通过 16KB LOAD／RELRO 检查，两份 APK 打包检查通过，未排除任何原生依赖；当前产物的已知 ELF 段对齐问题已清除。预览包的原生内容与受测包一致，已保留数据更新。未重跑全量或 4KB 回归，ARM64 实际运行、其他 API 与正式 release／AAB 仍未独立验证，详见[测试记录](docs/testing.md#2026-11-1151-官方源码构建-onnx-runtime-extensions-接入)。
+
 - 官方源码构建 Mozc 已通过 [PR #58](https://github.com/PantingEYEs/IPA_Board/pull/58) 合入 `0.0.4-dev`（2026-11-11，merge commit `cc025d4`），[#50](https://github.com/PantingEYEs/IPA_Board/issues/50) 六项验收标准已核对完成并关闭。两种 ABI 的旧 APK 提取库与词典替换为 `IPA_Engine/japanese@76a6129` 的配套产物，Google Mozc 固定源码为 `a4541df29db44`、OSS 数据版本为 `24.11.oss`；Engine Management 同步显示实际打包来源，并查询官方源码修订。
 
 - Mozc 词典按 SHA-256 分代部署，验证大小与哈希后原子发布，加载时核对实际数据版本；旧私有目录不再使用，但保留用于回退。新版零输入联想补充临时请求参数，继续保持无学习会话、分段消费、混排与原文回退。当前许可和资源锁已替换，旧来源归档；详见 [Mozc 接入说明](docs/mozc-upstream.md)。
