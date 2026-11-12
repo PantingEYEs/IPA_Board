@@ -4,6 +4,14 @@
 
 Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划](docs/0.0.4-development-plan.md)。
 
+- App 内蓝牙远程键盘首版已通过 [PR #57](https://github.com/PantingEYEs/IPA_Board/pull/57) 合入 `0.0.4-dev`（2026-11-11，merge commit `3beee76`）。设置页新增蓝牙键盘入口，支持选择接收端、查看实际连接状态和手动断开，调用当前系统输入法编辑草稿，可选择点击发送或确认后立即发送；不强制使用 IPA Board 输入法。
+
+- 首版按美国英语物理键位发送 ASCII 文字、控制键和一次性修饰键；不支持的文字整批拒绝并保留草稿。后台、中断或失败时取消未完成发送并尝试释放按键，不自动重发或重连。引擎快照与连接状态独立，IPA Board 在本应用远程输入区域默认进入已有的 `⌁` 模式，不替换已有快照或反复覆盖手动选择。详见[操作与限制说明](docs/bluetooth-remote-keyboard.md)。
+
+- 维护者实测反馈基本功能可用，但体验仍待继续收集和改进，并决定关闭 [#35](https://github.com/PantingEYEs/IPA_Board/issues/35) 的首版任务。[#4](https://github.com/PantingEYEs/IPA_Board/issues/4) 保持开放，继续跟踪服务内连接入口、Wi-Fi、完整字符／剪贴板传输及后续体验问题；不将首版关闭等同于所有接收端键集、异常与生命周期场景均已验证。本次未接入自行编译的 Mozc，现有引擎库与数据保持不变。
+
+- 蓝牙专项验证：34 项新增 JVM 测试通过；API 35／x86_64 模拟器共 40 项不同用例在主轮和专项复验后通过，保留此前失败记录，不合计为单轮 40/40。三轮受保护测试均恢复并校验软件与私有数据，备份已删除；模拟传输不作为真实蓝牙互通证明。编译、套件登记、资源校验及既有基线下的 Lint 通过；收尾只改文档，未重复全量测试，详见[测试记录](docs/testing.md#2026-11-11-35-app-内蓝牙键盘首版)。
+
 - Shortcut 配置导入、默认编辑快捷键及撤销／重做、页组文件夹导入／导出与初始化预设、地球拼音、三态全半角互换及空格确认整理已通过 [PR #48](https://github.com/PantingEYEs/IPA_Board/pull/48) 合入 `0.0.4-dev`（2026-11-10，merge commit `6141c69`）。[#45](https://github.com/PantingEYEs/IPA_Board/issues/45)、[#36](https://github.com/PantingEYEs/IPA_Board/issues/36)、[#33](https://github.com/PantingEYEs/IPA_Board/issues/33) 已补充完成说明并关闭；#33 的配置导出已在 PR #47 实现，本次另行补充配置导入。各阶段验证结果及限制保留于下文，不合计为全量通过。
 
 - 重写全半角互换：改为“关闭→单次→锁定→关闭”，单次仅作用于下一个完整字符，锁定不因上屏或移动光标取消。文字在输入时转换一次，已有预编辑、候选及分段后缀不被后续开关重新转换；关闭→单次时可转换整个选区，第二次只锁定。保留键盘原字形、已有功能绑定和原文粘贴；详见[操作说明](docs/character-width.md)。
