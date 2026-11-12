@@ -4,6 +4,12 @@
 
 Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划](docs/0.0.4-development-plan.md)。
 
+- 官方源码构建 Mozc 已通过 [PR #58](https://github.com/PantingEYEs/IPA_Board/pull/58) 合入 `0.0.4-dev`（2026-11-11，merge commit `cc025d4`），[#50](https://github.com/PantingEYEs/IPA_Board/issues/50) 六项验收标准已核对完成并关闭。两种 ABI 的旧 APK 提取库与词典替换为 `IPA_Engine/japanese@76a6129` 的配套产物，Google Mozc 固定源码为 `a4541df29db44`、OSS 数据版本为 `24.11.oss`；Engine Management 同步显示实际打包来源，并查询官方源码修订。
+
+- Mozc 词典按 SHA-256 分代部署，验证大小与哈希后原子发布，加载时核对实际数据版本；旧私有目录不再使用，但保留用于回退。新版零输入联想补充临时请求参数，继续保持无学习会话、分段消费、混排与原文回退。当前许可和资源锁已替换，旧来源归档；详见 [Mozc 接入说明](docs/mozc-upstream.md)。
+
+- 验证：35 项专项 JVM 测试通过；API 35／x86_64／4KB 环境共 47 项不同设备用例最终通过（首轮 46/47，修正测试环境判断后受影响类 10/10），API 36／x86_64／严格 16KB 专项 10/10 通过。三轮均完成软件与私有数据恢复校验并删除备份，未重复全量测试。双 ABI 的 ELF 对齐及系统依赖检查通过；严格 16KB 测试临时排除独立任务中的旧 ONNX Extensions，不能据此宣称完整 APK 支持 16KB 或 ARM64 运行已独立验证。正常预览版保留完整依赖并已保留数据更新，详见[测试记录](docs/testing.md#2026-11-1150-官方源码构建-mozc-接入)。
+
 - App 内蓝牙远程键盘首版已通过 [PR #57](https://github.com/PantingEYEs/IPA_Board/pull/57) 合入 `0.0.4-dev`（2026-11-11，merge commit `3beee76`）。设置页新增蓝牙键盘入口，支持选择接收端、查看实际连接状态和手动断开，调用当前系统输入法编辑草稿，可选择点击发送或确认后立即发送；不强制使用 IPA Board 输入法。
 
 - 首版按美国英语物理键位发送 ASCII 文字、控制键和一次性修饰键；不支持的文字整批拒绝并保留草稿。后台、中断或失败时取消未完成发送并尝试释放按键，不自动重发或重连。引擎快照与连接状态独立，IPA Board 在本应用远程输入区域默认进入已有的 `⌁` 模式，不替换已有快照或反复覆盖手动选择。详见[操作与限制说明](docs/bluetooth-remote-keyboard.md)。
