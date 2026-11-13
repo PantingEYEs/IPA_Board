@@ -4,11 +4,11 @@
 
 当前开发版本：**0.0.4-dev**，`versionCode = 4`，开发分支为 `0.0.4-dev`。最新正式版本为 **v0.0.3**；版本说明见 [v0.0.3 Release Notes](docs/releases/RELEASE_NOTES_0.0.3.md) 和 [更新日志](CHANGELOG.md)，正式安装包以 [GitHub Releases](https://github.com/PantingEYEs/IPA_Board/releases) 为准。
 
-0.0.4 计划成为首个不再按 GPL-3.0 整体发行的版本，具体后续协议在依赖与接入代码的许可核验完成后敲定。官方源码构建的 [Mozc 与配套 OSS 词典](docs/mozc-upstream.md)、[SentencePiece 专用 ONNX Runtime Extensions](docs/onnx-extensions-upstream.md)已完成接入；#51 经 [PR #59](https://github.com/PantingEYEs/IPA_Board/pull/59) 合入 `0.0.4-dev`。ONNX Runtime 主库、E5 模型与排序规则保持不变。
+0.0.4 计划成为首个不再按 GPL-3.0 整体发行的版本，具体后续协议在依赖与接入代码的许可核验完成后敲定。**第三方引擎及配套资源继续随 APK 发布**，取消原先移出 APK、下载后使用的安排。官方源码构建的 [Mozc 与配套 OSS 词典](docs/mozc-upstream.md)、[SentencePiece 专用 ONNX Runtime Extensions](docs/onnx-extensions-upstream.md)和 [Rime/OpenCC](docs/rime-upstream.md)已完成接入。Rime/OpenCC 不再使用 Trime 组合库、JNA 或外置候选桥接；Mozc 和 Extensions 的 16KB 对齐修复及实际验证范围见对应文档。
 
-[Rime/OpenCC 官方构建与桥接迁移 #49](docs/rime-upstream.md) 已通过 [PR #60](https://github.com/PantingEYEs/IPA_Board/pull/60) 合入 `0.0.4-dev` 并关闭，维护者实测未发现使用问题。固定 `chinese@073aabe` 构建采用 librime 1.17.0／OpenCC 1.4.2，保留既有中文方案与混排合同。后续工作为 [HeliBoard LatinIME 独立构建 #52](https://github.com/PantingEYEs/IPA_Board/issues/52)、[第三方资源下载与安装 #53](https://github.com/PantingEYEs/IPA_Board/issues/53)和[来源／许可核验 #54](https://github.com/PantingEYEs/IPA_Board/issues/54)。当前 Rime/OpenCC 接入不再使用 Trime 组合库、JNA 或外置候选桥接；LatinIME 按实际采用的源码核验许可。OpenBoard 英文词表继续使用现成的 `main_en-US.dict`，不自行编译。运行资源目前仍内置；第三方资源拆包、客户端下载及项目协议变更尚未完成，IPA Engine 与配套词典继续内置。详见 [0.0.4 开发计划](docs/0.0.4-development-plan.md)。
+后续工作为 [HeliBoard LatinIME 独立构建 #52](https://github.com/PantingEYEs/IPA_Board/issues/52)和[来源／许可核验 #54](https://github.com/PantingEYEs/IPA_Board/issues/54)。LatinIME 按实际采用的源码核验许可；ONNX Runtime 主库仍使用官方 AAR，E5 模型与现成 OpenBoard `main_en-US.dict` 继续随包，不要求重新训练或编译。IPA Engine 与配套词典继续内置，并保留独立 Release 更新及默认关闭的预发布渠道。整体构建迁移与项目协议变更尚未完成，详见 [0.0.4 开发计划](docs/0.0.4-development-plan.md)。
 
-0.0.4 开发版已加入 Shortcut 配置导入／导出与替代文字、默认编辑快捷键与可绑定的撤销／重做、页组文件夹导入／导出及更新后的初始化预设、地球拼音、可绑定的预编辑模式切换和三态全半角互换。连续光标、长按队列与 Rime 批量查询优化已加入开发版，现有 UTF-16 退格行为保留。
+0.0.4 开发版已加入中日文分段选词、词汇反查 IPA、Shortcut 配置导入／导出与替代文字、默认编辑快捷键与可绑定的撤销／重做、页组文件夹导入／导出及更新后的初始化预设、地球拼音、可绑定的预编辑模式切换和三态全半角互换。连续光标、Classic 长按混合队列与 Rime 批量查询优化已加入开发版，现有 UTF-16 退格行为保留。
 
 App 内蓝牙键盘 #35 已按首版范围收尾，维护者反馈基本功能实测可用；体验问题继续收集，具体兼容与异常场景仍有待逐项验证。#4 的输入法服务入口、Wi-Fi 和完整文字／剪贴板传输继续延期。后续界面任务包括 [About #55](https://github.com/PantingEYEs/IPA_Board/issues/55)和[逐键盘页 Split #34](https://github.com/PantingEYEs/IPA_Board/issues/34)；Stretch 不在 #34 的已确认范围内。
 
@@ -52,6 +52,7 @@ Shift 第一次点击启用临时大写（`Shift •`），再次点击锁定大
 
 - 中文使用 Rime，支持简繁转换及词组续写；日文使用 Mozc，支持转换和下一词候选。
 - 英文使用 LatinIME，支持补全、拼写纠错和短上下文预测；中文等上下文没有英文词时，回退到句首或常用词候选。
+- 中文拼音／注音及日文支持分段选词：已选段立即上屏，剩余编码继续待输入。内联模式下，光标在预输入显示区间内及紧贴两端时可编辑编码；完全离开时原位结束组合。非内联模式的缓冲与取消规则见下文。
 - 点击候选上屏，右侧按钮展开候选；空格选择首选词，英文追加空格。Enter 原样结束组合，再次按下执行编辑器动作。
 - 候选按钮最小宽度随键盘按键宽度调整。切页保留组合文本，工具面板的 Return 或系统返回键返回键盘。
 
@@ -59,7 +60,7 @@ Shift 第一次点击启用临时大写（`Shift •`），再次点击锁定大
 
 **Syllable Engines → Rime → Pinyin scheme** 可选择朙月拼音或地球拼音（Terra Pinyin）；当前默认仍为朙月拼音。地球拼音用音节末尾的 `-`、`/`、`<`、`\` 输入一至四声，例如 `ni<hao<`，也可省略声调。可选的 `;`、`,`、`.` 声调替代键默认关闭，开启后会影响中文候选对这些标点的解释。切换方案或替代键保留待输入原文和光标，只更新候选；配置独立于页级引擎绑定及 Remote Keyboard Mode。地球拼音和注音不依赖朙月拼音资源或会话，所选方案失败时不自动改用其他方案；详见 [地球拼音](docs/terra-pinyin.md)。
 
-**IPA Engine** 已实验接入，支持 IPA → 英文、简体/繁体中文和日文词条，例如 `həˈloʊ → hello`。当前上游包仅支持 `arm64-v8a`，不提供下一词预测。进入 **Engine Management → Manage IPA engine and dictionary**，可从上游仓库分别更新引擎或词典；词典由开发侧预先编译为压缩二进制，客户端不编译、不需要更新 APK 或连接电脑。先校验文件，再用当前引擎验证兼容性，成功后切换并删除旧词典；失败时保留旧资源。输入与上下文不上传。开发侧发布格式见 [IPA 更新接口](docs/ipa-updates.md)。
+**IPA Engine** 已实验接入，支持 IPA → 英文、简体/繁体中文和日文词条，例如 `həˈloʊ → hello`。当前上游包仅支持 `arm64-v8a`，不提供下一词预测。进入 **Engine Management → Manage IPA engine and dictionary**，可从上游 GitHub Releases 分别更新引擎或词典；**Allow Pre-release updates** 默认关闭，开启后也检查预发布版本，关闭不会回退已安装版本。页面底部 **Word to IPA** 可离线按完整词条反查活动词典中的 IPA，按地区显示读音及 Derived 标记，不受输入法 IPA 开关限制。词典由开发侧预先编译为压缩二进制，客户端不编译、不需要更新 APK 或连接电脑。先校验文件，再用当前引擎验证兼容性，成功后切换并删除旧词典；失败时保留旧资源。输入与上下文不上传。开发侧发布格式见 [IPA 更新接口](docs/ipa-updates.md)。
 
 **◷ Engine Dashboard** 可在按键编辑中自行绑定；当前 QWERTY 初始化配置已包含长按入口，现有用户配置不因升级而覆盖。按下后在键盘区查看全部已接入功能的配置与实时运行状态，支持滚动、打开主设置和返回键盘。面板只观察，不改变引擎开关或预输入；详见 [引擎仪表盘](docs/engine-dashboard.md)。
 
@@ -76,6 +77,8 @@ Shift 第一次点击启用临时大写（`Shift •`），再次点击锁定大
 多功能栏默认顺序：**⧉ → ⊞ → 顔 → status → ⌁ → ◩ → ∑**，依次为剪贴板、键盘页、颜文字、状态区、远程键盘模式、全半角互换和计算器。
 
 在 **Shortcut Management** 点击多功能栏预览中的入口，可分别替换六个位置的功能或文本，保存后立即更新预览和输入法；取消不修改配置。预览与输入法共用布局，status 区及候选栏保持专用。支持全部现有功能，Continuous Delete 按住重复删除；文本可选择输入行为，长标签省略显示但不截断实际输入。此处仅配置单个绑定，不提供长按、滑动或 Popup 编辑。
+
+**Replacement Text** 可在 Shortcut Management 中添加候选替代规则。例如将 `鞥` 绑定为 `嗯`，原候选完整匹配 `鞥` 时，会在全部原候选之后追加 `嗯`。规则按列表顺序处理，不递归触发，重复项保留，并继承原候选的分段／联想／计算器选择行为；详见 [替代文字说明](docs/shortcut-replacements.md)。
 
 同页 **Export configuration** 可将已保存的 Shift／Ctrl 快捷键、多功能栏绑定和替代文字规则导出为一个版本化 JSON 文件，完整保留文字、输入行为及规则顺序和重复项。**Import configuration** 读取并校验文件，显示类别和数量，确认后整份替换文件包含的类别；缺少的类别及其他设置保留。取消不会导入，不支持或损坏的文件会明确拒绝。操作和格式见 [Shortcut 配置导入与导出](docs/shortcut-export.md)。
 

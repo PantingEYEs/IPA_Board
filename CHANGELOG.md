@@ -4,6 +4,8 @@
 
 Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划](docs/0.0.4-development-plan.md)。
 
+- 更新 [0.0.4 开发计划](docs/0.0.4-development-plan.md)、README 与文档索引，合并当前功能与源码构建接入进度；取消第三方引擎及配套资源移出 APK、下载后使用的安排，改为自主源码构建后继续随包发布。Rime/OpenCC、Mozc 与 Extensions 已完成接入，LatinIME 构建及整体许可核验仍待完成；ONNX Runtime 主库维持官方 AAR，现成英文词表、E5 模型及 IPA 内置／独立更新保留。此调整取代较早的资源下载拆分计划。
+
 - 官方源码构建 Rime／OpenCC 已通过 [PR #60](https://github.com/PantingEYEs/IPA_Board/pull/60) 合入 `0.0.4-dev`（2026-11-11，merge commit `7e699e2`），[#49](https://github.com/PantingEYEs/IPA_Board/issues/49) 六项验收完成并关闭。使用 `IPA_Engine/chinese@073aabe` 的 librime 1.17.0／OpenCC 1.4.2 和 24 份官方兼容资源；维护者实测预览版后报告使用无问题。
 
 - 移除 Trime 组合二进制、JNA、旧函数表及独立 C++／Boost 候选桥接，以同一构建内的 JNI 保留批量候选、精确前缀消费、朙月／地球拼音、声调、注音、简繁、替代文字、无学习和多语言混排行为。运行时核对 ABI、候选包和完整构建身份；按构建身份部署新资源，保留旧私有目录和用户配置。Engine Management 区分官方运行库、兼容数据与集成构建；旧来源说明和计时报表入口归档。第三方原始许可继续保留，#52、#53、#54 及整体协议迁移仍待完成，详见 [Rime/OpenCC 接入说明](docs/rime-upstream.md)。
