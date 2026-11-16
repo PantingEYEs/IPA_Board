@@ -6,7 +6,7 @@
 
 0.0.4 计划成为首个不再按 GPL-3.0 整体发行的版本，具体后续协议在依赖与接入代码的许可核验完成后敲定。**第三方引擎及配套资源继续随 APK 发布**，取消原先移出 APK、下载后使用的安排。官方源码构建的 [Mozc 与配套 OSS 词典](docs/mozc-upstream.md)、[SentencePiece 专用 ONNX Runtime Extensions](docs/onnx-extensions-upstream.md)和 [Rime/OpenCC](docs/rime-upstream.md)已完成接入。Rime/OpenCC 不再使用 Trime 组合库、JNA 或外置候选桥接；Mozc 和 Extensions 的 16KB 对齐修复及实际验证范围见对应文档。
 
-[HeliBoard LatinIME 源码构建 #52](docs/latinime-upstream.md)已完成接入并获维护者人工使用验收，替换运行库和旧 Java 注册面；两项自动键盘显示失败记录保留，实际验收范围见测试记录；[来源／许可核验 #54](https://github.com/PantingEYEs/IPA_Board/issues/54)仍需推进。LatinIME 按实际采用的源码核验许可；ONNX Runtime 主库仍使用官方 AAR，E5 模型与现成 OpenBoard `main_en-US.dict` 继续随包，不要求重新训练或编译。IPA Engine 与配套词典继续内置，并保留独立 Release 更新及默认关闭的预发布渠道。整体构建迁移与项目协议变更尚未完成，详见 [0.0.4 开发计划](docs/0.0.4-development-plan.md)。
+[HeliBoard LatinIME 源码构建 #52](docs/latinime-upstream.md)已完成接入并获维护者人工使用验收，替换运行库和旧 Java 注册面；两项自动键盘显示失败记录保留，实际验收范围见测试记录；[来源／许可核验 #54](https://github.com/PantingEYEs/IPA_Board/issues/54)仍需推进。LatinIME 按实际采用的源码核验许可；ONNX Runtime 主库仍使用官方 AAR，E5 模型与现成 OpenBoard `main_en-US.dict` 继续随包，不要求重新训练或编译。IPA Engine 与配套词典继续内置，并保留独立 Release 更新及默认关闭的预发布渠道。指定组件的源码构建接入已完成，项目协议变更尚未完成，详见 [0.0.4 开发计划](docs/0.0.4-development-plan.md)。
 
 0.0.4 开发版已加入中日文分段选词、词汇反查 IPA、Shortcut 配置导入／导出与替代文字、默认编辑快捷键与可绑定的撤销／重做、页组文件夹导入／导出及更新后的初始化预设、地球拼音、可绑定的预编辑模式切换和三态全半角互换。连续光标、Classic 长按混合队列与 Rime 批量查询优化已加入开发版，现有 UTF-16 退格行为保留。
 

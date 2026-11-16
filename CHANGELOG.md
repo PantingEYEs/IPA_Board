@@ -4,6 +4,14 @@
 
 Android `versionName = 0.0.4-dev`、`versionCode = 4`；范围见 [开发计划](docs/0.0.4-development-plan.md)。
 
+- LatinIME 源码构建接入已通过 [PR #61](https://github.com/PantingEYEs/IPA_Board/pull/61) 合入 `0.0.4-dev`（2026-11-16，merge commit `192f0bd`），实现提交 `4ca12b7`；维护者实测报告使用中未发现异常，已关闭 [#52](https://github.com/PantingEYEs/IPA_Board/issues/52) 并清理开发分支。双 ABI 使用 `IPA_Engine/english@ad79fe3` 的固定源码构建 AAR，HeliBoard 4.1 修订为 `9f5bb635c2e8`；移除两份旧 APK 提取库和五个旧 Java 注册／签名类。
+
+- 新 JNI 只提供身份、只读打开、查询、概率与关闭接口；初始化核对完整 build ID，词典打开前校验完整哈希，损坏缓存从随包原始字节修复后原子发布。严格解码自有 LATN v1 结果包，保留补全／纠错／预测独立开关、排序、上下文、混输、过期结果拒绝、原文回退和无学习行为。现成 `main_en-US.dict` 不重新编译、不更换；Engine Management 区分实际打包身份与最新来源元数据，详见 [LatinIME 接入说明](docs/latinime-upstream.md)。
+
+- 验证：303 项 JVM、86 项工具测试及独立构建的 21 项产物测试通过；debug／AndroidTest 编译、157 项资源哈希、模型重组、套件校验及 Lint 通过（296 条警告，既有基线未改）。应用及测试 APK 的 **15+1** 个原生文件通过 ELF LOAD／RELRO／16KB 检查，两包 ZIP 对齐通过。API 36／ARM64／真实 16KB 专项 **72 项执行、70 通过、2 失败、0 跳过**；两项真实 IME 用例均在键盘显示前超时，关闭模拟硬件键盘后仅补跑该类仍为 **0/2**。按维护者决定保留失败并另行调查，不宣称整套通过；两轮软件／私有数据恢复均校验成功并删除备份，首轮恢复往返通过，临时 AVD 与镜像已清理。详情见 [测试记录](docs/testing.md#2026-11-16-latinime-源码构建接入52)。
+
+- 指定的 Rime/OpenCC、Mozc、Extensions 与 LatinIME 源码构建接入现均已完成，继续随包发布；ONNX Runtime 主库仍使用官方 AAR。源码选择、构建输入、原始通知及词典来源独立保留；英文词典许可和项目新协议继续由 #54 核验，不因 #52 完成宣称整体协议迁移。未重跑全量回归、x86_64／4KB 运行、其他 API、广泛宿主或签名 release／AAB，未声称性能提升。
+
 - 更新 [0.0.4 开发计划](docs/0.0.4-development-plan.md)、README 与文档索引，合并当前功能与源码构建接入进度；取消第三方引擎及配套资源移出 APK、下载后使用的安排，改为自主源码构建后继续随包发布。Rime/OpenCC、Mozc 与 Extensions 已完成接入，LatinIME 构建及整体许可核验仍待完成；ONNX Runtime 主库维持官方 AAR，现成英文词表、E5 模型及 IPA 内置／独立更新保留。此调整取代较早的资源下载拆分计划。
 
 - 官方源码构建 Rime／OpenCC 已通过 [PR #60](https://github.com/PantingEYEs/IPA_Board/pull/60) 合入 `0.0.4-dev`（2026-11-11，merge commit `7e699e2`），[#49](https://github.com/PantingEYEs/IPA_Board/issues/49) 六项验收完成并关闭。使用 `IPA_Engine/chinese@073aabe` 的 librime 1.17.0／OpenCC 1.4.2 和 24 份官方兼容资源；维护者实测预览版后报告使用无问题。
