@@ -288,7 +288,7 @@ class ImeEndToEndTest {
         assertEquals("The editor's composing state must match the input session", composing, composingStart >= 0)
     }
 
-    private fun withIsolatedKeyboard(
+    internal fun withIsolatedKeyboard(
         layouts: List<KeyboardLayout>,
         body: (ActivityScenario<ImeTestEditorActivity>, List<String>) -> Unit
     ) {

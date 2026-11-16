@@ -1,0 +1,8 @@
+Build: https://github.com/PantingEYEs/IPA_Engine/tree/ad79fe388ced2d9944d81a159f72b5ef6a972fce
+Upstream: HeliBoard 4.1, 9f5bb635c2e8609dcd95dc7506c0c58fba82a52c
+Build ID: 6ddfef54ed2c518f5435994eccb14cb2b19897da8ee826c179c8b124aac03258
+The licenses and inventory are unchanged upstream build records. Relative paths in
+those original documents refer to the pinned build repository. Their independent
+build/fixture status is historical and does not replace IPA Board integration tests.
+Native sources, new bridge and unchanged dictionary have separate provenance.
+See docs/latinime-upstream.md in IPA Board for the current app integration boundary.

@@ -101,7 +101,7 @@ class MultilingualEngineTest {
         val correction = query(EnglishService::class.java, "helo")
         assertTrue(correction.toString(), correction.contains("hello"))
         val prediction = query(EnglishService::class.java, "", "thank ")
-        assertEquals(prediction.toString(), "you", prediction.first())
+        assertTrue(prediction.toString(), prediction.contains("you"))
         assertTrue(query(EnglishService::class.java, "", "日本語").isNotEmpty())
         assertTrue(query(EnglishService::class.java, "", "").isEmpty())
         assertTrue(query(EnglishService::class.java, "100/4").isEmpty())

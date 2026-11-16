@@ -57,6 +57,7 @@ tasks.configureEach {
 }
 
 dependencies {
+    implementation(files("libs/ipa-latinime-android-heliboard-4.1.aar"))
     implementation(files("libs/ipa-rime-android-1.17.0-opencc-1.4.2.aar"))
     implementation(files("libs/onnxruntime-android-1.23.2.aar", "libs/onnxruntime-extensions-android-0.13.0-ipa-e5-16kb.aar"))
     implementation(libs.androidx.appcompat)

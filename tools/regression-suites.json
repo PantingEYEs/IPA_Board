@@ -92,6 +92,7 @@
     },
     "engines": {
       "classes": [
+        "com.example.ipa_board.LatinImeUpstreamRuntimeTest",
         "com.example.ipa_board.RimeUpstreamRuntimeTest",
         "com.example.ipa_board.MozcUpstreamRuntimeTest",
         "com.example.ipa_board.MultilingualEngineTest",
@@ -166,6 +167,7 @@
     },
     "full": {
       "classes": [
+        "com.example.ipa_board.LatinImeUpstreamRuntimeTest",
         "com.example.ipa_board.RimeUpstreamRuntimeTest",
         "com.example.ipa_board.RimeMigrationTest",
         "com.example.ipa_board.MozcUpstreamRuntimeTest",
@@ -564,6 +566,29 @@
     "rime-migration": {
       "classes": [
         "com.example.ipa_board.RimeMigrationTest"
+      ]
+    },
+    "latinime-runtime": {
+      "classes": [
+        "com.example.ipa_board.LatinImeUpstreamRuntimeTest"
+      ]
+    },
+    "latinime-upstream": {
+      "classes": [
+        "com.example.ipa_board.LatinImeUpstreamRuntimeTest",
+        "com.example.ipa_board.MultilingualEngineTest",
+        "com.example.ipa_board.EngineControlsTest",
+        "com.example.ipa_board.EngineSettingsContractTest",
+        "com.example.ipa_board.DiagnosticsContractTest",
+        "com.example.ipa_board.CompositionControllerTest",
+        "com.example.ipa_board.EngineManagementTest",
+        "com.example.ipa_board.EngineVersionLookupContractTest",
+        "com.example.ipa_board.EnglishImeIntegrationTest"
+      ]
+    },
+    "english-ime": {
+      "classes": [
+        "com.example.ipa_board.EnglishImeIntegrationTest"
       ]
     }
   }

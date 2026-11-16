@@ -10,6 +10,7 @@
 | [更新日志](../CHANGELOG.md) | 开发中及已发布版本的变更 |
 | [引擎接入与来源](engine-integration.md) | 已接入引擎、固定资源、开关、生命周期与限制 |
 | [Rime／OpenCC 官方源码接入](rime-upstream.md) | 单一 JNI、固定构建与兼容中文数据、版本展示及许可边界 |
+| [LatinIME 源码接入](latinime-upstream.md) | 双 ABI、独立只读 JNI、现成词典、来源及验证边界 |
 | [Mozc 官方源码接入](mozc-upstream.md) | 固定构建、OSS 词典、迁移与 16KB 验证边界 |
 | [ONNX Runtime Extensions 官方源码接入](onnx-extensions-upstream.md) | SentencePiece 专用构建、E5 兼容资源、许可与 16KB 验证边界 |
 | [地球拼音](terra-pinyin.md) | 方案选择、声调键、预编辑切换及独立部署 |
@@ -49,3 +50,5 @@
 - [0.0.1 Git 拓扑修复记录](archive/git-topology-repair-plan.md)：保留历史引用，不作为当前操作指南。
 
 - [旧 Trime／JNA 与外置 Rime 候选桥接](archive/rime-trime-integration.md)：固定基线历史说明，不作为当前接入和测试指令。
+
+- [旧 LatinIME APK 接入来源](archive/latinime-heliboard-apk-integration.md)：#52 迁移前的运行库及 Java 注册面，只保留历史事实。

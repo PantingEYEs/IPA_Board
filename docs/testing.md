@@ -989,3 +989,45 @@ yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyiiii
 - 收尾验收：维护者对 `0.0.4-dev-issue49-preview` 实测后报告“使用上没有任何问题”，授权完成 #49 并合并。该反馈作为真实设备人工使用结果记录，不外推为其他 ABI/API、编辑器或 release/AAB 的完整验证矩阵。收尾复核 568 项构建输入与已通过专项的副本逐字节一致，仅补充文档；未重复全量测试。
 
 - 合并结果：实现提交 `c30734e` 经 [PR #60](https://github.com/PantingEYEs/IPA_Board/pull/60) 合入 `0.0.4-dev`，merge commit `7e699e2`。六项验收已核对，维护者实测通过；[Issue #49](https://github.com/PantingEYEs/IPA_Board/issues/49) 已补充完成说明并关闭，开发分支已清理。提交、PR、合并及 Issue 操作均使用 PantingEYEs 身份。
+
+## 2026-11-16 LatinIME 源码构建接入（#52）
+
+基线 `71b19ee`，在 #52 分支将旧 APK 提取库及五个 Java 注册／签名类整体替换为
+`IPA_Engine/english@ad79fe388ced2d9944d81a159f72b5ef6a972fce` 的双 ABI AAR。
+保留现有 `main_en-US.dict` 的 SHA-256 和字节；完整来源与接口见 [LatinIME 接入说明](latinime-upstream.md)。
+新构建的既有独立验证只作为来源记录，本节报告当前 IPA Board 工作区的执行结果。
+
+主机：303 项 JVM、86 项工具测试通过；debug／AndroidTest 编译、套件登记、157 项资源哈希、
+完整模型重组、LatinIME 构建身份／源码清单／接口／许可校验通过。独立构建工程的 21 项产物测试也通过。
+Lint 通过，296 条警告与既有基线保留，129 项被基线过滤、7 项旧基线不再命中，未更新基线。
+新增的一条 `UnusedAttribute` 警告来自 debug-only `pageSizeCompat`：API 36 以下不使用该属性。
+原系统 Python 3.9 运行工具测试时因已有归档模块的联合类型注解无法加载；换用 Python 3.12.14 后 86 项通过，
+没有改动旧测试或扩大等待时间来处理该环境问题。
+
+两份受测 APK 的全部原生文件（包括 assets 内的 IPA 资源）共 **15+1** 个，全部通过 ELF LOAD／RELRO／
+16KB 段布局检查；两份 APK 均通过 `zipalign -c -P 16 -v 4`。LatinIME 双 ABI 的依赖、精确六个 JNI 导出、
+Java 字节码与 AAR build ID 另由固定构建验证器核验。debug 变体关闭页大小兼容模式，release 配置未因此改变。
+静态双 ABI 结果不外推为两 ABI 的运行验证。
+
+专用只读模拟器使用官方 API 36／ARM64／16KB 镜像；instrumentation 实际记录
+`aarch64`、页大小 **16384**，且身份与固定构建匹配。
+通过 `tools/regression.py run --suite latinime-upstream --serial emulator-5582 --no-build --verify-roundtrip --keep-going`
+执行，报告 `1930bb83-9a4d-4a4a-b597-9174c633139f`：**72 项执行、70 通过、2 失败、0 跳过**。
+原生包装 12 项、混输引擎 11 项、开关 3 项、配置 4 项、诊断降级／过期结果 11 项、组合控制器 14 项、
+Engine Management 7 项和版本查询 8 项通过。覆盖真实补全／纠错／预测、大小写与撇号、字面混输、独立开关、
+只读与无学习、损坏缓存修复、资源失败、UTF-8 补充字符路径、输入／结果边界、owner 上限、关闭及并发，
+以及当前打包身份与最新来源的分开展示。预安装备份校验、合成状态恢复往返和最终恢复全部通过，备份已删除。
+
+`EnglishImeIntegrationTest` 的两个用例在任何键盘输入／候选点击前等待受测键盘超时；
+生命周期仅记录到 `START_INPUT`／`FINISH_INPUT`，没有确认键盘显示。已有混输用例保留全部输入断言，
+设置同步改为共用 `ImeTestImeState`，定位器改用实际按键；新增纯英文用例复用现有隔离键盘夹具，仍有同类失败。
+关闭临时 AVD 的模拟硬件键盘、重新启动后仅补跑 `english-ime`：报告
+`9ec524fe-1c15-4397-9bae-722b75d55ffb`，**2 项执行、0 通过、2 失败**，仍为显示前超时。
+该轮同样恢复并校验原 APK／私有数据，备份已删除；没有重跑已通过的 70 项。
+**两轮均不能标记整套通过，也不能将该现象归因于引擎或已确认的环境原因。**
+维护者决定保留失败记录，本次完成引擎接入，键盘显示问题另行调查；实际 IME 点击链路保留为验收缺口。
+
+未执行 x86_64／4KB 运行、其他 API、广泛宿主编辑器、正式签名 release／AAB 或日用手机回归；
+未声称性能提升、原始窗口问题已修复或整体许可迁移完成。最终检查无待恢复备份，停止并清理本次临时 AVD 和镜像。
+
+- 收尾验收：维护者于 2026-11-16 报告“使用中未发现异常”，授权提交、PR 合并及分支清理。该反馈作为人工使用验收记录，不代替两项仍失败的自动键盘显示用例，也不外推为其他 API／ABI、编辑器或正式 release／AAB 已验证。收尾只补充文档并复核固定资源与无待恢复备份，未重复已通过的设备专项。

@@ -1,0 +1,131 @@
+{
+  "repository": "https://github.com/PantingEYEs/IPA_Engine",
+  "branch": "english",
+  "commit": "ad79fe388ced2d9944d81a159f72b5ef6a972fce",
+  "records": {
+    "CMakeLists.txt": {
+      "sha256": "d33fe335d31f54c52fbfe0948d7c2b3d8f4f0cce978882e5361aa5ccea92eb30",
+      "sizeBytes": 2102
+    },
+    "build-provenance.json": {
+      "sha256": "368a99975d9c2472166917b3b19fe6bd256de3c22840986e7af0cd0f8068ae96",
+      "sizeBytes": 9868
+    },
+    "manifest.json": {
+      "sha256": "e4c2ccc18a5c04e66eeafa677d1b44d076bffda21afd9031441c90dcfd9d2503",
+      "sizeBytes": 12148
+    },
+    "COPYRIGHT": {
+      "sha256": "00e5d59da65afc6cc9afd338f35094d0eadc2fffa3a4b47de7d96a37e6ce5064",
+      "sizeBytes": 352
+    },
+    "dictionary-sources.lock.json": {
+      "sha256": "f589f1e3b9ad392adceb776e8a6d47ef0ff988716a911170ac739a9460c75051",
+      "sizeBytes": 3618
+    },
+    "sources.lock.json": {
+      "sha256": "7fd88d31bfb3eeb940e0964f1cebf2380bde6c62aa5ca303aca72beeafc01352",
+      "sizeBytes": 51551
+    },
+    "licenses/sources.json": {
+      "sha256": "679542e568cc8af0fd4e305cbad639ad1f070c60a465eaa062eb5a9d03ccc6a4",
+      "sizeBytes": 2376
+    },
+    "licenses/README.md": {
+      "sha256": "ed75cc4665de8a0e42ac9ffc9f32091102b8ded46eb06325b7385704bbdf7af6",
+      "sizeBytes": 2677
+    },
+    "licenses/native/HeliBoard-Apache-2.0.txt": {
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "sizeBytes": 11358
+    },
+    "licenses/dictionary/OpenBoard-GPL-3.0.txt": {
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "sizeBytes": 35149
+    },
+    "licenses/dictionary/main_en_US.source": {
+      "sha256": "40858c209be9a676819c08ebc1126a8aa255ac2a239a75f38bc689f7c96b0efe",
+      "sizeBytes": 101
+    },
+    "licenses/dictionary/HeliBoard-GPL-3.0.txt": {
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "sizeBytes": 35149
+    },
+    "licenses/toolchain/NDK-r29-NOTICE.toolchain.txt": {
+      "sha256": "789714a9076571c580cf531bdcebec776a4d889c12c3c1108adafc6e4338710a",
+      "sizeBytes": 799639
+    },
+    "licenses/toolchain/NDK-r29-NOTICE.txt": {
+      "sha256": "faf0dc52cf6ce9ab09a04b0c074a378dd2565ee1ed9bc1179d83793bcdba012e",
+      "sizeBytes": 516438
+    },
+    "bridge/README.md": {
+      "sha256": "dcd51ee50f67dfcb0b60b48360830abcf318b303138007067e2313d2b58294e5",
+      "sizeBytes": 6889
+    },
+    "bridge/exports.map": {
+      "sha256": "e49f03b1cac6da26d70963417b80d48ffcdf209ec2caa7673fb6c9b1a74096d4",
+      "sizeBytes": 358
+    },
+    "bridge/latinime_jni.cpp": {
+      "sha256": "f3dd70b8aa6977a56340d1042e6e0f3034959926e0ac943b263ac5b894c493ee",
+      "sizeBytes": 16427
+    },
+    "bridge/java/org/ipaboard/latinime/LatinImeNative.java": {
+      "sha256": "b4fd43ae740ca9ffc6970c4a2400a0d57e61e58335a3e3d95c729a5dc1f286c6",
+      "sizeBytes": 2444
+    },
+    "source-inventory/README.md": {
+      "sha256": "e6b3ff8538a8107c6fd781d066fd10fcae81564c42648a8492ed8f9344cc9620",
+      "sizeBytes": 3910
+    },
+    "source-inventory/bridge-api-review.json": {
+      "sha256": "4973d88a49a52cfbf200291f7245b96d276132c7a246bf10f6b6fb3294bc3e92",
+      "sizeBytes": 4869
+    },
+    "source-inventory/published-files.json": {
+      "sha256": "d5f7c5e3b8b81c3a8c1dd0fa3ebdb53a1a72530e36d1718d2c1528825f003f4a",
+      "sizeBytes": 2768
+    },
+    "source-inventory/verify.py": {
+      "sha256": "dd87c147935573c0fd4641a08db82316aa4a60db4d61058a6b0f16a9bd43c7c8",
+      "sizeBytes": 6936
+    },
+    "source-inventory/native-files.json": {
+      "sha256": "b61281fa61673dbf6ff66c7d6ffa844fe85fac8ef69c9b2334aa88bc8f9216d5",
+      "sizeBytes": 307164
+    },
+    "source-inventory/excluded-java.json": {
+      "sha256": "96648fd9cfd860a32a7fe0d0e9c3456de2a790132ca68e942dceb31265e0c677",
+      "sizeBytes": 3192
+    },
+    "source-inventory/dictionary/history.json": {
+      "sha256": "99f2b9de94e0a37147ec32ccef381053b0cd790a9bc8f22f3fbbac95582dbeaa",
+      "sizeBytes": 1532
+    },
+    "source-inventory/dictionary/en_wordlist.combined.gz": {
+      "sha256": "3a9d7c4dca624ea70ea70c8fccf717a195675f48f194bbb175cd39d180d6c9d4",
+      "sizeBytes": 1400231
+    },
+    "scripts/package.py": {
+      "sha256": "b31e5687253ca13f02b682eeb1ede343789a982c76751b1b60c2cbe926d2f18f",
+      "sizeBytes": 4627
+    },
+    "scripts/bootstrap.py": {
+      "sha256": "743195de0307a0835a6c50d3b49272a15859a5025cf9c91bb3da18040319f7c6",
+      "sizeBytes": 2518
+    },
+    "scripts/build.py": {
+      "sha256": "de25e3b0d350b4eb203d102d470334e8fa98a76e0ef4bf8edea03019a3a1ea40",
+      "sizeBytes": 13601
+    },
+    "scripts/verify_artifacts.py": {
+      "sha256": "5bb7c51332d4513b6a08ee426b511f163ca3a4f95690f3b161d1b695068c9c16",
+      "sizeBytes": 6722
+    },
+    "scripts/elf.py": {
+      "sha256": "3bad35af2db98dafc3ceefddddd88601a9ff4068ab898041733013b7f68f1727",
+      "sizeBytes": 3427
+    }
+  }
+}

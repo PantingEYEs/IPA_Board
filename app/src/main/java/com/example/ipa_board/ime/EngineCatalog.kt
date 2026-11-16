@@ -27,7 +27,8 @@ object EngineCatalog {
     private val RIME_VERSION = "librime ${RimeBundle.UPSTREAM_VERSION} · OpenCC ${RimeBundle.OPENCC_VERSION} · $CHINESE_BUILD"
     private val MOZC_VERSION = "Google Mozc rev ${MozcBundle.UPSTREAM_REVISION.take(12)} · " +
         "OSS data ${MozcBundle.DATA_VERSION} · IPA_Engine build ${MozcBundle.BUILD_REVISION.take(12)}"
-    private const val ENGLISH_VERSION = "Source: HeliBoard 4.1 · rev 9f5bb635c2e8 · en_US dictionary 54"
+    private val ENGLISH_VERSION = "HeliBoard ${LatinImeBundle.UPSTREAM_VERSION} rev ${LatinImeBundle.UPSTREAM_REVISION.take(12)} · " +
+        "en_US dictionary 54 · IPA_Engine english ${LatinImeBundle.BUILD_REVISION.take(12)} · build ${LatinImeBundle.BUILD_ID.take(12)}"
 
     fun categories(appVersion: String): List<EngineCategory> = listOf(
         EngineCategory("ipa", "IPA Engines", listOf(
@@ -44,7 +45,7 @@ object EngineCatalog {
         )),
         EngineCategory("completion", "Completion Engines", listOf(
             EngineInfo("LatinIME · English suggestions", ENGLISH_VERSION,
-                detail = "Offline word completion and contextual candidates; read-only dictionary.", feature = EngineFeature.ENGLISH_COMPLETION, offBehavior = "Off: English exact/completion candidates are omitted; correction and prediction have separate switches.", versionSources = listOf(EngineVersionSource.HELIBOARD))
+                detail = "Offline word completion and contextual candidates; read-only dictionary.", feature = EngineFeature.ENGLISH_COMPLETION, offBehavior = "Off: English exact/completion candidates are omitted; correction and prediction have separate switches.", versionSources = listOf(EngineVersionSource.HELIBOARD, EngineVersionSource.ENGLISH_BUILD))
         )),
         EngineCategory("script_conversion", "Script Conversion Engines", listOf(
             EngineInfo("OpenCC (Traditional → Simplified Chinese)", "OpenCC ${RimeBundle.OPENCC_VERSION} · data ${RimeBundle.OPENCC_DATA_VERSION} · $CHINESE_BUILD",
@@ -64,7 +65,7 @@ object EngineCatalog {
         )),
         EngineCategory("prediction", "Next-word Prediction Engines", listOf(
             EngineInfo("LatinIME · Contextual next-word prediction", ENGLISH_VERSION,
-                detail = "English dictionary bigrams, with sentence-start/common-word fallback for mixed or non-English context.", feature = EngineFeature.ENGLISH_PREDICTION, offBehavior = "Off: no English next-word candidates.", versionSources = listOf(EngineVersionSource.HELIBOARD)),
+                detail = "English dictionary bigrams, with sentence-start/common-word fallback for mixed or non-English context.", feature = EngineFeature.ENGLISH_PREDICTION, offBehavior = "Off: no English next-word candidates.", versionSources = listOf(EngineVersionSource.HELIBOARD, EngineVersionSource.ENGLISH_BUILD)),
             EngineInfo("Rime corpus · Chinese phrase continuation", "Official rime-essay rev 0766c929ec3e · IPA_Engine chinese ${RimeBundle.BUILD_REVISION.take(12)}",
                 detail = "Read-only phrase suffixes and frequent-word fallback; not an arbitrary next-word language model.", feature = EngineFeature.CHINESE_PREDICTION, offBehavior = "Off: no Chinese phrase continuations; Chinese conversion is controlled separately.", versionSources = listOf(EngineVersionSource.CHINESE_BUILD)),
             EngineInfo("Mozc · Japanese next-word suggestions", MOZC_VERSION,
@@ -72,7 +73,7 @@ object EngineCatalog {
         )),
         EngineCategory("english_correction", "English Spelling Correction Engines", listOf(
             EngineInfo("LatinIME · English spelling correction", ENGLISH_VERSION,
-                detail = "Edit-distance correction candidates alongside Chinese and Japanese candidates.", feature = EngineFeature.ENGLISH_CORRECTION, offBehavior = "Off: English spelling corrections are omitted; completion and prediction stay independent.", versionSources = listOf(EngineVersionSource.HELIBOARD))
+                detail = "Edit-distance correction candidates alongside Chinese and Japanese candidates.", feature = EngineFeature.ENGLISH_CORRECTION, offBehavior = "Off: English spelling corrections are omitted; completion and prediction stay independent.", versionSources = listOf(EngineVersionSource.HELIBOARD, EngineVersionSource.ENGLISH_BUILD))
         )),
         EngineCategory("personalization", "Personalization Engines", listOf(
             planned("LatinIME · Personal and history dictionaries", "Later phase: local vocabulary and history learning; currently disabled.")
