@@ -44,6 +44,12 @@
       "url": "https://raw.githubusercontent.com/PantingEYEs/IPA_Engine/073aabe899fdcbdd195e2e9199fb25c43a574f47/Rime/artifacts/ipa-rime-android-1.17.0-opencc-1.4.2.aar",
       "sha256": "aa006bfd082f5862774b0d094be056c9ce3204ec914915279f32da0ff9d6d99e",
       "source_revision": "073aabe899fdcbdd195e2e9199fb25c43a574f47"
+    },
+    {
+      "file": "ipa-latinime-android-heliboard-4.1.aar",
+      "url": "https://raw.githubusercontent.com/PantingEYEs/IPA_Engine/ad79fe388ced2d9944d81a159f72b5ef6a972fce/artifacts/ipa-latinime-android-heliboard-4.1.aar",
+      "sha256": "395b09d4f5782dd01c7f7f4c86c12fa71031ec6290ad8d76ebccebaab820e61c",
+      "source_revision": "ad79fe388ced2d9944d81a159f72b5ef6a972fce"
     }
   ],
   "files": [
@@ -59,8 +65,8 @@
     },
     {
       "path": "app/src/main/assets/licenses/English-dictionary-source.txt",
-      "sha256": "a4a8a2580d999dccf7bad2ac152d1ac19d4db359a834e86b1d27f35711d283b8",
-      "bytes": 583
+      "sha256": "c3dfcb16d7efbe49a15f84fd470522a5fd018ca5257607e267433d1f93569df4",
+      "bytes": 1030
     },
     {
       "path": "app/src/main/assets/licenses/HeliBoard-GPL-3.0.txt",
@@ -73,19 +79,9 @@
       "bytes": 11358
     },
     {
-      "path": "app/src/main/jniLibs/arm64-v8a/libjni_latinime.so",
-      "sha256": "a97b09fd3de5395023df9fb4ddc2b1eef44162bd6e987b975897d74fc3ee7081",
-      "bytes": 1347040
-    },
-    {
       "path": "app/src/main/jniLibs/arm64-v8a/libmozc.so",
       "sha256": "d7cc97611b162e1577dc419811bc4a39b72a9af0be4f380b68597519e64d9b12",
       "bytes": 5478432
-    },
-    {
-      "path": "app/src/main/jniLibs/x86_64/libjni_latinime.so",
-      "sha256": "6f85b8fcb378ce0e53bf6df12ec2ad69286c0e61bda21cb2eb565dcbeb2fd0d0",
-      "bytes": 1339072
     },
     {
       "path": "app/src/main/jniLibs/x86_64/libmozc.so",
@@ -829,6 +825,81 @@
       "sha256": "58b9a4950ccc53917a89ac71604a6496f58b0ae66a6990ca8203b8e6e2e51a47",
       "bytes": 1772,
       "source": "IPA_Engine/chinese@073aabe899fdcbdd195e2e9199fb25c43a574f47; tools/rime/integration-source.json"
+    },
+    {
+      "path": "app/libs/ipa-latinime-android-heliboard-4.1.aar",
+      "sha256": "395b09d4f5782dd01c7f7f4c86c12fa71031ec6290ad8d76ebccebaab820e61c",
+      "bytes": 747783
+    },
+    {
+      "path": "app/src/main/assets/licenses/latinime-upstream/sources.json",
+      "sha256": "679542e568cc8af0fd4e305cbad639ad1f070c60a465eaa062eb5a9d03ccc6a4",
+      "bytes": 2376
+    },
+    {
+      "path": "app/src/main/assets/licenses/latinime-upstream/README.md",
+      "sha256": "ed75cc4665de8a0e42ac9ffc9f32091102b8ded46eb06325b7385704bbdf7af6",
+      "bytes": 2677
+    },
+    {
+      "path": "app/src/main/assets/licenses/latinime-upstream/bridge-api-review.json",
+      "sha256": "4973d88a49a52cfbf200291f7245b96d276132c7a246bf10f6b6fb3294bc3e92",
+      "bytes": 4869
+    },
+    {
+      "path": "app/src/main/assets/licenses/latinime-upstream/native-files.json",
+      "sha256": "b61281fa61673dbf6ff66c7d6ffa844fe85fac8ef69c9b2334aa88bc8f9216d5",
+      "bytes": 307164
+    },
+    {
+      "path": "app/src/main/assets/licenses/latinime-upstream/dictionary-sources.lock.json",
+      "sha256": "f589f1e3b9ad392adceb776e8a6d47ef0ff988716a911170ac739a9460c75051",
+      "bytes": 3618
+    },
+    {
+      "path": "app/src/main/assets/licenses/latinime-upstream/artifacts.json",
+      "sha256": "e4c2ccc18a5c04e66eeafa677d1b44d076bffda21afd9031441c90dcfd9d2503",
+      "bytes": 12148
+    },
+    {
+      "path": "app/src/main/assets/licenses/latinime-upstream/sources.lock.json",
+      "sha256": "7fd88d31bfb3eeb940e0964f1cebf2380bde6c62aa5ca303aca72beeafc01352",
+      "bytes": 51551
+    },
+    {
+      "path": "app/src/main/assets/licenses/latinime-upstream/native/HeliBoard-Apache-2.0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "bytes": 11358
+    },
+    {
+      "path": "app/src/main/assets/licenses/latinime-upstream/dictionary/OpenBoard-GPL-3.0.txt",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "bytes": 35149
+    },
+    {
+      "path": "app/src/main/assets/licenses/latinime-upstream/dictionary/main_en_US.source",
+      "sha256": "40858c209be9a676819c08ebc1126a8aa255ac2a239a75f38bc689f7c96b0efe",
+      "bytes": 101
+    },
+    {
+      "path": "app/src/main/assets/licenses/latinime-upstream/dictionary/HeliBoard-GPL-3.0.txt",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "bytes": 35149
+    },
+    {
+      "path": "app/src/main/assets/licenses/latinime-upstream/toolchain/NDK-r29-NOTICE.toolchain.txt",
+      "sha256": "789714a9076571c580cf531bdcebec776a4d889c12c3c1108adafc6e4338710a",
+      "bytes": 799639
+    },
+    {
+      "path": "app/src/main/assets/licenses/latinime-upstream/toolchain/NDK-r29-NOTICE.txt",
+      "sha256": "faf0dc52cf6ce9ab09a04b0c074a378dd2565ee1ed9bc1179d83793bcdba012e",
+      "bytes": 516438
+    },
+    {
+      "path": "app/src/main/assets/licenses/latinime-upstream/SOURCE.txt",
+      "sha256": "c2023e6756df7723efb8cf39cf1d90a0936c777f0e9b458cbfe597537ca7a2ff",
+      "bytes": 648
     }
   ],
   "sourceBuilds": [

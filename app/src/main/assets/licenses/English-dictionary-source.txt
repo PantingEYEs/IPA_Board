@@ -5,3 +5,9 @@ HeliBoard licenses: GPL-3.0 / Apache-2.0; see bundled license texts.
 Dictionary source declaration: https://codeberg.org/Helium314/aosp-dictionaries/src/branch/main/wordlists/main_en_US.source
 Original word list: https://github.com/openboard-team/openboard/blob/v1.4.5/dictionaries/en_wordlist.combined.gz
 No icon, gesture library, contacts or personal dictionaries are included.
+
+Issue #52 retains these exact bytes (SHA-256 bd950ef4b57655120eee65cee62a5d216a63f721d9a8bb759ce2022437840443).
+Binary format 202; wordlist version 54. No dictionary compilation or learning.
+Detailed source/wordlist evidence: latinime-upstream/dictionary-sources.lock.json.
+The complete dictionary has no established separate permissive file license;
+retain the original GPL distribution evidence independently of the Apache-noticed native core.

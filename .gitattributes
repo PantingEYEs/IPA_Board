@@ -15,3 +15,7 @@ tools/onnx-extensions/** -text -whitespace
 app/src/main/assets/engines/rime/** -text -whitespace
 app/src/main/assets/licenses/rime-upstream/** -text -whitespace
 tools/rime/** -text -whitespace
+
+# LatinIME source-build evidence and original notices retain upstream byte hashes.
+app/src/main/assets/licenses/latinime-upstream/** -text -whitespace
+tools/latinime/** -text -whitespace

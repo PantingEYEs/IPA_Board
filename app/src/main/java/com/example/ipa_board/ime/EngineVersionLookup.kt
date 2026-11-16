@@ -17,6 +17,7 @@ enum class EngineVersionSource(val label: String, val endpoint: String, val revi
     OPENCC("OpenCC upstream", "https://api.github.com/repos/BYVoid/OpenCC/releases/latest"),
     CHINESE_BUILD("IPA chinese source", "https://api.github.com/repos/PantingEYEs/IPA_Engine/commits/chinese", true),
     MOZC("Mozc upstream", "https://api.github.com/repos/google/mozc/commits/master", true),
+    ENGLISH_BUILD("IPA English source", "https://api.github.com/repos/PantingEYEs/IPA_Engine/commits/english", true),
     HELIBOARD("HeliBoard source", "https://api.github.com/repos/HeliBorg/HeliBoard/releases/latest"),
     E5("E5 model", "https://huggingface.co/api/models/intfloat/multilingual-e5-small", true),
     ONNX_RUNTIME("ONNX Runtime", "https://api.github.com/repos/microsoft/onnxruntime/releases/latest")

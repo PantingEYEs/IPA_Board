@@ -11,7 +11,7 @@
 | Mozc JNI + mozc.data | [Google Mozc `a4541df29db443b49f81cf54665873b68fde9efa`](https://github.com/google/mozc/tree/a4541df29db443b49f81cf54665873b68fde9efa)，[独立构建提交 `76a6129`](https://github.com/PantingEYEs/IPA_Engine/tree/76a612924530188bce6fa1c770b1e2e096e27ed8) | 官方源码构建的 arm64-v8a/x86_64 运行库与配套 OSS `24.11.oss` 词典；兼容 JNI 入口、内容哈希部署代际及预测请求适配见 [Mozc 接入说明](mozc-upstream.md) |
 | Rime + OpenCC | [IPA_Engine chinese `073aabe`](https://github.com/PantingEYEs/IPA_Engine/tree/073aabe899fdcbdd195e2e9199fb25c43a574f47)；官方 librime 1.17.0 + OpenCC 1.4.2 | 两 ABI AAR，单一 `RimeNative` JNI 接口及静态链接依赖；保留只读批量候选与精确范围合同，见 [接入说明](rime-upstream.md) |
 | 中文资源 | 官方 Rime 方案／词典仓库与 OpenCC 1.2.0 数据；精确提交与哈希见随包 resource-sources.lock.json | 保留拼音、注音、词典和禁用学习策略；生成 s2t/t2s 文本配置并显式声明原有字典优先级 |
-| LatinIME 英文核心与词库 | [HeliBoard 4.1，revision `9f5bb635c2e8609dcd95dc7506c0c58fba82a52c`](https://github.com/HeliBorg/HeliBoard/tree/9f5bb635c2e8609dcd95dc7506c0c58fba82a52c) | 从官方 APK 原样提取两个 ABI 的 libjni_latinime.so 与 main_en-US.dict；保留四个 JNI 注册类的方法签名，使用本项目的最小只读适配器，替换 easy_en |
+| LatinIME 英文核心与词库 | [HeliBoard 4.1 固定源码](https://github.com/HeliBorg/HeliBoard/tree/9f5bb635c2e8609dcd95dc7506c0c58fba82a52c)，[IPA_Engine english `ad79fe3`](https://github.com/PantingEYEs/IPA_Engine/tree/ad79fe388ced2d9944d81a159f72b5ef6a972fce) | 双 ABI 源码构建 AAR 与独立只读 JNI；完整替换旧注册类和 APK 提取库，保留原始 main_en-US.dict；见 [接入说明](latinime-upstream.md) |
 | E5 与 ONNX Runtime 主库 | 固定 E5 small 模型 revision、ONNX Runtime 1.23.2 官方 Android AAR | 模型分块、分词图、校准数据与主库保持原版；详见 [语义排序](context-ranking.md) |
 | ONNX Runtime Extensions | [微软 v0.13.0 源码 `9d5638b`](https://github.com/microsoft/onnxruntime-extensions/tree/9d5638b0b1f28ed2ca9ef589d5ec3ea86f859432)，[IPA Engine `ranking` 构建 `dd6f7fb`](https://github.com/PantingEYEs/IPA_Engine/tree/dd6f7fb09530a6e0daff5ac8d5987d855a76142e) | 使用 SentencePiece 专用、两 ABI 16KB 对齐的完整 AAR，替换旧 Maven 原包；来源、算子范围与验证边界见 [接入说明](onnx-extensions-upstream.md) |
 | IPA_Engine | 内置 v0.0.1-dev，发布提交 `53eed9518f932934a28aceb4e03a453d545f80b8` | ARM64 DEX/JNI 与预编译压缩词典，独立 `:ipa` 服务；版本及更新合同见 [IPA 资源更新](ipa-updates.md) |
@@ -64,7 +64,7 @@ python3 tools/regression.py run --suite full --serial DEVICE_SERIAL --no-build
 - 排序采用来源内排名、原文匹配、具体 bigram 关联与候选类型等启发式特征，另有可选的实验性语义重排；不是经过跨语言语料校准的概率。尚无持久化个性学习，也没有无分隔整串跨语言分词。
 - Rime、当前自行构建的 Mozc 及 SentencePiece 专用 Extensions 两种 ABI 均为 16KB ELF 对齐。Extensions 来自官方源码重编译，原 ONNX Runtime 1.23.2 主库保持不变；#51 以真实 16KB 页环境为验收目标。静态检查、独立构建与当前应用接入分别验证，见 [Mozc 验证边界](mozc-upstream.md#16kb-与验证边界)、[Extensions 验证边界](onnx-extensions-upstream.md#16kb-与验证边界)和[测试记录](testing.md)。
 - Rime/OpenCC 已采用官方源码独立构建及新的 JNI 接口，旧 Trime 组合库、JNA 与外置候选桥接不再用于当前 APK。原生通知、资源 LGPL／CC 归属和新适配代码版权分别保留；这不等于应用整体协议已经迁移。
-- HeliBoard 发布核心及适配的上游声明包含 Apache-2.0 与 GPL-3.0；两份许可证已保存，官方源码归档的 SHA-256 与固定 revision 已记录。未包含其图标或外部手势库。LatinIME 两个 ABI 的 ELF LOAD 对齐均为 16KB；各库的静态对齐仍不能代替完整应用在目标设备配置上的运行验证。
+- LatinIME 使用审阅后的 Apache-2.0 原生源码子集及新只读 JNI，原始通知、NDK 通知和来源清单位于 `licenses/latinime-upstream/`。英文词典保留原始字节及独立的 OpenBoard／HeliBoard GPL 发布证据；不把核心许可套用到词典，不宣称整体协议已迁移。双 ABI ELF 静态 16KB 检查与应用运行验收分别记录；[旧 APK 接入归档](archive/latinime-heliboard-apk-integration.md)不再作为当前加载方式。
 
 上游原生构建说明：[Rime/OpenCC 固定源码构建](https://github.com/PantingEYEs/IPA_Engine/tree/073aabe899fdcbdd195e2e9199fb25c43a574f47)、[Mozc 固定源码构建](https://github.com/PantingEYEs/IPA_Engine/tree/76a612924530188bce6fa1c770b1e2e096e27ed8)、[Extensions 固定源码构建](https://github.com/PantingEYEs/IPA_Engine/tree/dd6f7fb09530a6e0daff5ac8d5987d855a76142e)。完整许可与精确来源随 APK 保存在 `assets/licenses/rime-upstream/`、`mozc/` 与 `onnx-extensions/`。
 

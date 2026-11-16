@@ -25,6 +25,51 @@ import org.junit.Test
 import java.io.File
 
 class EngineManagementTest {
+    @Test fun englishRowsKeepThePackagedSourceBuildWhenLatestMetadataChanges() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val packaged = JSONObject(context.assets.open("licenses/latinime-upstream/artifacts.json")
+            .bufferedReader().use { it.readText() })
+        val features = setOf(EngineFeature.ENGLISH_COMPLETION, EngineFeature.ENGLISH_CORRECTION,
+            EngineFeature.ENGLISH_PREDICTION)
+        val rows = EngineCatalog.configurable().filter { it.feature in features }
+        val old = EngineVersionLookup.metadataLoaderOverride
+        EngineVersionLookup.metadataLoaderOverride = { source ->
+            if (source.revisionMetadata) """{"sha":"1234567890abcdef1234567890abcdef12345678"}"""
+            else """{"tag_name":"v-future","draft":false,"prerelease":false}"""
+        }
+        fun checkRows(root: View) {
+            rows.forEach { row ->
+                val current = root.findViewWithTag<TextView>("engine-current:${row.name}").text.toString()
+                assertTrue(current.contains(packaged.getString("upstreamCommit").take(12)))
+                assertTrue(current.contains(packaged.getString("buildId").take(12)))
+                assertTrue(current.contains("en_US dictionary 54"))
+                assertFalse(current.contains("v-future"))
+                assertFalse(current.contains("1234567890ab"))
+            }
+        }
+        try {
+            ActivityScenario.launch(EngineManagementActivity::class.java).use { scenario ->
+                scenario.onActivity { activity ->
+                    val root = activity.findViewById<View>(R.id.engine_management_root)
+                    checkRows(root)
+                    root.findViewWithTag<View>("category:completion").performClick()
+                }
+                val deadline = android.os.SystemClock.uptimeMillis() + 5_000
+                var ready = false
+                while (!ready && android.os.SystemClock.uptimeMillis() < deadline) {
+                    scenario.onActivity { activity ->
+                        val root = activity.findViewById<View>(R.id.engine_management_root)
+                        ready = root.findViewWithTag<TextView>("engine-latest:${rows.first { it.feature == EngineFeature.ENGLISH_COMPLETION }.name}")
+                            .text.toString().contains("1234567890ab")
+                        checkRows(root)
+                    }
+                    if (!ready) Thread.sleep(30)
+                }
+                assertTrue("Latest source revision should display separately from the bundled build", ready)
+            }
+        } finally { EngineVersionLookup.metadataLoaderOverride = old }
+    }
+
     @Test fun chineseRowsKeepPackagedIdentityWhenUpstreamMetadataChanges() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val packaged = JSONObject(context.assets.open("licenses/rime-upstream/artifacts.json")

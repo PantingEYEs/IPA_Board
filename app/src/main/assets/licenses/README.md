@@ -9,3 +9,5 @@ Rime 方案、词典与 essay 的 LGPL v3 及附带 GPL v3 文字、CC-CEDICT �
 Mozc 的原始通知与来源在 `mozc/`，ONNX Runtime Extensions 的通知与来源在 `onnx-extensions/`；LatinIME/HeliBoard、英文词表、E5/ONNX Runtime 主库及 IPA Engine 的其他现有材料仍按各自声明保留。本文件不替代任何原始许可证或未完成的来源核验。
 
 旧中文接入的历史归档见项目 `docs/archive/rime-trime-integration.md`；现行合同见 `docs/rime-upstream.md`。
+
+LatinIME 已接入 IPA_Engine english 固定构建 `ad79fe3`，原生子集、桥接和词典的独立来源与原始通知见 `latinime-upstream/`。旧注册 Java 类及 APK 提取运行库已移除，原英文词典和其 GPL 发布证据继续保留；词典的独立文件许可仍待核验。该变化不代表项目整体许可已改变。原始构建说明的相对路径按该固定构建仓库解释。

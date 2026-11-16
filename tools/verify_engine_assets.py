@@ -8,6 +8,7 @@ import sys
 import zipfile
 from verify_onnx_extensions import verify as verify_onnx_extensions
 from verify_rime import verify as verify_rime
+from verify_latinime import verify as verify_latinime
 
 root = pathlib.Path(__file__).resolve().parents[1]
 manifest = json.loads((root / 'tools/engine-assets.lock.json').read_text())
@@ -20,11 +21,12 @@ if errors:
     sys.exit('Missing or modified resources:\n' + '\n'.join(errors))
 print(f"Verified {len(manifest['files'])} engine resource hashes.")
 try:
+    verify_latinime(root)
     verify_rime(root)
     verify_onnx_extensions(root)
 except (ValueError, OSError) as error:
     sys.exit(f'Source-built engine package verification failed: {error}')
-print('Verified source-built Rime/OpenCC and Extensions: both ABIs, 16KB ELF layout, dependencies, JNI and Java interface.')
+print('Verified source-built LatinIME, Rime/OpenCC and Extensions: both ABIs, 16KB ELF layout, dependencies, JNI and Java interface.')
 
 def print_alignment(label, data):
     offset = struct.unpack_from('<Q', data, 32)[0]
